@@ -9,8 +9,10 @@ if (typeof $ === "undefined") {
 }
 
 Falk.Lead = {
-    OnLoad: {},
-
+    OnLoad: function(executionContext){
+        var formContext = executionContext.getFormContext();
+        Falk.OnChange(executionContext)
+    },
     OnSave: {},
 
     OnChange: function (executionContext) {
