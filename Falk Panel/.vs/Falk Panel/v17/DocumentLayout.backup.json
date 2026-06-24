@@ -3,16 +3,12 @@
   "WorkspaceRootPath": "E:\\Riya\\FALK\\FALK_PANEL\\Falk Panel\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{65B5599C-993E-44FC-9DF7-F0A409C75A79}|Falk Plugins\\Falk Plugins.csproj|e:\\riya\\falk\\falk_panel\\falk panel\\falk plugins\\saleslifecycle\\saleslifecycleprocessplugin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{65B5599C-993E-44FC-9DF7-F0A409C75A79}|Falk Plugins\\Falk Plugins.csproj|E:\\Riya\\FALK\\FALK_PANEL\\Falk Panel\\falk plugins\\saleslifecycle\\saleslifecycleprocessplugin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{65B5599C-993E-44FC-9DF7-F0A409C75A79}|Falk Plugins\\Falk Plugins.csproj|solutionrelative:falk plugins\\saleslifecycle\\saleslifecycleprocessplugin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65B5599C-993E-44FC-9DF7-F0A409C75A79}|Falk Plugins\\Falk Plugins.csproj|e:\\riya\\falk\\falk_panel\\falk panel\\falk plugins\\pluginbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{65B5599C-993E-44FC-9DF7-F0A409C75A79}|Falk Plugins\\Falk Plugins.csproj|E:\\Riya\\FALK\\FALK_PANEL\\Falk Panel\\falk plugins\\pluginbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{65B5599C-993E-44FC-9DF7-F0A409C75A79}|Falk Plugins\\Falk Plugins.csproj|solutionrelative:falk plugins\\pluginbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{880EDA22-6162-4C33-BB75-C3E650AF7BE4}|Falk Web Resources\\Falk Web Resources.csproj|e:\\riya\\falk\\falk_panel\\falk panel\\falk web resources\\lead.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
-      "RelativeMoniker": "D:0:0:{880EDA22-6162-4C33-BB75-C3E650AF7BE4}|Falk Web Resources\\Falk Web Resources.csproj|solutionrelative:falk web resources\\lead.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
     }
   ],
   "DocumentGroupContainers": [
@@ -25,17 +21,8 @@
           "SelectedChildIndex": 2,
           "Children": [
             {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "Lead.js",
-              "DocumentMoniker": "E:\\Riya\\FALK\\FALK_PANEL\\Falk Panel\\Falk Web Resources\\Lead.js",
-              "RelativeDocumentMoniker": "Falk Web Resources\\Lead.js",
-              "ToolTip": "E:\\Riya\\FALK\\FALK_PANEL\\Falk Panel\\Falk Web Resources\\Lead.js",
-              "RelativeToolTip": "Falk Web Resources\\Lead.js",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2026-06-24T09:57:55.429Z",
-              "EditorCaption": ""
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             },
             {
               "$type": "Document",
@@ -45,7 +32,7 @@
               "RelativeDocumentMoniker": "Falk Plugins\\PluginBase.cs",
               "ToolTip": "E:\\Riya\\FALK\\FALK_PANEL\\Falk Panel\\Falk Plugins\\PluginBase.cs",
               "RelativeToolTip": "Falk Plugins\\PluginBase.cs",
-              "ViewState": "AgIAABoAAAAAAAAAAAAQwAMAAAAbAAAAAAAAAA==",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAAACcAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-24T09:47:50.969Z",
               "EditorCaption": ""
@@ -58,7 +45,7 @@
               "RelativeDocumentMoniker": "Falk Plugins\\SalesLifecycle\\SalesLifecycleProcessPlugin.cs",
               "ToolTip": "E:\\Riya\\FALK\\FALK_PANEL\\Falk Panel\\Falk Plugins\\SalesLifecycle\\SalesLifecycleProcessPlugin.cs",
               "RelativeToolTip": "Falk Plugins\\SalesLifecycle\\SalesLifecycleProcessPlugin.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAASAAAAAAAAAA==",
+              "ViewState": "AgIAAFIAAAAAAAAAAAAswGYAAAAzAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-24T09:47:28.461Z",
               "EditorCaption": ""

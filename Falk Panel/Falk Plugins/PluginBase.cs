@@ -16,7 +16,7 @@ namespace Falk_Plugins
         /// Alias of the image registered for the snapshot of the 
         /// primary entity's attributes after the core platform operation executes.
         /// 
-        /// Note: Only synchronous post-event and asynchronous registered plug-ins 
+        /// Note: Only synchronous post-event and asynchronous registered plug-ins
         /// have PostEntityImages populated.
         /// </summary>
         protected const string CONST_POSTIMAGENAME = "PostImage";
