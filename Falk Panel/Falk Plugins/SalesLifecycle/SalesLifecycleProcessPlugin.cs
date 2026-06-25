@@ -79,7 +79,7 @@ namespace Falk_Plugins.SalesLifecycle
             string stageName = GetStageName(activeStageRef.Id);
             tracingService.Trace($"Stage name = {stageName}");
 
-            if (stageName == "Budget Quote")
+            if (stageName == BudgetQuoteStageName)
             {
                 EntityReference opportunityRef = bpfRecord.GetAttributeValue<EntityReference>("bpf_opportunityid");
                 tracingService.Trace($"Opportunity ref = {opportunityRef}");
