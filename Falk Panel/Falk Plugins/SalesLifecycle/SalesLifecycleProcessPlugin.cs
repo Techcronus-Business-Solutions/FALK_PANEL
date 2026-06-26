@@ -101,9 +101,9 @@ namespace Falk_Plugins.SalesLifecycle
                     tracingService.Trace($"Opportunity name = {opportunityName}");
                 }
 
-                Entity task = new Entity("task");
-                task["subject"] = $"{BudgetQuoteTaskSubject}{opportunityName}";
-                task["regardingobjectid"] = opportunityRef;
+                Entity task = new Entity("tbs_rfqtask");
+                task["tbs_name"] = $"{BudgetQuoteTaskSubject}{opportunityName}";
+                task["tbs_regarding"] = opportunityRef;
 
                 service.Create(task);
 
