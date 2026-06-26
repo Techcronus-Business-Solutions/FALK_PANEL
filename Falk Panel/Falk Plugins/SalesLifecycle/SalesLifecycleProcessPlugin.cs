@@ -1,6 +1,7 @@
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
+using System.Threading.Tasks;
 
 namespace Falk_Plugins.SalesLifecycle
 {
@@ -105,8 +106,10 @@ namespace Falk_Plugins.SalesLifecycle
                 task["tbs_name"] = $"{BudgetQuoteTaskSubject}{opportunityName}";
                 task["tbs_regarding"] = opportunityRef;
 
-                service.Create(task);
 
+                service.Create(task);
+                Guid taskId = service.Create(task);
+                tracingService.Trace($"RFQ Task Created. Id = {taskId}");
                 tracingService.Trace($"Budget Quote task created for Opportunity: {opportunityName}");
             }
 
