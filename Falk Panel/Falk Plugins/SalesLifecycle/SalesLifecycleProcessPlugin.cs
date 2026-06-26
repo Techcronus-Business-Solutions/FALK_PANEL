@@ -75,7 +75,7 @@ namespace Falk_Plugins.SalesLifecycle
             EntityReference activeStageRef = bpfRecord.GetAttributeValue<EntityReference>("activestageid");
 
             if (activeStageRef == null)
-                return;
+                return;        
 
             string stageName = GetStageName(activeStageRef.Id);
             tracingService.Trace($"Stage name = {stageName}");
@@ -107,9 +107,7 @@ namespace Falk_Plugins.SalesLifecycle
                 task["tbs_regarding"] = opportunityRef;
 
 
-                service.Create(task);
-                Guid taskId = service.Create(task);
-                tracingService.Trace($"RFQ Task Created. Id = {taskId}");
+                service.Create(task);              
                 tracingService.Trace($"Budget Quote task created for Opportunity: {opportunityName}");
             }
 
