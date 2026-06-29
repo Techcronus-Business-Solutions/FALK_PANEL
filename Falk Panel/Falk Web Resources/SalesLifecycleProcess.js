@@ -31,10 +31,15 @@ Falk.SalesLifecycleProcess = {
 
             eventArgs.preventDefault();
 
-            Xrm.Navigation.openAlertDialog({
-                title: "Restricted",
-                text: "Moving to a previous stage is not allowed."
-            });
+            formContext.ui.setFormNotification(
+                "Moving to a previous stage is not allowed",
+                "ERROR",
+                "BPFError"
+            );
         }
+
+        setTimeout(function () {
+            formContext.ui.clearFormNotification("BPFError");
+        }, 5000);
     }
 };
