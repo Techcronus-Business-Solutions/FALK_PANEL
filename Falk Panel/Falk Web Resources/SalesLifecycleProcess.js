@@ -25,11 +25,12 @@ Falk.SalesLifecycleProcess = {
     PreStageChange: function (executionContext) {
 
         var eventArgs = executionContext.getEventArgs();
-
+        var formContext = executionContext.getFormContext();
         // Check whether user is moving backwards
         if (eventArgs.getDirection() === "Previous") {
 
             eventArgs.preventDefault();
+            
 
             formContext.ui.setFormNotification(
                 "Moving to a previous stage is not allowed",
