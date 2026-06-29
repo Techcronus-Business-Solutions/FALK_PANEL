@@ -72,9 +72,9 @@ namespace Falk_Plugins.Pricing_Master
             Entity record = service.Retrieve(
                 lookup.LogicalName,
                 lookup.Id,
-                new ColumnSet("tbs_name"));
+                new ColumnSet("name"));
 
-            return record.GetAttributeValue<string>("tbs_name") ?? string.Empty;
+            return record.GetAttributeValue<string>("name") ?? string.Empty;
         }
 
         private void InitProperties(LocalPluginContext localcontext)
