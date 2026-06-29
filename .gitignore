@@ -76,3 +76,6 @@ nunit-*.xml
 /.vs/FALK_PANEL/v18/workspaceFileList.bin
 /.vs/slnx.sqlite
 /.vs/VSWorkspaceState.json
+/Falk Panel/.vs/Falk Panel/CopilotIndices/18.6.39603.9996
+/Falk Panel/Falk Plugins/.vs/Falk Plugins.csproj.dtbcache.json
+/Falk Panel/Falk Web Resources/.vs/Falk Web Resources.csproj.dtbcache.json
