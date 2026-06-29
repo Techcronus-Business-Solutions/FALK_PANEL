@@ -57,3 +57,10 @@ TestResult.xml
 nunit-*.xml
 /Falk Panel/.vs/Falk Panel/FileContentIndex/05cfdbc7-a632-4534-8479-144ce540fe2b.vsidx
 /Falk Panel/.vs/Falk Panel/FileContentIndex
+/.vs/FALK_PANEL.slnx
+/.vs/slnx.sqlite
+/Falk Panel/.vs/Falk Panel/v18
+*.sqlite-journal
+/Falk Panel/Falk Web Resources/Falk Web Resources.csproj
+/.vs/slnx.sqlite
+/Falk Panel/Falk Web Resources/Falk Web Resources.csproj
