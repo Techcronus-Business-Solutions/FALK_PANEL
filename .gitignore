@@ -57,9 +57,22 @@ TestResult.xml
 nunit-*.xml
 /Falk Panel/.vs/Falk Panel/FileContentIndex/05cfdbc7-a632-4534-8479-144ce540fe2b.vsidx
 /Falk Panel/.vs/Falk Panel/FileContentIndex
+<<<<<<< HEAD
 /.vs/FALK_PANEL/v17/.wsuo
 /.vs/FALK_PANEL/v17/DocumentLayout.backup.json
 /Falk Panel/.vs/Falk Panel/v17/.suo
 /.vs/FALK_PANEL/v17/DocumentLayout.json
 /Falk Panel/.vs/Falk Panel/v17/DocumentLayout.backup.json
 /Falk Panel/.vs/Falk Panel/v17/DocumentLayout.json
+=======
+/.vs/FALK_PANEL.slnx
+/.vs/slnx.sqlite
+/Falk Panel/.vs/Falk Panel/v18
+*.sqlite-journal
+/Falk Panel/Falk Web Resources/Falk Web Resources.csproj
+/.vs/slnx.sqlite
+/Falk Panel/Falk Web Resources/Falk Web Resources.csproj
+>>>>>>> 44094f99246a32c5d86d49360c531822a9a55538
+/.vs/FALK_PANEL/v18/workspaceFileList.bin
+/.vs/slnx.sqlite
+/.vs/VSWorkspaceState.json
