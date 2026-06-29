@@ -47,66 +47,22 @@ namespace Falk_Plugins
                                 decimal feet = targetEntity.GetAttributeValue<decimal>("tbs_ft");
                                 decimal inches = targetEntity.GetAttributeValue<decimal>("tbs_in");
 
-                                int wholeFeet = (int)Math.Truncate(feet);
-                                int wholeInches = (int)Math.Truncate(inches);
-
-                                decimal fraction = inches - wholeInches;
-
-                                int quarter = (int)Math.Round(fraction * 4);
-
-                                string fractionText = "";
-
-                                if (quarter == 4)
-                                {
-                                    wholeInches++;
-                                    quarter = 0;
-                                }
-
-                                if (wholeInches == 12)
-                                {
-                                    wholeFeet++;
-                                    wholeInches = 0;
-                                }
-
-                                switch (quarter)
-                                {
-                                    case 1:
-                                        fractionText = "1/4";
-                                        break;
-                                    case 2:
-                                        fractionText = "2/4";   // Change to "1/2" if preferred
-                                        break;
-                                    case 3:
-                                        fractionText = "3/4";
-                                        break;
-                                }
-
-                                string result = $"{wholeFeet}' {wholeInches}";
-
-                                if (!string.IsNullOrWhiteSpace(fractionText))
-                                    result += $" {fractionText}";
-
-                                result += "\"";
-
+                                string result = CalculateLinearFtInch(feet, inches);
                                 targetEntity["tbs_linearftinch"] = result;
                             }
-                            tracingService.Trace("linearftinch");
                             #endregion
 
                             #region Get Panel Width
                             if (targetEntity.Contains("tbs_opportunityproduct") && targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct") != null)
                             {
-                                tracingService.Trace("1");
                                 QueryExpression query = new QueryExpression("tbs_thickness");
                                 query.ColumnSet.AddColumn("tbs_visiblepanelwidth");
                                 LinkEntity oppProduct = query.AddLink("opportunityproduct", "tbs_thicknessid", "tbs_panelthickness");
                                 oppProduct.EntityAlias = "oppProduct";
-                                var LI = oppProduct.AddLink("tbs_lineitem", "opportunityproductid", "tbs_opportunityproduct");
-                                LI.EntityAlias = "LI";
 
-                                LI.LinkCriteria.AddCondition("tbs_lineitemid", ConditionOperator.Equal, targetEntity.Id);
+                                oppProduct.LinkCriteria.AddCondition("opportunityproductid", ConditionOperator.Equal, targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id);
+
                                 Entity thickness = service.RetrieveMultiple(query).Entities.FirstOrDefault();
-                                tracingService.Trace("2");
 
                                 if (thickness.Contains("tbs_visiblepanelwidth"))
                                 {
@@ -116,10 +72,7 @@ namespace Falk_Plugins
                                         targetEntity["tbs_widthpanel"] = width;
                                     }
                                 }
-                                tracingService.Trace("3");
-
                             }
-                            tracingService.Trace("width");
                             #endregion
 
                             #region Calculate SQFT
@@ -132,9 +85,34 @@ namespace Falk_Plugins
 
                                 decimal totalSqFt = (noOfPanels * ((feet * 12) + inches) * width) / 144;
 
-                                targetEntity["tbs_totalsqft"] = Math.Round(totalSqFt, 2);
+                                targetEntity["tbs_totalsqft"] = Math.Round(totalSqFt);
                             }
-                            tracingService.Trace("SQFt");
+                            #endregion
+                        }
+
+                        else if (context.MessageName == CONST_UPDATE && context.Stage == PreOperation)
+                        {
+                            Entity PreUpdateImage = context.PreEntityImages["PreImage"];
+
+                            #region Fill Linear FT & Inch
+                            
+                                decimal feet = targetEntity.Contains("tbs_ft") ? targetEntity.GetAttributeValue<decimal>("tbs_ft") : PreUpdateImage.GetAttributeValue<decimal>("tbs_ft");
+                                decimal inches = targetEntity.Contains("tbs_in") ? targetEntity.GetAttributeValue<decimal>("tbs_in") : PreUpdateImage.GetAttributeValue<decimal>("tbs_in");
+
+                                string result = CalculateLinearFtInch(feet, inches);
+                                targetEntity["tbs_linearftinch"] = result;
+                            
+                            #endregion
+
+                            #region Calculate SQFT
+                           
+                                int noOfPanels = targetEntity.Contains("tbs_numberofpanels") ? targetEntity.GetAttributeValue<int>("tbs_numberofpanels") : PreUpdateImage.GetAttributeValue<int>("tbs_numberofpanels");
+                                decimal width = targetEntity.Contains("tbs_widthpanel") ? targetEntity.GetAttributeValue<decimal>("tbs_widthpanel") : PreUpdateImage.GetAttributeValue<decimal>("tbs_widthpanel");
+
+                                decimal totalSqFt = (noOfPanels * ((feet * 12) + inches) * width) / 144;
+
+                                targetEntity["tbs_totalsqft"] = Math.Round(totalSqFt);
+                            
                             #endregion
                         }
                     }
@@ -146,6 +124,51 @@ namespace Falk_Plugins
             }
         }
 
+        private string CalculateLinearFtInch(decimal feet, decimal inches)
+        {
+            int wholeFeet = (int)Math.Truncate(feet);
+            int wholeInches = (int)Math.Truncate(inches);
+
+            decimal fraction = inches - wholeInches;
+
+            int quarter = (int)Math.Round(fraction * 4);
+
+            string fractionText = "";
+
+            if (quarter == 4)
+            {
+                wholeInches++;
+                quarter = 0;
+            }
+
+            if (wholeInches == 12)
+            {
+                wholeFeet++;
+                wholeInches = 0;
+            }
+
+            switch (quarter)
+            {
+                case 1:
+                    fractionText = "1/4";
+                    break;
+                case 2:
+                    fractionText = "2/4";   // Change to "1/2" if preferred
+                    break;
+                case 3:
+                    fractionText = "3/4";
+                    break;
+            }
+
+            string result = $"{wholeFeet}' {wholeInches}";
+
+            if (!string.IsNullOrWhiteSpace(fractionText))
+                result += $" {fractionText}";
+
+            result += "\"";
+
+            return result;
+        }
 
         private void InitProperties(LocalPluginContext localcontext)
         {
