@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Falk_Plugins
 {
-    internal class LineItemPlugin : PluginBase
+    public class LineItemPlugin : PluginBase
     {
         public LineItemPlugin() : base(typeof(LineItemPlugin)) { }
 
@@ -89,23 +89,24 @@ namespace Falk_Plugins
                                 result += "\"";
 
                                 targetEntity["tbs_linearftinch"] = result;
-
                             }
+                            tracingService.Trace("linearftinch");
                             #endregion
 
                             #region Get Panel Width
                             if (targetEntity.Contains("tbs_opportunityproduct") && targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct") != null)
                             {
+                                tracingService.Trace("1");
                                 QueryExpression query = new QueryExpression("tbs_thickness");
                                 query.ColumnSet.AddColumn("tbs_visiblepanelwidth");
                                 LinkEntity oppProduct = query.AddLink("opportunityproduct", "tbs_thicknessid", "tbs_panelthickness");
                                 oppProduct.EntityAlias = "oppProduct";
-
                                 var LI = oppProduct.AddLink("tbs_lineitem", "opportunityproductid", "tbs_opportunityproduct");
                                 LI.EntityAlias = "LI";
 
                                 LI.LinkCriteria.AddCondition("tbs_lineitemid", ConditionOperator.Equal, targetEntity.Id);
                                 Entity thickness = service.RetrieveMultiple(query).Entities.FirstOrDefault();
+                                tracingService.Trace("2");
 
                                 if (thickness.Contains("tbs_visiblepanelwidth"))
                                 {
@@ -115,7 +116,10 @@ namespace Falk_Plugins
                                         targetEntity["tbs_widthpanel"] = width;
                                     }
                                 }
+                                tracingService.Trace("3");
+
                             }
+                            tracingService.Trace("width");
                             #endregion
 
                             #region Calculate SQFT
@@ -130,6 +134,7 @@ namespace Falk_Plugins
 
                                 targetEntity["tbs_totalsqft"] = Math.Round(totalSqFt, 2);
                             }
+                            tracingService.Trace("SQFt");
                             #endregion
                         }
                     }

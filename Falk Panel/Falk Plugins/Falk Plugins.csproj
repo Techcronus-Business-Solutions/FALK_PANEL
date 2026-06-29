@@ -167,7 +167,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="LineItemPlugin.cs" />
+    <Compile Include="Pricing Master\LineItemPlugin.cs" />
     <Compile Include="PluginBase.cs" />
     <Compile Include="Pricing Master\PricingMasterExteriorPlugin.cs" />
     <Compile Include="Pricing Master\PricingMasterInteriorPlugin.cs" />
