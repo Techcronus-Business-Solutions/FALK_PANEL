@@ -39,8 +39,24 @@ namespace Falk_Plugins.Pricing_Master
                             string panelThickness = GetLookupName(targetEntity, "tbs_panelthickness");
                             string exteriorFinish = GetLookupName(targetEntity, "tbs_exteriorfinish");
                             string exteriorGauge = GetLookupName(targetEntity, "tbs_exteriorgauge");
+                            string exteriorColorCategory = GetLookupName(targetEntity, "tbs_exteriorcolorcategory");
 
-                            string pricingMasterExteriorName = panelThickness + " " + exteriorFinish + " " + exteriorGauge;
+                            StringBuilder nameBuilder = new StringBuilder();
+
+                            if (!string.IsNullOrWhiteSpace(panelThickness))
+                                nameBuilder.Append(panelThickness);
+
+                            if (!string.IsNullOrWhiteSpace(exteriorFinish))
+                                nameBuilder.Append(" ").Append(exteriorFinish);
+
+                            if (!string.IsNullOrWhiteSpace(exteriorGauge))
+                                nameBuilder.Append(" ").Append(exteriorGauge);
+
+                            // Optional field
+                            if (!string.IsNullOrWhiteSpace(exteriorColorCategory))
+                                nameBuilder.Append(" ").Append(exteriorColorCategory);
+
+                            string pricingMasterExteriorName = nameBuilder.ToString().Trim();
 
                             tracingService.Trace(pricingMasterExteriorName);
                             targetEntity["tbs_name"] = pricingMasterExteriorName;

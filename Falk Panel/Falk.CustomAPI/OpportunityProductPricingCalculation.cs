@@ -34,55 +34,73 @@ namespace Falk.CustomAPI
                 var interiorFinish = GetInputRef("InteriorFinish");
                 var exteriorGauge = GetInputRef("ExteriorGauge");
                 var interiorGauge = GetInputRef("InteriorGauge");
-                var exteriorColor = GetInputRef("ExteriorColor");
-                var interiorColor = GetInputRef("InteriorColor");
+                var exteriorColor = GetInputRef("ExteriorColor", false);
+                var interiorColor = GetInputRef("InteriorColor", false);
+                bool interiorEmboss = GetInputBool("InteriorEmboss", false);
+                bool exteriorEmboss = GetInputBool("ExteriorEmboss", false);
 
-                var interiorColorCategory = GetColorCategory(interiorColor.Id);
-                var exteriorColorCategory = GetColorCategory(exteriorColor.Id);
+                #region Calculate Interior/Exterior Finish Price
+                var interiorConditions = new Dictionary<string, object>
+                {
+                    { "tbs_paneltype", product.Id },
+                    { "tbs_panelthickness", panelThickness.Id },
+                    { "tbs_interiorfinish", interiorFinish.Id },
+                    { "tbs_interiorgauge", interiorGauge.Id }
+                };
+
+                if (interiorColor != null)
+                {
+                    interiorConditions.Add("tbs_interiorcolorcategory", interiorColor.Id);
+                }
 
                 decimal interiorPrice = GetPrice(
                     "tbs_pricingmasterinterior",
                     "tbs_interiorprice",
-                    new Dictionary<string, object>
-                    {
-                        { "tbs_paneltype", product.Id },
-                        { "tbs_panelthickness", panelThickness.Id },
-                        { "tbs_interiorfinish", interiorFinish.Id },
-                        { "tbs_interiorgauge", interiorGauge.Id },
-                        { "tbs_interiorcolorcategory", interiorColorCategory.Value }
-                    },
+                    interiorConditions,
                     out bool interiorFound);
+
+                var exteriorConditions = new Dictionary<string, object>
+                {
+                    { "tbs_paneltype", product.Id },
+                    { "tbs_panelthickness", panelThickness.Id },
+                    { "tbs_exteriorfinish", exteriorFinish.Id },
+                    { "tbs_exteriorgauge", exteriorGauge.Id }
+                };
+
+                if (exteriorColor != null)
+                {
+                    exteriorConditions.Add("tbs_exteriorcolorcategory", exteriorColor.Id);
+                }
 
                 decimal exteriorPrice = GetPrice(
                     "tbs_pricingmasterexterior",
                     "tbs_exteriorprice",
-                    new Dictionary<string, object>
-                    {
-                        { "tbs_paneltype", product.Id },
-                        { "tbs_panelthickness", panelThickness.Id },
-                        { "tbs_exteriorfinish", exteriorFinish.Id },
-                        { "tbs_exteriorgauge", exteriorGauge.Id },
-                        { "tbs_exteriorcolorcategory", exteriorColorCategory.Value }
-                    },
+                    exteriorConditions,
                     out bool exteriorFound);
 
                 context.OutputParameters["InteriorPrice"] = new Money(interiorPrice);
                 context.OutputParameters["ExteriorPrice"] = new Money(exteriorPrice);
+                #endregion
 
-                //throw new InvalidPluginExecutionException(exteriorFinish.Id + " " + exteriorColor.Id + " " + exteriorGauge.Id + " Color Category: " + exteriorColorCategory.Value);
+                #region Calculate Interior/Exterior Emboss Price
+                decimal interiorEmbossPrice = 0;
+                decimal exteriorEmbossPrice = 0;
 
-                //List<string> errors = new List<string>();
+                if (!interiorEmboss)
+                {
+                    interiorEmbossPrice = GetEmbossPrice(panelThickness.Id);
+                }
 
-                //if (!interiorFound)
-                //    errors.Add("Interior pricing not found.");
+                if (!exteriorEmboss)
+                {
+                    exteriorEmbossPrice = GetEmbossPrice(panelThickness.Id);
+                }
 
-                //if (!exteriorFound)
-                //    errors.Add("Exterior pricing not found.");
+                context.OutputParameters["InteriorEmbossPrice"] = new Money(interiorEmbossPrice);
+                context.OutputParameters["ExteriorEmbossPrice"] = new Money(exteriorEmbossPrice);
+                #endregion
 
-                //if (errors.Any())
-                //{
-                //    throw new InvalidPluginExecutionException(string.Join(Environment.NewLine, errors));
-                //}                
+                //throw new InvalidPluginExecutionException(exteriorFinish.Id + " " + exteriorColor.Id + " " + exteriorGauge.Id + " Color Category: " + exteriorColorCategory.Value);                       
             }
             catch (Exception ex)
             {
@@ -91,15 +109,52 @@ namespace Falk.CustomAPI
             }
         }
 
-        private EntityReference GetInputRef(string parameterName)
+        private EntityReference GetInputRef(string parameterName, bool required = true)
         {
             if (!context.InputParameters.Contains(parameterName))
-                throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is missing.");
+            {
+                if (required)
+                    throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is missing.");
+
+                return null;
+            }
+
+            if (context.InputParameters[parameterName] == null)
+            {
+                if (required)
+                    throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is null.");
+
+                return null;
+            }
 
             if (!(context.InputParameters[parameterName] is EntityReference entityReference))
                 throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is invalid.");
 
             return entityReference;
+        }
+
+        private bool GetInputBool(string parameterName, bool required = true)
+        {
+            if (!context.InputParameters.Contains(parameterName))
+            {
+                if (required)
+                    throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is missing.");
+
+                return false;
+            }
+
+            if (context.InputParameters[parameterName] == null)
+            {
+                if (required)
+                    throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is null.");
+
+                return false;
+            }
+
+            if (!(context.InputParameters[parameterName] is bool value))
+                throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is invalid.");
+
+            return value;
         }
 
         private decimal GetPrice(string entityName, string priceField, Dictionary<string, object> conditions, out bool found)
@@ -126,19 +181,15 @@ namespace Falk.CustomAPI
             found = true;
             return record.GetAttributeValue<Money>(priceField)?.Value ?? 0;
         }
-        private OptionSetValue GetColorCategory(Guid colorId)
+
+        private decimal GetEmbossPrice(Guid panelThicknessId)
         {
-            Entity color = service.Retrieve(
-                "tbs_color",
-                colorId,
-                new ColumnSet("tbs_colorcategory"));
+            Entity thickness = service.Retrieve(
+                "tbs_thickness",
+                panelThicknessId,
+                new ColumnSet("tbs_embossingnoprice"));
 
-            OptionSetValue category = color.GetAttributeValue<OptionSetValue>("tbs_colorcategory");
-
-            if (category == null)
-                throw new InvalidPluginExecutionException("Color Category is missing.");
-
-            return category;
+            return thickness.GetAttributeValue<Money>("tbs_embossingnoprice")?.Value ?? 0;
         }
 
         private void InitProperties(LocalPluginContext localcontext)

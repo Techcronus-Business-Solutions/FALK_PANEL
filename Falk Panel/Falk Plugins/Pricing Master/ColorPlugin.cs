@@ -1,4 +1,6 @@
 ﻿using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Collections.Generic;
@@ -8,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace Falk_Plugins.Pricing_Master
 {
-    public class ThicknessPlugin:PluginBase
+    public class ColorPlugin : PluginBase
     {
-        public ThicknessPlugin():base(typeof(ThicknessPlugin)) { }
+        public ColorPlugin() : base(typeof(ColorPlugin)) { }
 
         #region Private Variables
         private IOrganizationService service { get; set; }
@@ -31,50 +33,53 @@ namespace Falk_Plugins.Pricing_Master
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
                 {
                     targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
-                    if (targetEntity.LogicalName == "tbs_thickness")
+                    if (targetEntity.LogicalName == "tbs_color")
                     {
                         // ---------------- CREATE (PreOperation) ----------------
                         if (context.Stage == PreOperation && context.MessageName == CONST_CREATE)
                         {
-                            string panelThickness = GetLookupName(targetEntity, "tbs_product");
-                            decimal thicknessNumber = targetEntity.Contains("tbs_thicknessnumber") ? targetEntity.GetAttributeValue<decimal>("tbs_thicknessnumber") : 0;
+                            string colorName = targetEntity.GetAttributeValue<string>("tbs_name");
 
-                            string thicknessName = panelThickness + " " + thicknessNumber.ToString();
+                            OptionSetValue colorCategory = targetEntity.GetAttributeValue<OptionSetValue>("tbs_colorcategory");
 
-                            tracingService.Trace(thicknessName);
-                            targetEntity["tbs_name"] = thicknessName;
+                            if (colorCategory != null)
+                            {
+                                // Get Option Set Label
+                                string colorCategoryLabel = GetOptionSetLabel(
+                                    "tbs_color",
+                                    "tbs_colorcategory",
+                                    colorCategory.Value);
+
+                                // Set combined value
+                                targetEntity["tbs_name"] = $"{colorName} {colorCategoryLabel}";
+                            }
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                tracingService.Trace("ThicknessPlugin Exception: {0}", ex.ToString());
-                throw new InvalidPluginExecutionException($"Error in ThicknessPlugin: {ex.Message}");
+                tracingService.Trace("ColorPlugin Exception: {0}", ex.ToString());
+                throw new InvalidPluginExecutionException($"Error in ColorPlugin: {ex.Message}");
             }
         }
 
-        private string GetLookupName(Entity entity, string attributeName)
+        private string GetOptionSetLabel(string entityName, string attributeName, int optionValue)
         {
-            if (!entity.Contains(attributeName))
-                return string.Empty;
+            RetrieveAttributeRequest request = new RetrieveAttributeRequest
+            {
+                EntityLogicalName = entityName,
+                LogicalName = attributeName,
+                RetrieveAsIfPublished = true
+            };
 
-            EntityReference lookup = entity.GetAttributeValue<EntityReference>(attributeName);
+            RetrieveAttributeResponse response = (RetrieveAttributeResponse)service.Execute(request);
 
-            if (lookup == null)
-                return string.Empty;
+            EnumAttributeMetadata metadata = (EnumAttributeMetadata)response.AttributeMetadata;
 
-            // If Name is already available, use it
-            if (!string.IsNullOrWhiteSpace(lookup.Name))
-                return lookup.Name;
+            var option = metadata.OptionSet.Options.FirstOrDefault(o => o.Value == optionValue);
 
-            // Otherwise retrieve the record
-            Entity record = service.Retrieve(
-                lookup.LogicalName,
-                lookup.Id,
-                new ColumnSet("name"));
-
-            return record.GetAttributeValue<string>("name") ?? string.Empty;
+            return option?.Label?.UserLocalizedLabel?.Label ?? string.Empty;
         }
 
         private void InitProperties(LocalPluginContext localcontext)
