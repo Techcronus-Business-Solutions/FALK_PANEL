@@ -12,25 +12,19 @@ if (typeof $ === "undefined") {
 Falk.SalesLifecycleProcess = {
 
     OnLoad: function (executionContext) {
-
         var formContext = executionContext.getFormContext();
+
         // Register the PreStageChange event
         formContext.data.process.addOnPreStageChange(Falk.SalesLifecycleProcess.PreStageChange);
     },
 
-    OnChange: function (executionContext) {
-
-    },
-
     PreStageChange: function (executionContext) {
-
         var eventArgs = executionContext.getEventArgs();
         var formContext = executionContext.getFormContext();
+
         // Check whether user is moving backwards
         if (eventArgs.getDirection() === "Previous") {
-
-            eventArgs.preventDefault();
-            
+            eventArgs.preventDefault();            
 
             formContext.ui.setFormNotification(
                 "Moving to a previous stage is not allowed",
