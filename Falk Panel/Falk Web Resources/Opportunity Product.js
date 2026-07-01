@@ -44,13 +44,13 @@ Falk.OpportunityProduct = {
 
         formContext.getControl("tbs_exteriorcolor")
             .addPreSearch(function () {
-            Falk.OpportunityProduct.FilterExteriorColorLookup(formContext);
-        });
+                Falk.OpportunityProduct.FilterExteriorColorLookup(formContext);
+            });
 
         formContext.getControl("tbs_interiorcolor")
             .addPreSearch(function () {
-            Falk.OpportunityProduct.FilterInteriorColorLookup(formContext);
-        });
+                Falk.OpportunityProduct.FilterInteriorColorLookup(formContext);
+            });
 
         formContext.getAttribute("productid")
             .addOnChange(async function () {
@@ -82,6 +82,11 @@ Falk.OpportunityProduct = {
 
                 formContext.getAttribute("tbs_exteriorcolor").setValue(null);
                 formContext.getAttribute("tbs_interiorcolor").setValue(null);
+            });
+
+        formContext.getAttribute("tbs_panelthickness")
+            .addOnChange(async function () {
+                await Falk.OpportunityProduct.SetFieldsFromThickness(formContext);
             });
     },
 
@@ -432,4 +437,25 @@ Falk.OpportunityProduct = {
             console.error(error.message);
         }
     },
+
+    SetFieldsFromThickness: async function (formContext) {
+        const thickness = formContext.getAttribute("tbs_panelthickness")?.getValue();
+        if (!thickness) {
+            formContext.getAttribute("tbs_stackheight").setValue(null);
+            formContext.getAttribute("tbs_panelsperstack").setValue(null);
+            formContext.getAttribute("tbs_widthpanel").setValue(null);
+            return;
+        }
+
+        const thicknessId = thickness[0].id.replace(/[{}]/g, "");
+        const thicknessRecord = await Xrm.WebApi.retrieveRecord("tbs_thickness", thicknessId, "?$select=tbs_stackheight,tbs_maxpanelperstack,tbs_visiblepanelwidth");
+
+        const stackHeight = thicknessRecord["tbs_stackheight"];
+        const panelsPerStack = thicknessRecord["tbs_maxpanelperstack"];
+        const widthPanel = thicknessRecord["tbs_visiblepanelwidth"];
+
+        formContext.getAttribute("tbs_stackheight").setValue(stackHeight);
+        formContext.getAttribute("tbs_panelsperstack").setValue(panelsPerStack);
+        formContext.getAttribute("tbs_widthpanel").setValue(widthPanel);
+    }
 }
