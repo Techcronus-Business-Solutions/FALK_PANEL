@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Lead.js" />
+    <Content Include="Opportunity Product.js" />
     <Content Include="SalesLifecycleProcess.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
