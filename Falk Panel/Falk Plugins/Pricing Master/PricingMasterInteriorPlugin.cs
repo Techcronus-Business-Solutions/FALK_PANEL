@@ -39,9 +39,24 @@ namespace Falk_Plugins.Pricing_Master
                             string panelThickness = GetLookupName(targetEntity, "tbs_panelthickness");
                             string interiorFinish = GetLookupName(targetEntity, "tbs_interiorfinish");
                             string interiorGauge = GetLookupName(targetEntity, "tbs_interiorgauge");
+                            string interiorColorCategory = GetLookupName(targetEntity, "tbs_interiorcolorcategory");
 
+                            StringBuilder nameBuilder = new StringBuilder();
 
-                            string pricingMasterInteriorName = panelThickness + " " + interiorFinish + " " + interiorGauge;
+                            if (!string.IsNullOrWhiteSpace(panelThickness))
+                                nameBuilder.Append(panelThickness);
+
+                            if (!string.IsNullOrWhiteSpace(interiorFinish))
+                                nameBuilder.Append(" ").Append(interiorFinish);
+
+                            if (!string.IsNullOrWhiteSpace(interiorGauge))
+                                nameBuilder.Append(" ").Append(interiorGauge);
+
+                            // Optional field
+                            if (!string.IsNullOrWhiteSpace(interiorColorCategory))
+                                nameBuilder.Append(" ").Append(interiorColorCategory);
+
+                            string pricingMasterInteriorName = nameBuilder.ToString().Trim();
 
                             tracingService.Trace(pricingMasterInteriorName);
                             targetEntity["tbs_name"] = pricingMasterInteriorName;

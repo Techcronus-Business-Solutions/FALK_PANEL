@@ -14,14 +14,17 @@ Falk.OpportunityProductRibbon = {
     CalculateLineItemPricing: function (primaryControl) {
         var formContext = primaryControl;
 
-        var panelThickness = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_panelthickness", "tbs_thickness");
-        var exteriorFinish = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_exteriorfinish", "tbs_finish");
-        var interiorFinish = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_interiorfinish", "tbs_finish");
-        var exteriorGauge = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_exteriorgauge", "tbs_gauge");
-        var interiorGauge = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_interiorgauge", "tbs_gauge");
-        var exteriorColor = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_exteriorcolor", "tbs_color");
-        var interiorColor = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_interiorcolor", "tbs_color");
-        var productId = Falk.OpportunityProductRibbon.getLookup(formContext, "productid", "product");
+        let panelThickness = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_panelthickness", "tbs_thickness");
+        let exteriorFinish = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_exteriorfinish", "tbs_finish");
+        let interiorFinish = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_interiorfinish", "tbs_finish");
+        let exteriorGauge = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_exteriorgauge", "tbs_gauge");
+        let interiorGauge = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_interiorgauge", "tbs_gauge");
+        let exteriorColor = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_exteriorcolor", "tbs_color");
+        let interiorColor = Falk.OpportunityProductRibbon.getLookup(formContext, "tbs_interiorcolor", "tbs_color");
+        let productId = Falk.OpportunityProductRibbon.getLookup(formContext, "productid", "product");
+
+        let exteriorEmboss = formContext.getAttribute("tbs_exterioremboss").getValue();
+        let interiorEmboss = formContext.getAttribute("tbs_interioremboss").getValue();
 
         if (!panelThickness || !exteriorFinish || !interiorFinish || !exteriorGauge ||
             !interiorGauge || !exteriorColor || !interiorColor) {
@@ -40,6 +43,8 @@ Falk.OpportunityProductRibbon = {
             InteriorGauge: { "@odata.type": "Microsoft.Dynamics.CRM.tbs_gauge", tbs_gaugeid: interiorGauge.id },
             ExteriorColor: { "@odata.type": "Microsoft.Dynamics.CRM.tbs_color", tbs_colorid: exteriorColor.id },
             InteriorColor: { "@odata.type": "Microsoft.Dynamics.CRM.tbs_color", tbs_colorid: interiorColor.id },
+            ExteriorEmboss: exteriorEmboss,
+            InteriorEmboss: interiorEmboss,
 
             getMetadata: function () {
                 return {
@@ -53,7 +58,9 @@ Falk.OpportunityProductRibbon = {
                         InteriorGauge: { typeName: "mscrm.tbs_gauge", structuralProperty: 5 },
                         ExteriorColor: { typeName: "mscrm.tbs_color", structuralProperty: 5 },
                         InteriorColor: { typeName: "mscrm.tbs_color", structuralProperty: 5 },
-                        Product: { typeName: "mscrm.product", structuralProperty: 5 }
+                        Product: { typeName: "mscrm.product", structuralProperty: 5 },
+                        ExteriorEmboss: { typeName: "Edm.Boolean", structuralProperty: 1 },
+                        InteriorEmboss: { typeName: "Edm.Boolean", structuralProperty: 1 }
                     },
                     operationType: 0, operationName: "tbs_FalkCustomAPIOpportunityProductPricingCalculation"
                 };
@@ -75,6 +82,13 @@ Falk.OpportunityProductRibbon = {
             .then(function (result) {
                 formContext.getAttribute("tbs_interiorfinishprice").setValue(result.InteriorPrice);
                 formContext.getAttribute("tbs_exteriorfinishprice").setValue(result.ExteriorPrice);
+                formContext.getAttribute("tbs_ribbingmodelsweatherprice").setValue(0);
+                formContext.getAttribute("tbs_ribbingmodeusinteriorprice").setValue(0);
+                formContext.getAttribute("tbs_embossinglsweatherprice").setValue(result.ExteriorEmbossPrice);
+                formContext.getAttribute("tbs_embossingusinteriorprice").setValue(result.InteriorEmbossPrice);
+
+                let TotalPropertyPrice = result.InteriorPrice + result.ExteriorPrice + result.ExteriorEmbossPrice + result.InteriorEmbossPrice;
+                formContext.getAttribute("tbs_totalpropertiesprice").setValue(TotalPropertyPrice);
             })
             .catch(function (error) {
                 formContext.ui.setFormNotification(
@@ -89,7 +103,7 @@ Falk.OpportunityProductRibbon = {
             })
             .finally(function () {
                 Xrm.Utility.closeProgressIndicator();
-            });  
+            });
     },
 
     getLookup: function (formContext, fieldName, entityType) {
