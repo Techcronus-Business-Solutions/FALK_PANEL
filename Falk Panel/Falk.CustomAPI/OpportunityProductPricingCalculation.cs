@@ -37,8 +37,10 @@ namespace Falk.CustomAPI
                 var interiorGauge = GetInputRef("InteriorGauge");
                 var exteriorColor = GetInputRef("ExteriorColor", false);
                 var interiorColor = GetInputRef("InteriorColor", false);
-                bool interiorEmboss = GetInputBool("InteriorEmboss", false);
-                bool exteriorEmboss = GetInputBool("ExteriorEmboss", false);
+                int? interiorEmboss = GetInputChoice("InteriorEmboss");
+                int? exteriorEmboss = GetInputChoice("ExteriorEmboss");
+
+                //throw new InvalidPluginExecutionException(exteriorFinish.Name + " " + exteriorColor.Name + " " + exteriorGauge.Name + " Color Category: " + interiorColor.Name + " tier: " + tier.Name + " exterior EMboss: " + exteriorEmboss + " Interior Emboss: " + interiorEmboss);
 
                 #region Calculate Interior/Exterior Finish Price
                 var interiorConditions = new Dictionary<string, object>
@@ -87,12 +89,12 @@ namespace Falk.CustomAPI
                 decimal interiorEmbossPrice = 0;
                 decimal exteriorEmbossPrice = 0;
 
-                if (!interiorEmboss)
+                if (interiorEmboss == 1) // No
                 {
                     interiorEmbossPrice = GetEmbossPrice(panelThickness.Id);
                 }
 
-                if (!exteriorEmboss)
+                if (exteriorEmboss == 1) // No
                 {
                     exteriorEmbossPrice = GetEmbossPrice(panelThickness.Id);
                 }
@@ -112,9 +114,9 @@ namespace Falk.CustomAPI
 
                 Entity tierRecord = service.Retrieve("tbs_tier", tier.Id, new ColumnSet("tbs_multiplier"));
 
-                decimal multiplier = tierRecord.GetAttributeValue<decimal>("tbs_multiplier");
+                decimal multiplier = Convert.ToDecimal(tierRecord.GetAttributeValue<int>("tbs_multiplier"));
 
-                Entity thickness = service.Retrieve("tbs_panelthickness", panelThickness.Id, new ColumnSet("tbs_baseprice"));
+                Entity thickness = service.Retrieve("tbs_thickness", panelThickness.Id, new ColumnSet("tbs_baseprice"));
 
                 Money basePriceMoney = thickness.GetAttributeValue<Money>("tbs_baseprice");
 
@@ -124,7 +126,7 @@ namespace Falk.CustomAPI
                     return;
                 }
 
-                decimal calculatedPrice = (basePriceMoney.Value * multiplier) / 100;
+                decimal calculatedPrice = (basePriceMoney.Value * multiplier) / 100m;
                 context.OutputParameters["CalculatedBasePrice"] = new Money(calculatedPrice);
                 #endregion
 
@@ -137,10 +139,7 @@ namespace Falk.CustomAPI
                 #region Calculate Line Total
                 #endregion
 
-                #endregion
-
-
-                //throw new InvalidPluginExecutionException(exteriorFinish.Id + " " + exteriorColor.Id + " " + exteriorGauge.Id + " Color Category: " + exteriorColorCategory.Value);                       
+                #endregion                
             }
             catch (Exception ex)
             {
@@ -173,25 +172,20 @@ namespace Falk.CustomAPI
             return entityReference;
         }
 
-        private bool GetInputBool(string parameterName, bool required = true)
+        private int? GetInputChoice(string parameterName, bool required = true)
         {
             if (!context.InputParameters.Contains(parameterName))
             {
                 if (required)
                     throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is missing.");
 
-                return false;
+                return null;
             }
 
             if (context.InputParameters[parameterName] == null)
-            {
-                if (required)
-                    throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is null.");
+                return null;
 
-                return false;
-            }
-
-            if (!(context.InputParameters[parameterName] is bool value))
+            if (!(context.InputParameters[parameterName] is int value))
                 throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is invalid.");
 
             return value;
