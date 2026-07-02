@@ -88,6 +88,14 @@ Falk.OpportunityProduct = {
             .addOnChange(async function () {
                 await Falk.OpportunityProduct.SetFieldsFromThickness(formContext);
             });
+
+        formContext.getAttribute("tbs_interiorfinish")
+            ?.addOnChange(Falk.OpportunityProduct.FinishOnChange);
+
+        formContext.getAttribute("tbs_exteriorfinish")
+            ?.addOnChange(Falk.OpportunityProduct.FinishOnChange);
+
+        await Falk.OpportunityProduct.FinishOnChange(executionContext);
     },
 
     addExteriorFinishView: function (formContext) {
@@ -102,10 +110,6 @@ Falk.OpportunityProduct = {
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
             "  <entity name='tbs_finish'>" +
             "    <attribute name='tbs_name' />" +
-            "    <attribute name='tbs_type' />" +
-            "    <filter>" +
-            "       <condition attribute='tbs_type' operator='eq' value='1' />" +
-            "    </filter>" +
             "    <order attribute='tbs_name' />" +
             "    <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
             "       <filter>" +
@@ -119,7 +123,6 @@ Falk.OpportunityProduct = {
             "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
             "   <row name='result' id='tbs_finishid'>" +
             "      <cell name='tbs_name' width='250' />" +
-            "      <cell name='tbs_type' width='120' />" +
             "   </row>" +
             "</grid>";
 
@@ -145,10 +148,6 @@ Falk.OpportunityProduct = {
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
             "  <entity name='tbs_finish'>" +
             "    <attribute name='tbs_name' />" +
-            "    <attribute name='tbs_type' />" +
-            "    <filter>" +
-            "       <condition attribute='tbs_type' operator='eq' value='0' />" +
-            "    </filter>" +
             "    <order attribute='tbs_name' />" +
             "    <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
             "       <filter>" +
@@ -162,7 +161,6 @@ Falk.OpportunityProduct = {
             "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
             "   <row name='result' id='tbs_finishid'>" +
             "      <cell name='tbs_name' width='250' />" +
-            "      <cell name='tbs_type' width='120' />" +
             "   </row>" +
             "</grid>";
 
@@ -188,10 +186,6 @@ Falk.OpportunityProduct = {
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
             "  <entity name='tbs_gauge'>" +
             "    <attribute name='tbs_name' />" +
-            "    <attribute name='tbs_type' />" +
-            "    <filter>" +
-            "       <condition attribute='tbs_type' operator='eq' value='1' />" +
-            "    </filter>" +
             "    <order attribute='tbs_name' />" +
             "    <link-entity name='tbs_gauge_product' from='tbs_gaugeid' to='tbs_gaugeid' link-type='inner'>" +
             "       <filter>" +
@@ -205,7 +199,6 @@ Falk.OpportunityProduct = {
             "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
             "   <row name='result' id='tbs_gaugeid'>" +
             "      <cell name='tbs_name' width='250' />" +
-            "      <cell name='tbs_type' width='120' />" +
             "   </row>" +
             "</grid>";
 
@@ -231,10 +224,6 @@ Falk.OpportunityProduct = {
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
             "  <entity name='tbs_gauge'>" +
             "    <attribute name='tbs_name' />" +
-            "    <attribute name='tbs_type' />" +
-            "    <filter>" +
-            "       <condition attribute='tbs_type' operator='eq' value='0' />" +
-            "    </filter>" +
             "    <order attribute='tbs_name' />" +
             "    <link-entity name='tbs_gauge_product' from='tbs_gaugeid' to='tbs_gaugeid' link-type='inner'>" +
             "       <filter>" +
@@ -248,7 +237,6 @@ Falk.OpportunityProduct = {
             "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
             "   <row name='result' id='tbs_gaugeid'>" +
             "      <cell name='tbs_name' width='250' />" +
-            "      <cell name='tbs_type' width='120' />" +
             "   </row>" +
             "</grid>";
 
@@ -274,10 +262,6 @@ Falk.OpportunityProduct = {
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
             "  <entity name='tbs_profile'>" +
             "    <attribute name='tbs_name' />" +
-            "    <attribute name='tbs_type' />" +
-            "    <filter>" +
-            "       <condition attribute='tbs_type' operator='eq' value='1' />" +
-            "    </filter>" +
             "    <order attribute='tbs_name' />" +
             "    <link-entity name='tbs_profile_product' from='tbs_profileid' to='tbs_profileid' link-type='inner'>" +
             "       <filter>" +
@@ -291,7 +275,6 @@ Falk.OpportunityProduct = {
             "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
             "   <row name='result' id='tbs_profileid'>" +
             "      <cell name='tbs_name' width='250' />" +
-            "      <cell name='tbs_type' width='120' />" +
             "   </row>" +
             "</grid>";
 
@@ -317,10 +300,6 @@ Falk.OpportunityProduct = {
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
             "  <entity name='tbs_profile'>" +
             "    <attribute name='tbs_name' />" +
-            "    <attribute name='tbs_type' />" +
-            "    <filter>" +
-            "       <condition attribute='tbs_type' operator='eq' value='0' />" +
-            "    </filter>" +
             "    <order attribute='tbs_name' />" +
             "    <link-entity name='tbs_profile_product' from='tbs_profileid' to='tbs_profileid' link-type='inner'>" +
             "       <filter>" +
@@ -334,7 +313,6 @@ Falk.OpportunityProduct = {
             "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
             "   <row name='result' id='tbs_profileid'>" +
             "      <cell name='tbs_name' width='250' />" +
-            "      <cell name='tbs_type' width='120' />" +
             "   </row>" +
             "</grid>";
 
@@ -362,7 +340,6 @@ Falk.OpportunityProduct = {
             "<filter type='and'>" +
             "<condition attribute='tbs_product' operator='eq' value='" + productId + "' />" +
             "<condition attribute='tbs_finish' operator='eq' value='" + finishId + "' />" +
-            "<condition attribute='tbs_type' operator='eq' value='1' />" +
             "</filter>";
 
         formContext.getControl("tbs_exteriorcolor").addCustomFilter(filter, "tbs_color");
@@ -382,7 +359,6 @@ Falk.OpportunityProduct = {
             "<filter type='and'>" +
             "<condition attribute='tbs_product' operator='eq' value='" + productId + "' />" +
             "<condition attribute='tbs_finish' operator='eq' value='" + finishId + "' />" +
-            "<condition attribute='tbs_type' operator='eq' value='0' />" +
             "</filter>";
 
         formContext.getControl("tbs_interiorcolor").addCustomFilter(filter, "tbs_color");
@@ -436,6 +412,59 @@ Falk.OpportunityProduct = {
         catch (error) {
             console.error(error.message);
         }
+    },
+
+    FinishOnChange: async function (executionContext) {
+        const formContext = executionContext.getFormContext();
+
+        const hpsFinishId = await Falk.OpportunityProduct.GetEnvironmentVariableValue("tbs_FalkHPSFinishId");
+
+        if (!hpsFinishId)
+            return;
+
+        const interiorFinish = formContext.getAttribute("tbs_interiorfinish")?.getValue();
+        const exteriorFinish = formContext.getAttribute("tbs_exteriorfinish")?.getValue();
+
+        const normalizeGuid = (id) => id.replace(/[{}]/g, "").toLowerCase();
+
+        const envId = normalizeGuid(hpsFinishId);
+
+        // Interior
+        if (interiorFinish && normalizeGuid(interiorFinish[0].id) === envId) {
+            formContext.getAttribute("tbs_interioremboss").setValue(2); //HPS
+        }
+
+        // Exterior
+        if (exteriorFinish && normalizeGuid(exteriorFinish[0].id) === envId) {
+            formContext.getAttribute("tbs_exterioremboss").setValue(2); //HPS
+        }
+    },
+
+    GetEnvironmentVariableValue: async function (schemaName) {
+        const defResult = await Xrm.WebApi.retrieveMultipleRecords(
+            "environmentvariabledefinition",
+            `?$select=environmentvariabledefinitionid,defaultvalue&$filter=schemaname eq '${schemaName}'`
+        );
+        if (!defResult.entities || defResult.entities.length === 0) {
+            console.warn(
+                `No EnvironmentVariableDefinition found for schema '${schemaName}'`
+            );
+            return null;
+        }
+        const def = defResult.entities[0];
+        const definitionId = def.environmentvariabledefinitionid;
+        const defaultValue = def.defaultvalue;
+
+        // Query the value entity for the current environment override
+        const valResult = await Xrm.WebApi.retrieveMultipleRecords(
+            "environmentvariablevalue",
+            `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definitionId}`
+        );
+        if (valResult.entities && valResult.entities.length > 0) {
+            return valResult.entities[0].value;
+        }
+        // If no override exists, fall back to defaultValue
+        return defaultValue;
     },
 
     SetFieldsFromThickness: async function (formContext) {

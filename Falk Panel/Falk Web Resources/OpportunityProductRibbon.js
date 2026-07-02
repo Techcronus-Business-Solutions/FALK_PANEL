@@ -59,8 +59,8 @@ Falk.OpportunityProductRibbon = {
                         ExteriorColor: { typeName: "mscrm.tbs_color", structuralProperty: 5 },
                         InteriorColor: { typeName: "mscrm.tbs_color", structuralProperty: 5 },
                         Product: { typeName: "mscrm.product", structuralProperty: 5 },
-                        ExteriorEmboss: { typeName: "Edm.Boolean", structuralProperty: 1 },
-                        InteriorEmboss: { typeName: "Edm.Boolean", structuralProperty: 1 }
+                        ExteriorEmboss: { typeName: "Edm.Int32", structuralProperty: 1 },
+                        InteriorEmboss: { typeName: "Edm.Int32", structuralProperty: 1 }
                     },
                     operationType: 0, operationName: "tbs_FalkCustomAPIOpportunityProductPricingCalculation"
                 };
