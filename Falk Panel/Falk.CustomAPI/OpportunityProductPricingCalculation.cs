@@ -30,6 +30,7 @@ namespace Falk.CustomAPI
             {
                 var product = GetInputRef("Product");
                 var panelThickness = GetInputRef("PanelThickness");
+                var tier = GetInputRef("PriceLevelTier");
                 var exteriorFinish = GetInputRef("ExteriorFinish");
                 var interiorFinish = GetInputRef("InteriorFinish");
                 var exteriorGauge = GetInputRef("ExteriorGauge");
@@ -99,6 +100,45 @@ namespace Falk.CustomAPI
                 context.OutputParameters["InteriorEmbossPrice"] = new Money(interiorEmbossPrice);
                 context.OutputParameters["ExteriorEmbossPrice"] = new Money(exteriorEmbossPrice);
                 #endregion
+
+                #region Set Total Pricing
+
+                #region Calculate Base Price
+                if (panelThickness == null || tier == null)
+                {
+                    //target["tbs_baseprice"] = null;
+                    return;
+                }
+
+                Entity tierRecord = service.Retrieve("tbs_tier", tier.Id, new ColumnSet("tbs_multiplier"));
+
+                decimal multiplier = tierRecord.GetAttributeValue<decimal>("tbs_multiplier");
+
+                Entity thickness = service.Retrieve("tbs_panelthickness", panelThickness.Id, new ColumnSet("tbs_baseprice"));
+
+                Money basePriceMoney = thickness.GetAttributeValue<Money>("tbs_baseprice");
+
+                if (basePriceMoney == null)
+                {
+                    //target["tbs_baseprice"] = null;
+                    return;
+                }
+
+                decimal calculatedPrice = (basePriceMoney.Value * multiplier) / 100;
+                context.OutputParameters["CalculatedBasePrice"] = new Money(calculatedPrice);
+                #endregion
+
+                #region Calculate Small Order Upcharge
+                #endregion
+
+                #region Calculate Price per unit
+                #endregion
+
+                #region Calculate Line Total
+                #endregion
+
+                #endregion
+
 
                 //throw new InvalidPluginExecutionException(exteriorFinish.Id + " " + exteriorColor.Id + " " + exteriorGauge.Id + " Color Category: " + exteriorColorCategory.Value);                       
             }
