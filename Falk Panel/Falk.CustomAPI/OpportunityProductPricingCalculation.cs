@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Falk.CustomAPI
 {
-    public class OpportunityProductPricingCalculation : PluginBase
+    public class OpportunityProductPricingCalculation : CustomAPIBase
     {
         public OpportunityProductPricingCalculation() : base(typeof(OpportunityProductPricingCalculation)) { }
 

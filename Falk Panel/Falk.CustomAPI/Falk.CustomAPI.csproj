@@ -127,7 +127,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="OpportunityProductPricingCalculation.cs" />
-    <Compile Include="PluginBase.cs" />
+    <Compile Include="CustomAPIBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

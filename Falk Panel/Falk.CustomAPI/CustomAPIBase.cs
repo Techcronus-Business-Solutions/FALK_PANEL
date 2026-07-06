@@ -13,7 +13,7 @@ namespace Falk.CustomAPI
     /// <summary>
     /// Base class for all plug-in classes.
     /// </summary>    
-    public abstract class PluginBase : IPlugin
+    public abstract class CustomAPIBase : IPlugin
     {
         protected const string CONST_TARGETENTITY = "Target";
         /// <summary>
@@ -135,10 +135,10 @@ namespace Falk.CustomAPI
         protected string ChildClassName { get; private set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="PluginBase"/> class.
+        /// Initializes a new instance of the <see cref="CustomAPIBase"/> class.
         /// </summary>
         /// <param name="childClassName">The <see cref=" cred="Type"/> of the derived class.</param>
-        internal PluginBase(Type childClassName)
+        internal CustomAPIBase(Type childClassName)
         {
             ChildClassName = childClassName.ToString();
         }
