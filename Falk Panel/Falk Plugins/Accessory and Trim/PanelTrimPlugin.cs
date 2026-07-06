@@ -41,7 +41,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
                             if (trimRef != null && oppProductRef != null)
                             {
-                                Entity trim = service.Retrieve("tbs_accessory", trimRef.Id, new ColumnSet("tbs_unit", "tbs_price"));
+                                Entity trim = service.Retrieve("tbs_trim", trimRef.Id, new ColumnSet("tbs_unit", "tbs_price"));
                                 Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("tbs_priceleveltier"));
 
                                 Money unitPrice = trim.Contains("tbs_price") ? trim.GetAttributeValue<Money>("tbs_price") : new Money(0);
