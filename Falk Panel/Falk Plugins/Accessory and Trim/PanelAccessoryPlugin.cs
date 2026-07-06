@@ -6,11 +6,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Falk_Plugins
+namespace Falk_Plugins.Accessory_and_Trim
 {
-    public class PanelTrimPlugin : PluginBase
+    public class PanelAccessoryPlugin : PluginBase
     {
-        public PanelTrimPlugin() : base(typeof(PanelTrimPlugin)) { }
+        public PanelAccessoryPlugin() : base(typeof(PanelAccessoryPlugin)) { }
 
         #region Private Variables
         private IOrganizationService service { get; set; }
@@ -31,35 +31,35 @@ namespace Falk_Plugins
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
                 {
                     targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
-                    if (targetEntity.LogicalName == "tbs_opppaneltrim")
+                    if (targetEntity.LogicalName == "tbs_opppanelaccessory")
                     {
                         // ---------------- CREATE (PreOperation) ----------------
                         if (context.Stage == PreOperation && context.MessageName == CONST_CREATE)
                         {
-                            EntityReference trimRef = targetEntity.Contains("tbs_trim") ? targetEntity.GetAttributeValue<EntityReference>("tbs_trim") : null;
+                            EntityReference accessoryRef = targetEntity.Contains("tbs_accessory") ? targetEntity.GetAttributeValue<EntityReference>("tbs_accessory") : null;
                             EntityReference oppProductRef = targetEntity.Contains("tbs_opportunityproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct") : null;
 
-                            if (trimRef != null && oppProductRef != null)
+                            if (accessoryRef != null && oppProductRef != null)
                             {
-                                Entity trim = service.Retrieve("tbs_accessory", trimRef.Id, new ColumnSet("tbs_unit", "tbs_price"));
+                                Entity accessory = service.Retrieve("tbs_accessory", accessoryRef.Id, new ColumnSet("tbs_unit", "tbs_price"));
                                 Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("tbs_priceleveltier"));
 
-                                Money unitPrice = trim.Contains("tbs_price") ? trim.GetAttributeValue<Money>("tbs_price") : new Money(0);
+                                Money unitPrice = accessory.Contains("tbs_price") ? accessory.GetAttributeValue<Money>("tbs_price") : new Money(0);
 
-                                targetEntity["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
+                                targetEntity["tbs_unit"] = accessory.Contains("tbs_unit") ? accessory.GetAttributeValue<EntityReference>("tbs_unit") : null;
                                 targetEntity["tbs_unitprice"] = unitPrice;
 
-                                EntityReference tierRef = opportunityProduct.Contains("tbs_priceleveltier") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_priceleveltier") : null;
+                                //EntityReference tierRef = opportunityProduct.Contains("tbs_priceleveltier") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_priceleveltier") : null;
 
-                                if (tierRef != null)
-                                {
-                                    Entity tier = service.Retrieve("tbs_tier", tierRef.Id, new ColumnSet("tbs_multiplier"));
+                                //if (tierRef != null)
+                                //{
+                                //    Entity tier = service.Retrieve("tbs_tier", tierRef.Id, new ColumnSet("tbs_multiplier"));
 
-                                    int tierMultiplier = tier.Contains("tbs_multiplier") ? tier.GetAttributeValue<int>("tbs_multiplier") : 0;
+                                //    int tierMultiplier = tier.Contains("tbs_multiplier") ? tier.GetAttributeValue<int>("tbs_multiplier") : 0;
 
-                                    decimal totalPrice = unitPrice.Value * tierMultiplier;
-                                    targetEntity["tbs_totalprice"] = new Money(totalPrice);
-                                }
+                                //    decimal totalPrice = unitPrice.Value * tierMultiplier;
+                                //    targetEntity["tbs_totalprice"] = new Money(totalPrice);
+                                //}
                             }
                         }
                     }
@@ -67,8 +67,8 @@ namespace Falk_Plugins
             }
             catch (Exception ex)
             {
-                tracingService.Trace("TrimPlugin Exception: {0}", ex.ToString());
-                throw new InvalidPluginExecutionException($"Error in TrimPlugin: {ex.Message}");
+                tracingService.Trace("AccessoryPlugin Exception: {0}", ex.ToString());
+                throw new InvalidPluginExecutionException($"Error in AccessoryPlugin: {ex.Message}");
             }
         }
 
