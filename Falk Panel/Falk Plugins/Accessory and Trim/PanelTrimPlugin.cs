@@ -117,10 +117,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             {
                 decimal packagingTotal = basePrice * quantity;
 
-                //Entity updatePackaging = new Entity("tbs_opppaneltrim", panelTrim.Id);
                 panelTrim["tbs_totalprice"] = new Money(packagingTotal);
-
-                //service.Update(updatePackaging);
 
                 tracingService.Trace("Packaging Rule Applied");
                 return;
@@ -149,10 +146,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                     decimal galvanizedUnitPrice = basePrice * multiplier;
                     decimal galvanizedTotalPrice = galvanizedUnitPrice * quantity;
 
-                    //Entity updateGalvanized = new Entity("tbs_opppaneltrim", panelTrim.Id);
                     panelTrim["tbs_totalprice"] = new Money(galvanizedTotalPrice);
-
-                    //service.Update(updateGalvanized);
 
                     tracingService.Trace("Galvanized Rule Applied");
                     return;
@@ -198,25 +192,22 @@ namespace Falk_Plugins.Accessory_and_Trim
                 calculatedUnitPrice = embossPrice * multiplier;
 
                 tracingService.Trace("Emboss Pricing Applied. EmbossPrice={0}, Multiplier={1}", embossPrice, multiplier);
-                throw new InvalidPluginExecutionException("Emboss Pricing Applied. EmbossPrice={0}, Multiplier={1}" + embossPrice + ", " + multiplier + " Calculated Unit Price: " + calculatedUnitPrice);
+                //throw new InvalidPluginExecutionException("Emboss Pricing Applied. EmbossPrice={0}, Multiplier={1}" + embossPrice + ", " + multiplier + " Calculated Unit Price: " + calculatedUnitPrice);
             }
             else
             {
                 calculatedUnitPrice = basePrice * multiplier;
 
                 tracingService.Trace("Base Pricing Applied. BasePrice={0}, Multiplier={1}", basePrice, multiplier);
-                throw new InvalidPluginExecutionException("Base Pricing Applied. BasePrice={0}, Multiplier={1}" + basePrice + ", " + multiplier + " Calculated Unit Price: " + calculatedUnitPrice);
+                //throw new InvalidPluginExecutionException("Base Pricing Applied. BasePrice={0}, Multiplier={1}" + basePrice + ", " + multiplier + " Calculated Unit Price: " + calculatedUnitPrice);
             }
 
             decimal totalPrice = calculatedUnitPrice * quantity;
 
-            //Entity updateRecord = new Entity("tbs_opppaneltrim", panelTrim.Id);
             panelTrim["tbs_totalprice"] = new Money(totalPrice);
 
-            //service.Update(updateRecord);
-
             tracingService.Trace("Total Price Updated. Quantity={0}, TotalPrice={1}", quantity, totalPrice);
-            throw new InvalidPluginExecutionException("Total Price Updated. Quantity, TotalPrice" + quantity + ", " + totalPrice);
+            //throw new InvalidPluginExecutionException("Total Price Updated. Quantity, TotalPrice" + quantity + ", " + totalPrice);
             #endregion
         }
 
