@@ -49,17 +49,17 @@ namespace Falk_Plugins.Accessory_and_Trim
                                 targetEntity["tbs_unit"] = accessory.Contains("tbs_unit") ? accessory.GetAttributeValue<EntityReference>("tbs_unit") : null;
                                 targetEntity["tbs_unitprice"] = unitPrice;
 
-                                //EntityReference tierRef = opportunityProduct.Contains("tbs_priceleveltier") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_priceleveltier") : null;
+                                EntityReference tierRef = opportunityProduct.Contains("tbs_priceleveltier") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_priceleveltier") : null;
 
-                                //if (tierRef != null)
-                                //{
-                                //    Entity tier = service.Retrieve("tbs_tier", tierRef.Id, new ColumnSet("tbs_multiplier"));
+                                if (tierRef != null)
+                                {
+                                    Entity tier = service.Retrieve("tbs_tier", tierRef.Id, new ColumnSet("tbs_multiplier"));
 
-                                //    int tierMultiplier = tier.Contains("tbs_multiplier") ? tier.GetAttributeValue<int>("tbs_multiplier") : 0;
+                                    int tierMultiplier = tier.Contains("tbs_multiplier") ? tier.GetAttributeValue<int>("tbs_multiplier") : 0;
 
-                                //    decimal totalPrice = unitPrice.Value * tierMultiplier;
-                                //    targetEntity["tbs_totalprice"] = new Money(totalPrice);
-                                //}
+                                    decimal totalPrice = unitPrice.Value * tierMultiplier;
+                                    targetEntity["tbs_totalprice"] = new Money(totalPrice);
+                                }
                             }
                         }
                     }

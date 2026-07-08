@@ -38,81 +38,137 @@ namespace Falk_Plugins
                     targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
                     if (targetEntity.LogicalName == "tbs_lineitem")
                     {
-                        if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
+                        if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
-                            //Fill linear FT & Inch
-                            #region Fill Linear FT & Inch
-                            if (targetEntity.Contains("tbs_ft") && targetEntity.Contains("tbs_in") && targetEntity.GetAttributeValue<decimal>("tbs_ft") > 0 && targetEntity.GetAttributeValue<decimal>("tbs_in") > 0)
+                            #region Calculate Opportunity Product Rollups
+                            // Calculate total SQFT & Linear Ft of all line items on the opportunity product
+                            try
                             {
-                                decimal feet = targetEntity.GetAttributeValue<decimal>("tbs_ft");
-                                decimal inches = targetEntity.GetAttributeValue<decimal>("tbs_in");
+                                decimal width = targetEntity.Contains("tbs_widthpanel") ? targetEntity.GetAttributeValue<decimal>("tbs_widthpanel") : 0;
+                                Entity OpportunityProduct = service.Retrieve("opportunityproduct", targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id, new ColumnSet("quantity"));
 
-                                string result = CalculateLinearFtInch(feet, inches);
-                                targetEntity["tbs_linearftinch"] = result;
+                                decimal totalSqFtSum = GetDecimalAttributeValue(OpportunityProduct, "quantity") + GetDecimalAttributeValue(targetEntity, "tbs_totalsqft");
+                                decimal linearFt = width > 0 ? (totalSqFtSum * 12) / width : 0;
+
+                                Entity OpportunityProductToUpdate = new Entity("opportunityproduct", targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id);
+                                OpportunityProductToUpdate["quantity"] = totalSqFtSum;
+                                OpportunityProductToUpdate["tbs_linearfeet"] = linearFt;
+                                service.Update(OpportunityProductToUpdate);
                             }
-                            #endregion
-
-                            #region Get Panel Width
-                            if (targetEntity.Contains("tbs_opportunityproduct") && targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct") != null)
+                            catch (Exception e)
                             {
-                                QueryExpression query = new QueryExpression("tbs_thickness");
-                                query.ColumnSet.AddColumn("tbs_visiblepanelwidth");
-                                LinkEntity oppProduct = query.AddLink("opportunityproduct", "tbs_thicknessid", "tbs_panelthickness");
-                                oppProduct.EntityAlias = "oppProduct";
+                                tracingService.Trace($"Error Occurred in Calculating Total Sqft :{e.Message}");
+                            }
 
-                                oppProduct.LinkCriteria.AddCondition("opportunityproductid", ConditionOperator.Equal, targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id);
-
-                                Entity thickness = service.RetrieveMultiple(query).Entities.FirstOrDefault();
-
-                                if (thickness.Contains("tbs_visiblepanelwidth"))
+                            // Force rollup total amount of panels on the opportunity product
+                            try
+                            {
+                                CalculateRollupFieldRequest calcularRollup = new CalculateRollupFieldRequest
                                 {
-                                    decimal width = thickness.GetAttributeValue<decimal>("tbs_visiblepanelwidth");
-                                    if (width > 0)
-                                    {
-                                        targetEntity["tbs_widthpanel"] = width;
-                                    }
-                                }
+                                    Target = new EntityReference("opportunityproduct", targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id),
+                                    FieldName = "tbs_totalamountofpanels"
+                                };
+                                CalculateRollupFieldResponse calcularRollupResult = (CalculateRollupFieldResponse)service.Execute(calcularRollup);
                             }
-                            #endregion
-
-                            #region Calculate SQFT
-                            if (targetEntity.Contains("tbs_numberofpanels") && targetEntity.Contains("tbs_ft") && targetEntity.Contains("tbs_in") && targetEntity.Contains("tbs_widthpanel"))
+                            catch (Exception e)
                             {
-                                int noOfPanels = targetEntity.GetAttributeValue<int>("tbs_numberofpanels");
-                                decimal feet = targetEntity.GetAttributeValue<decimal>("tbs_ft");
-                                decimal inches = targetEntity.GetAttributeValue<decimal>("tbs_in");
-                                decimal width = targetEntity.GetAttributeValue<decimal>("tbs_widthpanel");
-
-                                decimal totalSqFt = (noOfPanels * ((feet * 12) + inches) * width) / 144;
-
-                                targetEntity["tbs_totalsqft"] = Math.Round(totalSqFt);
+                                tracingService.Trace($"Error Occurred in Calculating Total Number of Panel :{e.Message}");
                             }
                             #endregion
                         }
 
-                        else if (context.MessageName == CONST_UPDATE && context.Stage == PreOperation)
+                        else if (context.MessageName == CONST_UPDATE && context.Stage == PostOperation)
                         {
-                            Entity PreUpdateImage = context.PreEntityImages["PreImage"];
+                            Entity PreImage = context.PreEntityImages["PreImage"];
 
-                            #region Fill Linear FT & Inch
-                            
-                                decimal feet = targetEntity.Contains("tbs_ft") ? targetEntity.GetAttributeValue<decimal>("tbs_ft") : PreUpdateImage.GetAttributeValue<decimal>("tbs_ft");
-                                decimal inches = targetEntity.Contains("tbs_in") ? targetEntity.GetAttributeValue<decimal>("tbs_in") : PreUpdateImage.GetAttributeValue<decimal>("tbs_in");
+                            #region Calculate Opportunity Product Rollups
+                            // Calculate total SQFT & Linear Ft of all line items on the opportunity product
+                            if (targetEntity.Contains("tbs_totalsqft"))
+                            {
+                                try
+                                {
+                                    decimal width = targetEntity.Contains("tbs_widthpanel") ? targetEntity.GetAttributeValue<decimal>("tbs_widthpanel") : PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
+                                    Entity OpportunityProduct = service.Retrieve("opportunityproduct", PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id, new ColumnSet("quantity"));
 
-                                string result = CalculateLinearFtInch(feet, inches);
-                                targetEntity["tbs_linearftinch"] = result;
-                            
+                                    decimal totalSqFtSum = GetDecimalAttributeValue(OpportunityProduct, "quantity") + GetDecimalAttributeValue(targetEntity, "tbs_totalsqft") - GetDecimalAttributeValue(PreImage, "tbs_totalsqft");
+                                    decimal linearFt = width > 0 ? (totalSqFtSum * 12) / width : 0;
+
+                                    Entity OpportunityProductToUpdate = new Entity("opportunityproduct", OpportunityProduct.Id);
+                                    OpportunityProductToUpdate["quantity"] = totalSqFtSum;
+                                    OpportunityProductToUpdate["tbs_linearfeet"] = linearFt;
+                                    service.Update(OpportunityProductToUpdate);
+                                }
+                                catch (Exception e)
+                                {
+                                    tracingService.Trace($"Error Occurred in Calculating Total Sqft :{e.Message}");
+                                }
+                            }
+
+                            // Force rollup total amount of panels on the opportunity product if number of panel is changed
+                            if (targetEntity.Contains("tbs_numberofpanels"))
+                            {
+                                try
+                                {
+                                    CalculateRollupFieldRequest calcularRollup = new CalculateRollupFieldRequest
+                                    {
+                                        Target = new EntityReference("opportunityproduct", PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id),
+                                        FieldName = "tbs_totalamountofpanels"
+                                    };
+                                    CalculateRollupFieldResponse calcularRollupResult = (CalculateRollupFieldResponse)service.Execute(calcularRollup);
+                                }
+                                catch (Exception e)
+                                {
+                                    tracingService.Trace($"Error Occurred in Calculating Total Number of Panel :{e.Message}");
+                                }
+                            }
                             #endregion
+                        }
+                    }
+                }
 
-                            #region Calculate SQFT
-                           
-                                int noOfPanels = targetEntity.Contains("tbs_numberofpanels") ? targetEntity.GetAttributeValue<int>("tbs_numberofpanels") : PreUpdateImage.GetAttributeValue<int>("tbs_numberofpanels");
-                                decimal width = targetEntity.Contains("tbs_widthpanel") ? targetEntity.GetAttributeValue<decimal>("tbs_widthpanel") : PreUpdateImage.GetAttributeValue<decimal>("tbs_widthpanel");
+                else if (context.InputParameters.Contains("Target") && (context.InputParameters["Target"] is EntityReference))
+                {
+                    EntityReference targetEntityRef = (EntityReference)context.InputParameters["Target"];
+                    if (targetEntityRef.LogicalName == "tbs_lineitem")
+                    {
+                        if (context.MessageName == CONST_DELETE && context.Stage == PostOperation)
+                        {
+                            Entity PreImage = context.PreEntityImages["PreImage"];
 
-                                decimal totalSqFt = (noOfPanels * ((feet * 12) + inches) * width) / 144;
+                            #region Calculate Opportunity Product Rollups
+                            // Calculate total SQFT & Linear Ft of all line items on the opportunity product
+                            try
+                            {
+                                decimal width = PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
+                                Entity OpportunityProduct = service.Retrieve("opportunityproduct", PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id, new ColumnSet("quantity"));
 
-                                targetEntity["tbs_totalsqft"] = Math.Round(totalSqFt);
-                            
+                                decimal totalSqFtSum = GetDecimalAttributeValue(OpportunityProduct, "quantity") - GetDecimalAttributeValue(PreImage, "tbs_totalsqft");
+                                decimal linearFt = width > 0 ? (totalSqFtSum * 12) / width : 0;
+
+                                Entity OpportunityProductToUpdate = new Entity("opportunityproduct", OpportunityProduct.Id);
+                                OpportunityProductToUpdate["quantity"] = totalSqFtSum;
+                                OpportunityProductToUpdate["tbs_linearfeet"] = linearFt;
+                                service.Update(OpportunityProductToUpdate);
+                            }
+                            catch (Exception e)
+                            {
+                                tracingService.Trace($"Error Occurred in Calculating Total Sqft :{e.Message}");
+                            }
+
+                            // Force rollup total amount of panels on the opportunity product if number of panel is changed
+                            try
+                            {
+                                CalculateRollupFieldRequest calcularRollup = new CalculateRollupFieldRequest
+                                {
+                                    Target = new EntityReference("opportunityproduct", PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id),
+                                    FieldName = "tbs_totalamountofpanels"
+                                };
+                                CalculateRollupFieldResponse calcularRollupResult = (CalculateRollupFieldResponse)service.Execute(calcularRollup);
+                            }
+                            catch (Exception e)
+                            {
+                                tracingService.Trace($"Error Occurred in Calculating Total Number of Panel :{e.Message}");
+                            }
                             #endregion
                         }
                     }
@@ -122,52 +178,6 @@ namespace Falk_Plugins
             {
                 throw new InvalidPluginExecutionException("exception : " + e.Message);
             }
-        }
-
-        private string CalculateLinearFtInch(decimal feet, decimal inches)
-        {
-            int wholeFeet = (int)Math.Truncate(feet);
-            int wholeInches = (int)Math.Truncate(inches);
-
-            decimal fraction = inches - wholeInches;
-
-            int quarter = (int)Math.Round(fraction * 4);
-
-            string fractionText = "";
-
-            if (quarter == 4)
-            {
-                wholeInches++;
-                quarter = 0;
-            }
-
-            if (wholeInches == 12)
-            {
-                wholeFeet++;
-                wholeInches = 0;
-            }
-
-            switch (quarter)
-            {
-                case 1:
-                    fractionText = "1/4";
-                    break;
-                case 2:
-                    fractionText = "2/4";   // Change to "1/2" if preferred
-                    break;
-                case 3:
-                    fractionText = "3/4";
-                    break;
-            }
-
-            string result = $"{wholeFeet}' {wholeInches}";
-
-            if (!string.IsNullOrWhiteSpace(fractionText))
-                result += $" {fractionText}";
-
-            result += "\"";
-
-            return result;
         }
 
         private void InitProperties(LocalPluginContext localcontext)

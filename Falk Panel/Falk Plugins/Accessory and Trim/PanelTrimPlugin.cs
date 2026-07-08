@@ -41,26 +41,22 @@ namespace Falk_Plugins.Accessory_and_Trim
 
                             if (trimRef != null && oppProductRef != null)
                             {
-                                Entity trim = service.Retrieve("tbs_trim", trimRef.Id, new ColumnSet("tbs_unit", "tbs_price"));
-                                Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("tbs_priceleveltier"));
+                                Entity trim = service.Retrieve("tbs_trim", trimRef.Id, new ColumnSet("tbs_unit", "tbs_price", "tbs_usdembossedprice", "tbs_description", "tbs_finish", "tbs_canadacustomerprice"));
 
+                                Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("opportunityid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge"));
+
+                                #region Add Unit & Base Price in Panel Trim based on Trim
                                 Money unitPrice = trim.Contains("tbs_price") ? trim.GetAttributeValue<Money>("tbs_price") : new Money(0);
 
                                 targetEntity["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
                                 targetEntity["tbs_unitprice"] = unitPrice;
+                                #endregion
 
-                                EntityReference tierRef = opportunityProduct.Contains("tbs_priceleveltier") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_priceleveltier") : null;
-
-                                if (tierRef != null)
-                                {
-                                    Entity tier = service.Retrieve("tbs_tier", tierRef.Id, new ColumnSet("tbs_multiplier"));
-
-                                    int tierMultiplier = tier.Contains("tbs_multiplier") ? tier.GetAttributeValue<int>("tbs_multiplier") : 0;
-
-                                    decimal totalPrice = unitPrice.Value * tierMultiplier;
-                                    targetEntity["tbs_totalprice"] = new Money(totalPrice);
-                                }
+                                #region Calculate Total Price
+                                CalculatePanelTrimPrice(targetEntity, trim, opportunityProduct);
+                                #endregion
                             }
+
                         }
                     }
                 }
@@ -70,6 +66,158 @@ namespace Falk_Plugins.Accessory_and_Trim
                 tracingService.Trace("TrimPlugin Exception: {0}", ex.ToString());
                 throw new InvalidPluginExecutionException($"Error in TrimPlugin: {ex.Message}");
             }
+        }
+
+        private void CalculatePanelTrimPrice(Entity panelTrim, Entity trim, Entity opportunityProduct)
+        {
+            tracingService.Trace("CalculatePanelTrimPrice Started");
+
+            EntityReference trimRef = panelTrim.Contains("tbs_trim") ? panelTrim.GetAttributeValue<EntityReference>("tbs_trim") : null;
+            EntityReference oppProductRef = panelTrim.Contains("tbs_opportunityproduct") ? panelTrim.GetAttributeValue<EntityReference>("tbs_opportunityproduct") : null;
+
+            if (trimRef == null || oppProductRef == null)
+            {
+                tracingService.Trace("Trim or Opportunity Product is null.");
+                return;
+            }
+
+            int quantity = panelTrim.Contains("tbs_quantity") ? panelTrim.GetAttributeValue<int>("tbs_quantity") : 1;
+
+            Money basePriceMoney = trim.GetAttributeValue<Money>("tbs_price") ?? new Money(0);
+            Money embossPriceMoney = trim.GetAttributeValue<Money>("tbs_usdembossedprice") ?? new Money(0);
+
+            decimal basePrice = basePriceMoney.Value;
+            decimal embossPrice = embossPriceMoney.Value;
+
+            string trimDescription = trim.GetAttributeValue<string>("tbs_description") ?? string.Empty;
+
+            OptionSetValue finishOption = trim.GetAttributeValue<OptionSetValue>("tbs_finish");
+
+            int finishValue = finishOption != null ? finishOption.Value : 0;
+
+            decimal multiplier = 1m;
+
+            EntityReference tierRef = opportunityProduct.Contains("tbs_priceleveltier") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_priceleveltier") : null;
+
+            if (tierRef != null)
+            {
+                Entity tier = service.Retrieve("tbs_tier", tierRef.Id, new ColumnSet("tbs_multiplier"));
+
+                if (tier.Contains("tbs_multiplier"))
+                {
+                    int multiplierPercent = tier.GetAttributeValue<int>("tbs_multiplier");
+
+                    // Convert 25 -> 1.25
+                    multiplier = 1 + (multiplierPercent / 100m);
+                }
+            }
+
+            #region Packaging Rule
+            if (trimDescription.IndexOf("Packaging", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                decimal packagingTotal = basePrice * quantity;
+
+                //Entity updatePackaging = new Entity("tbs_opppaneltrim", panelTrim.Id);
+                panelTrim["tbs_totalprice"] = new Money(packagingTotal);
+
+                //service.Update(updatePackaging);
+
+                tracingService.Trace("Packaging Rule Applied");
+                return;
+            }
+            #endregion
+
+            #region Determine Color/Gauge based on Finish
+            EntityReference colorRef = null;
+            EntityReference gaugeRef = null;
+
+            switch (finishValue)
+            {
+                case 2: // Interior Match
+                    colorRef = opportunityProduct.Contains("tbs_interiorcolor") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_interiorcolor") : null;
+                    gaugeRef = opportunityProduct.Contains("tbs_interiorgauge") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_interiorgauge") : null;
+                    break;
+
+                case 3: // Exterior Match
+                    colorRef = opportunityProduct.Contains("tbs_exteriorcolor") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_exteriorcolor") : null;
+                    gaugeRef = opportunityProduct.Contains("tbs_exteriorgauge") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_exteriorgauge") : null;
+                    break;
+
+                case 1: // Galvanized
+                default:
+
+                    decimal galvanizedUnitPrice = basePrice * multiplier;
+                    decimal galvanizedTotalPrice = galvanizedUnitPrice * quantity;
+
+                    //Entity updateGalvanized = new Entity("tbs_opppaneltrim", panelTrim.Id);
+                    panelTrim["tbs_totalprice"] = new Money(galvanizedTotalPrice);
+
+                    //service.Update(updateGalvanized);
+
+                    tracingService.Trace("Galvanized Rule Applied");
+                    return;
+            }
+
+            bool colorEmbossable = false;
+
+            if (colorRef != null)
+            {
+                Entity color = service.Retrieve("tbs_color", colorRef.Id, new ColumnSet("tbs_isembossable"));
+
+                colorEmbossable = color.Contains("tbs_isembossable") ? color.GetAttributeValue<bool>("tbs_isembossable") : false;
+            }
+
+            bool gaugeOK = false;
+
+            if (gaugeRef != null)
+            {
+                Entity gauge = service.Retrieve("tbs_gauge", gaugeRef.Id, new ColumnSet("tbs_name"));
+
+                string gaugeName = gauge.GetAttributeValue<string>("tbs_name") ?? string.Empty;
+
+                gaugeOK = !gaugeName.Equals("22ga", StringComparison.OrdinalIgnoreCase);
+            }
+
+            bool trimNot22 = trimDescription.IndexOf("22ga", StringComparison.OrdinalIgnoreCase) < 0;
+
+            bool embossEnabled = false;
+
+            EntityReference opportunityRef = opportunityProduct.GetAttributeValue<EntityReference>("opportunityid");
+
+            if (opportunityRef != null)
+            {
+                Entity opportunity = service.Retrieve("opportunity", opportunityRef.Id, new ColumnSet("tbs_embossedtrims"));
+
+                embossEnabled = opportunity.GetAttributeValue<bool>("tbs_embossedtrims");
+            }
+
+            decimal calculatedUnitPrice;
+
+            if (embossEnabled && colorEmbossable && gaugeOK && trimNot22)
+            {
+                calculatedUnitPrice = embossPrice * multiplier;
+
+                tracingService.Trace("Emboss Pricing Applied. EmbossPrice={0}, Multiplier={1}", embossPrice, multiplier);
+                throw new InvalidPluginExecutionException("Emboss Pricing Applied. EmbossPrice={0}, Multiplier={1}" + embossPrice + ", " + multiplier + " Calculated Unit Price: " + calculatedUnitPrice);
+            }
+            else
+            {
+                calculatedUnitPrice = basePrice * multiplier;
+
+                tracingService.Trace("Base Pricing Applied. BasePrice={0}, Multiplier={1}", basePrice, multiplier);
+                throw new InvalidPluginExecutionException("Base Pricing Applied. BasePrice={0}, Multiplier={1}" + basePrice + ", " + multiplier + " Calculated Unit Price: " + calculatedUnitPrice);
+            }
+
+            decimal totalPrice = calculatedUnitPrice * quantity;
+
+            //Entity updateRecord = new Entity("tbs_opppaneltrim", panelTrim.Id);
+            panelTrim["tbs_totalprice"] = new Money(totalPrice);
+
+            //service.Update(updateRecord);
+
+            tracingService.Trace("Total Price Updated. Quantity={0}, TotalPrice={1}", quantity, totalPrice);
+            throw new InvalidPluginExecutionException("Total Price Updated. Quantity, TotalPrice" + quantity + ", " + totalPrice);
+            #endregion
         }
 
         private void InitProperties(LocalPluginContext localcontext)
