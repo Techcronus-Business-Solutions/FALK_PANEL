@@ -169,6 +169,7 @@
   <ItemGroup>
     <Compile Include="Accessory and Trim\PanelAccessoryPlugin.cs" />
     <Compile Include="Accessory and Trim\AccessoryTrimCreationPlugin.cs" />
+    <Compile Include="Accessory and Trim\AccessoriesQtyPlugin.cs" />
     <Compile Include="Pricing Master\ColorPlugin.cs" />
     <Compile Include="Pricing Master\LineItemPlugin.cs" />
     <Compile Include="PluginBase.cs" />
