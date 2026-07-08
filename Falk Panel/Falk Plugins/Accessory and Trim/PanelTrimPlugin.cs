@@ -43,7 +43,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                             {
                                 Entity trim = service.Retrieve("tbs_trim", trimRef.Id, new ColumnSet("tbs_unit", "tbs_price", "tbs_usdembossedprice", "tbs_description", "tbs_finish", "tbs_canadacustomerprice"));
 
-                                Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("opportunityid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge"));
+                                Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("opportunityid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge", "tbs_interiorfinish", "tbs_exteriorfinish"));
 
                                 #region Add Unit & Base Price in Panel Trim based on Trim
                                 Money unitPrice = trim.Contains("tbs_price") ? trim.GetAttributeValue<Money>("tbs_price") : new Money(0);
@@ -91,26 +91,87 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             string trimDescription = trim.GetAttributeValue<string>("tbs_description") ?? string.Empty;
 
-            OptionSetValue finishOption = trim.GetAttributeValue<OptionSetValue>("tbs_finish");
+            OptionSetValue finishOption = trim.Contains("tbs_finish") ? trim.GetAttributeValue<OptionSetValue>("tbs_finish") : new OptionSetValue(0);
 
             int finishValue = finishOption != null ? finishOption.Value : 0;
 
             decimal multiplier = 1m;
 
-            EntityReference tierRef = opportunityProduct.Contains("tbs_priceleveltier") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_priceleveltier") : null;
+            #region Determine Category (SS / FM / Tier2)
+            string categoryName = "Tier2";
 
-            if (tierRef != null)
+            // Determine finish from Opportunity Product
+            EntityReference finishRef = null;
+
+            switch (finishValue)
             {
-                Entity tier = service.Retrieve("tbs_tier", tierRef.Id, new ColumnSet("tbs_multiplier"));
+                case 2: // Interior Match
+                    finishRef = opportunityProduct.GetAttributeValue<EntityReference>("tbs_interiorfinish");
+                    break;
 
-                if (tier.Contains("tbs_multiplier"))
+                case 3: // Exterior Match
+                    finishRef = opportunityProduct.GetAttributeValue<EntityReference>("tbs_exteriorfinish");
+                    break;
+            }
+
+            string finishName = string.Empty;
+
+            tracingService.Trace("Finish ID: " + finishRef.Id);
+
+            if (finishRef != null)
+            {
+                Entity finish = service.Retrieve(
+                    "tbs_finish",
+                    finishRef.Id,
+                    new ColumnSet("tbs_name"));
+
+                finishName = finish.GetAttributeValue<string>("tbs_name") ?? "";
+
+                tracingService.Trace("Finish Name: " + finishName);
+            }
+
+            tracingService.Trace("Finish Name: " + finishName);
+
+            // Static Comparison for Setting Tier In Opp Panel Trim based on Finish
+            if (finishValue == 2 || finishValue == 3)
+            {
+                if (finishName.Equals("304 Stainless", StringComparison.OrdinalIgnoreCase))
                 {
-                    int multiplierPercent = tier.GetAttributeValue<int>("tbs_multiplier");
-
-                    // Convert 25 -> 1.25
-                    multiplier = 1 + (multiplierPercent / 100m);
+                    categoryName = "SS";
+                }
+                else if (trimDescription.IndexOf("FM", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    categoryName = "FM";
+                }
+                else
+                {
+                    categoryName = "Tier2";
                 }
             }
+            #endregion
+
+            #region Retrieve Tier record using Category
+            QueryExpression tierQuery = new QueryExpression("tbs_tier");
+            tierQuery.ColumnSet = new ColumnSet("tbs_multiplier");
+            tierQuery.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, categoryName);
+
+            Entity tier = service.RetrieveMultiple(tierQuery).Entities.FirstOrDefault();
+
+            if (tier == null)
+            {
+                throw new InvalidPluginExecutionException($"Tier '{categoryName}' not found.");
+            }
+
+            // Set Category lookup
+            panelTrim["tbs_category"] = tier.ToEntityReference();
+
+            // Read Multiplier
+            int multiplierPercent = tier.GetAttributeValue<int>("tbs_multiplier");
+
+            multiplier = multiplierPercent / 100m;
+
+            tracingService.Trace("Category={0}, Finish={1}, Multiplier={2}", categoryName, finishName, multiplier);
+            #endregion
 
             #region Packaging Rule
             if (trimDescription.IndexOf("Packaging", StringComparison.OrdinalIgnoreCase) >= 0)
