@@ -91,7 +91,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             string trimDescription = trim.GetAttributeValue<string>("tbs_description") ?? string.Empty;
 
-            OptionSetValue finishOption = trim.Contains("tbs_finish") ? trim.GetAttributeValue<OptionSetValue>("tbs_finish") : new OptionSetValue(0);
+            OptionSetValue finishOption = trim.Contains("tbs_finish") ? trim.GetAttributeValue<OptionSetValue>("tbs_finish") : null;
 
             int finishValue = finishOption != null ? finishOption.Value : 0;
 
@@ -106,17 +106,15 @@ namespace Falk_Plugins.Accessory_and_Trim
             switch (finishValue)
             {
                 case 2: // Interior Match
-                    finishRef = opportunityProduct.GetAttributeValue<EntityReference>("tbs_interiorfinish");
+                    finishRef = opportunityProduct.Contains("tbs_interiorfinish") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_interiorfinish") : null;
                     break;
 
                 case 3: // Exterior Match
-                    finishRef = opportunityProduct.GetAttributeValue<EntityReference>("tbs_exteriorfinish");
+                    finishRef = opportunityProduct.Contains("tbs_exteriorfinish") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_exteriorfinish") : null;
                     break;
             }
 
             string finishName = string.Empty;
-
-            tracingService.Trace("Finish ID: " + finishRef.Id);
 
             if (finishRef != null)
             {
@@ -152,7 +150,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             #region Retrieve Tier record using Category
             QueryExpression tierQuery = new QueryExpression("tbs_tier");
-            tierQuery.ColumnSet = new ColumnSet("tbs_multiplier");
+            tierQuery.ColumnSet = new ColumnSet("tbs_multiplier", "tbs_name");
             tierQuery.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, categoryName);
 
             Entity tier = service.RetrieveMultiple(tierQuery).Entities.FirstOrDefault();
@@ -243,7 +241,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             {
                 Entity opportunity = service.Retrieve("opportunity", opportunityRef.Id, new ColumnSet("tbs_embossedtrims"));
 
-                embossEnabled = opportunity.GetAttributeValue<bool>("tbs_embossedtrims");
+                embossEnabled = opportunity.Contains("tbs_embossedtrims") ? opportunity.GetAttributeValue<bool>("tbs_embossedtrims") : false;
             }
 
             decimal calculatedUnitPrice;
