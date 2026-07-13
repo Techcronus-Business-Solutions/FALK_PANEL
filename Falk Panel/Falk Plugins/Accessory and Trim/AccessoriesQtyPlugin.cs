@@ -44,6 +44,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                         {
 
                             Guid oppProductId = GetOpportunityProductId();
+                            tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
 
                             Entity opportunityProduct = GetOpportunityProduct(oppProductId);
 
@@ -92,12 +93,14 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             accessoryLink.Columns = new ColumnSet("tbs_ruleclass","tbs_multiplier1","tbs_multiplier2","tbs_itemcategory","tbs_deptbl1","tbs_depcat1","tbs_deptbl2","tbs_depcat2","tbs_deptbl3","tbs_depcat3");
             EntityCollection accessories = service.RetrieveMultiple(query);
+            tracingService.Trace(accessories.Entities.Count.ToString());
             return accessories;
         }
 
         private int CalculateQuantity(AccessoryConfiguration config, CalculationContext context)
         {
             string rule = config.RuleClass;
+            tracingService.Trace(rule);
 
             decimal div1 = config.Mult1;
             decimal div2 = config.Mult2;

@@ -243,7 +243,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             {
                 Entity opportunity = service.Retrieve("opportunity", opportunityRef.Id, new ColumnSet("tbs_embossedtrims"));
 
-                embossEnabled = opportunity.GetAttributeValue<bool>("tbs_embossedtrims");
+                embossEnabled = opportunity.Contains("tbs_embossedtrims") ? opportunity.GetAttributeValue<bool>("tbs_embossedtrims") : false;
             }
 
             decimal calculatedUnitPrice;
