@@ -22,7 +22,6 @@ namespace Falk_Plugins
 
         private Entity targetEntity { get; set; }
 
-
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
         {
             if (localcontext == null)
