@@ -41,25 +41,25 @@ namespace Falk_Plugins.Accessory_and_Trim
 
                             if (accessoryRef != null && oppProductRef != null)
                             {
-                                Entity accessory = service.Retrieve("tbs_accessory", accessoryRef.Id, new ColumnSet("tbs_unit", "tbs_price"));
-                                Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("tbs_priceleveltier"));
+                                //Entity accessory = service.Retrieve("tbs_accessory", accessoryRef.Id, new ColumnSet("tbs_unit", "tbs_price"));
+                                //Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("tbs_priceleveltier"));
 
-                                Money unitPrice = accessory.Contains("tbs_price") ? accessory.GetAttributeValue<Money>("tbs_price") : new Money(0);
+                                //Money unitPrice = accessory.Contains("tbs_price") ? accessory.GetAttributeValue<Money>("tbs_price") : new Money(0);
 
-                                targetEntity["tbs_unit"] = accessory.Contains("tbs_unit") ? accessory.GetAttributeValue<EntityReference>("tbs_unit") : null;
-                                targetEntity["tbs_unitprice"] = unitPrice;
+                                //targetEntity["tbs_unit"] = accessory.Contains("tbs_unit") ? accessory.GetAttributeValue<EntityReference>("tbs_unit") : null;
+                                //targetEntity["tbs_unitprice"] = unitPrice;
 
-                                EntityReference tierRef = opportunityProduct.Contains("tbs_priceleveltier") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_priceleveltier") : null;
+                                //EntityReference tierRef = opportunityProduct.Contains("tbs_priceleveltier") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_priceleveltier") : null;
 
-                                if (tierRef != null)
-                                {
-                                    Entity tier = service.Retrieve("tbs_tier", tierRef.Id, new ColumnSet("tbs_multiplier"));
+                                //if (tierRef != null)
+                                //{
+                                //    Entity tier = service.Retrieve("tbs_tier", tierRef.Id, new ColumnSet("tbs_multiplier"));
 
-                                    int tierMultiplier = tier.Contains("tbs_multiplier") ? tier.GetAttributeValue<int>("tbs_multiplier") : 0;
+                                //    int tierMultiplier = tier.Contains("tbs_multiplier") ? tier.GetAttributeValue<int>("tbs_multiplier") : 0;
 
-                                    decimal totalPrice = unitPrice.Value * tierMultiplier;
-                                    targetEntity["tbs_totalprice"] = new Money(totalPrice);
-                                }
+                                //    decimal totalPrice = unitPrice.Value * tierMultiplier;
+                                //    targetEntity["tbs_totalprice"] = new Money(totalPrice);
+                                //}
                             }
                         }
                     }
