@@ -1,106 +1,70 @@
-﻿using Microsoft.Crm.Sdk.Messages;
+﻿using Microsoft.Xrm.Sdk.Query;
 using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Query;
 using System;
-using System.Activities.Statements;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Caching;
-using System.Web.UI.WebControls;
-using System.Windows.Forms;
+using System.Web.Services.Description;
+using Microsoft.Xrm.Tooling.Connector;
 
-namespace Falk_Plugins.Accessory_and_Trim
+namespace Falk_Console
 {
-    public class AccessoriesQtyPlugin : PluginBase
+    public class AccessoriesQtyConsole
     {
-        public AccessoriesQtyPlugin() : base(typeof(AccessoriesQtyPlugin)) { }
+        public static Entity targetEntity = new Entity();
+        public static CrmServiceClient service;
 
-        private IOrganizationService service { get; set; }
-
-        private IPluginExecutionContext context { get; set; }
-
-        private ITracingService tracingService { get; set; }
-
-        private Entity targetEntity { get; set; }
-
-        protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
+        public static void CalculateQty(CrmServiceClient serviceParam)
         {
-            if (localcontext == null)
-            {
-                throw new ArgumentNullException(nameof(localcontext));
-            }
-            InitProperties(localcontext);
-
             try
             {
-                if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
-                {
-                    targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
-                    if (targetEntity.LogicalName == "tbs_opppanelaccessory")
-                    {
-                        if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
-                        {
+                service = serviceParam;
+                targetEntity = service.Retrieve("tbs_opppanelaccessory", new Guid("afc90b0f-607c-f111-ab0f-6045bd042674"), new ColumnSet(true));
 
-                            Guid oppProductId = GetOpportunityProductId();
-                            tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
+                Guid oppProductId = GetOpportunityProductId();
+                Console.WriteLine("Opportunity ProductId = " + oppProductId.ToString());
 
-                            Entity opportunityProduct = GetOpportunityProduct(oppProductId);
+                Entity opportunityProduct = GetOpportunityProduct(oppProductId);
 
-                            EntityCollection accessories = GetAccessories(oppProductId);
+                EntityCollection accessories = GetAccessories(oppProductId);
 
-                            CalculationContext context = BuildCalculationContext(opportunityProduct);
+                CalculationContext context = BuildCalculationContext(opportunityProduct);
 
-                            CalculateAllAccessories(accessories, context);
-                        }
-                    }
-                }
+                CalculateAllAccessories(accessories, context);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                throw new InvalidPluginExecutionException("exception : " + e.Message);
+                Console.WriteLine(ex.Message);
             }
         }
 
-        private Guid GetOpportunityProductId()
+        private static Guid GetOpportunityProductId()
         {
-            return targetEntity
-                .GetAttributeValue<EntityReference>("tbs_opportunityproduct")
-                .Id;
+            return targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id;
         }
 
-        private Entity GetOpportunityProduct(Guid oppProductId)
+        private static Entity GetOpportunityProduct(Guid oppProductId)
         {
-            return service.Retrieve(
-                "opportunityproduct",
-                oppProductId,
-                new ColumnSet(
-                    "quantity",
-                    "tbs_linearfeet"));
+            return service.Retrieve("opportunityproduct", oppProductId, new ColumnSet("quantity", "tbs_linearfeet"));
         }
-        private EntityCollection GetAccessories(Guid opportunityProductId)
+        private static EntityCollection GetAccessories(Guid opportunityProductId)
         {
             QueryExpression query = new QueryExpression("tbs_opppanelaccessory");
-
             query.ColumnSet = new ColumnSet("tbs_quantity", "tbs_accessory");
-
             query.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, opportunityProductId);
-
             LinkEntity accessoryLink = query.AddLink("tbs_accessory", "tbs_accessory", "tbs_accessoryid");
-
             accessoryLink.EntityAlias = "acc";
-
-            accessoryLink.Columns = new ColumnSet("tbs_ruleclass","tbs_multiplier1","tbs_multiplier2","tbs_itemcategory","tbs_deptbl1","tbs_depcat1","tbs_deptbl2","tbs_depcat2","tbs_deptbl3","tbs_depcat3");
+            accessoryLink.Columns = new ColumnSet("tbs_itemcategory");
             EntityCollection accessories = service.RetrieveMultiple(query);
-            tracingService.Trace(accessories.Entities.Count.ToString());
+            Console.WriteLine(accessories.Entities.Count.ToString());
             return accessories;
         }
 
-        private int CalculateQuantity(AccessoryConfiguration config, CalculationContext context)
+        private static int CalculateQuantity(AccessoryConfiguration config, CalculationContext context)
         {
             string rule = config.RuleClass;
-            tracingService.Trace(rule);
+            Console.WriteLine(rule);
 
             decimal div1 = config.Mult1;
             decimal div2 = config.Mult2;
@@ -199,18 +163,18 @@ namespace Falk_Plugins.Accessory_and_Trim
         {
             public Guid OpportunityAccessoryId { get; set; }
             public string RuleClass { get; set; }
-            public decimal Mult1 { get; set; }   
+            public decimal Mult1 { get; set; }
             public decimal Mult2 { get; set; }
             public string DepTbl1 { get; set; }
-            public string DepCat1 { get; set; }
+            public decimal DepCat1 { get; set; }
             public string DepTbl2 { get; set; }
-            public string DepCat2 { get; set; }
+            public decimal DepCat2 { get; set; }
             public string DepTbl3 { get; set; }
-            public string DepCat3 { get; set; }
-            public string ItemCategory { get; set; }
+            public decimal DepCat3 { get; set; }
+            public EntityReference ItemCategory { get; set; }
         }
 
-        private decimal GetDependencyValue(CalculationContext context, string table, string category)
+        private static decimal GetDependencyValue(CalculationContext context, string table, string category)
         {
             string key = $"{table}|{category}";
 
@@ -220,7 +184,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             return context.Values[key];
         }
-        private void UpdateAccessoryQuantity(Guid id, int qty)
+        private static void UpdateAccessoryQuantity(Guid id, int qty)
         {
             Entity update =
                 new Entity("tbs_opppanelaccessory");
@@ -231,7 +195,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             service.Update(update);
         }
-        private void CalculateAllAccessories(EntityCollection accessories, CalculationContext context)
+        private static void CalculateAllAccessories(EntityCollection accessories, CalculationContext context)
         {
             foreach (Entity accessory in accessories.Entities)
             {
@@ -259,7 +223,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             public Dictionary<string, decimal> Values
                 = new Dictionary<string, decimal>();
         }
-        private CalculationContext BuildCalculationContext(Entity opportunityProduct)
+        private static CalculationContext BuildCalculationContext(Entity opportunityProduct)
         {
             return new CalculationContext
             {
@@ -268,34 +232,28 @@ namespace Falk_Plugins.Accessory_and_Trim
                 LinearFeet = opportunityProduct.GetAttributeValue<decimal>("tbs_linearfeet")
             };
         }
-        private AccessoryConfiguration BuildAccessoryConfiguration(Entity accessory)
+        private static AccessoryConfiguration BuildAccessoryConfiguration(Entity accessory)
         {
-            return new AccessoryConfiguration
+
+
+
+            AccessoryConfiguration accConfig = new AccessoryConfiguration
             {
                 OpportunityAccessoryId = accessory.Id,
-
-                ItemCategory = GetAliasedValue<string>(accessory, "acc.tbs_itemcategory"),
-
+                ItemCategory = GetAliasedValue<EntityReference>(accessory, "acc.tbs_itemcategory"),
                 RuleClass = GetAliasedValue<string>(accessory, "acc.tbs_ruleclass"),
-
                 Mult1 = GetAliasedValue<decimal>(accessory, "acc.tbs_multiplier1"),
-
                 Mult2 = GetAliasedValue<decimal>(accessory, "acc.tbs_multiplier2"),
-
                 DepTbl1 = GetAliasedValue<string>(accessory, "acc.tbs_deptbl1"),
-
                 DepCat1 = GetAliasedValue<string>(accessory, "acc.tbs_depcat1"),
-
                 DepTbl2 = GetAliasedValue<string>(accessory, "acc.tbs_deptbl2"),
-
                 DepCat2 = GetAliasedValue<string>(accessory, "acc.tbs_depcat2"),
-
                 DepTbl3 = GetAliasedValue<string>(accessory, "acc.tbs_deptbl3"),
-
                 DepCat3 = GetAliasedValue<string>(accessory, "acc.tbs_depcat3")
             };
+            return accConfig;
         }
-        private T GetAliasedValue<T>(Entity entity, string alias)
+        private static T GetAliasedValue<T>(Entity entity, string alias)
         {
             if (!entity.Contains(alias))
                 return default(T);
@@ -308,30 +266,5 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             return (T)value.Value;
         }
-
-        private void InitProperties(LocalPluginContext localcontext)
-        {
-            //// Obtain the execution context service from the LocalContext.
-            context = localcontext.PluginExecutionContext;
-            if (context == null)
-            {
-                throw new InvalidPluginExecutionException("Failed to retrieve Plugin Execution Context !");
-            }
-
-            //Get the Organization Service from the LocalContext
-            service = localcontext.OrganizationService;
-            if (service == null)
-            {
-                throw new InvalidPluginExecutionException("Failed to retrieve Organization Service !");
-            }
-
-            //Get the Tracing Service from the LocalContext
-            tracingService = localcontext.TracingService;
-            if (tracingService == null)
-            {
-                throw new InvalidPluginExecutionException("Failed to retrieve Tracing Service !");
-            }
-        }
     }
 }
-

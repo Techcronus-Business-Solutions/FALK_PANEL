@@ -1,4 +1,5 @@
-﻿using Microsoft.Xrm.Sdk;
+﻿using Microsoft.Crm.Sdk.Messages;
+using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using System;
@@ -21,54 +22,41 @@ namespace Falk_Plugins.Pricing_Master
         #endregion
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
         {
+
             if (localcontext == null)
-                throw new ArgumentNullException(nameof(localcontext)); 
-             
+            {
+                throw new ArgumentNullException(nameof(localcontext));
+            }
             InitProperties(localcontext);
 
             try
             {
-                if (context.MessageName != "Create")
-                    return;
+                if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
+                {
+                    targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
+                    if (targetEntity.LogicalName == "opportunityproduct")
+                    {
+                        if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
+                        {
+                            targetEntity["quantity"] = (decimal)0;
+                        }
+                        if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
+                        {
+                            tracingService.Trace("create");
+                            string opportunityProductName = targetEntity.GetAttributeValue<string>("opportunityproductname");
 
-                tracingService.Trace("Plugin Started");
+                            tracingService.Trace(opportunityProductName);
+                            EntityReference panelThickness = targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness");
+                            tracingService.Trace(panelThickness.Id.ToString());
 
-                if (context.Depth > 1)
-                    return;
+                            EntityReference panelType = targetEntity.GetAttributeValue<EntityReference>("productid");
 
-                if (!context.InputParameters.Contains("Target"))
-                    return;
+                            CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness);
 
-                if (!(context.InputParameters["Target"] is Entity target))
-                    return;
-
-                if (target.LogicalName != "opportunityproduct")
-                    return;
-
-                tracingService.Trace("Opportunity Product Id");
-
-                Entity opportunityProduct = service.Retrieve(
-                                "opportunityproduct",
-                                target.Id,
-                                new ColumnSet(
-                                    "opportunityproductname",
-                                    "productid",
-                                    "tbs_panelthickness"));
-
-                string opportunityProductName = opportunityProduct.GetAttributeValue<string>("opportunityproductname");
-
-                EntityReference panelThickness = opportunityProduct.GetAttributeValue<EntityReference>("tbs_panelthickness");
-
-                tracingService.Trace("Panel Thickness Id : " + panelThickness.Id.ToString());
-
-                if (panelThickness == null)
-                    return;
-
-                EntityReference panelType = opportunityProduct.GetAttributeValue<EntityReference>("productid");
-
-                CreatePanelAccessories(service, target.Id, opportunityProductName, panelType, panelThickness);
-
-                CreatePanelTrims(service, target.Id, opportunityProductName, panelType, panelThickness);
+                            CreatePanelTrims(service, targetEntity.Id, opportunityProductName, panelType, panelThickness);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -76,35 +64,69 @@ namespace Falk_Plugins.Pricing_Master
                 throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records.", ex);
             }
         }
-        private void CreatePanelAccessories(IOrganizationService service, Guid opportunityProductId, string opportunityProductName, EntityReference panelType, EntityReference panelThickness)
+        private void CreatePanelAccessories(IOrganizationService service, Guid opportunityProductId, EntityReference panelType, EntityReference panelThickness)
         {
             try
             {
-                tracingService.Trace("===== ACCESSORY FETCH =====");
+                #region List Accessories
+                QueryExpression query = new QueryExpression("tbs_accessory");
+                query.ColumnSet.AddColumns("tbs_accessoryid");
+                LinkEntity pricing = query.AddLink("tbs_accessorypricing", "tbs_accessorypricing", "tbs_accessorypricingid");
+                pricing.EntityAlias = "pricing";
+                pricing.Columns.AddColumns("tbs_price", "tbs_unit");
+                LinkEntity thickness = query.AddLink("tbs_accessory_tbs_thickness", "tbs_accessoryid", "tbs_accessoryid");
+                thickness.EntityAlias = "thickness";
+                thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
 
-                string fetchXml = $@"<fetch distinct='true'>
-                  <entity name='tbs_accessory'>
-                    <attribute name='tbs_accessoryid' />
-                    <attribute name='tbs_name' />
-                    <link-entity
-                        name='tbs_accessory_tbs_thickness'
-                        from='tbs_accessoryid'
-                        to='tbs_accessoryid'
-                        intersect='true'>
-                      <filter>
-                        <condition
-                          attribute='tbs_thicknessid'
-                          operator='eq'
-                          value='{panelThickness.Id}' />
-                      </filter>
-                    </link-entity>
-                  </entity>
-                </fetch>";
+                EntityCollection accessories = service.RetrieveMultiple(query);
+                tracingService.Trace($"accessories count: {accessories.Entities.Count}");
+                #endregion
 
-                tracingService.Trace(fetchXml);
+                #region Get User Info
+                QueryExpression userQuery = new QueryExpression("systemuser");
+                userQuery.ColumnSet = new ColumnSet(false);
+                userQuery.Criteria.AddCondition("systemuserid", ConditionOperator.Equal, context.InitiatingUserId);
+                LinkEntity teretory = userQuery.AddLink("territory", "territoryid", "territoryid");
+                teretory.EntityAlias = "teretory";
+                teretory.Columns.AddColumn("name");
+                LinkEntity parentteretory = teretory.AddLink("territory", "parentterritoryid", "territoryid", JoinOperator.LeftOuter);
+                parentteretory.EntityAlias = "parentteretory";
+                parentteretory.Columns.AddColumn("name");
 
-                EntityCollection accessories = service.RetrieveMultiple(new FetchExpression(fetchXml));
-               
+                Entity user = service.RetrieveMultiple(userQuery).Entities.FirstOrDefault();
+                tracingService.Trace($"User: {user?.Id}");
+                bool isUSA = false;
+
+                if (user != null)
+                {
+                    var territory =
+                        user.GetAttributeValue<AliasedValue>("teretory.name")?.Value as string;
+
+                    var parent =
+                        user.GetAttributeValue<AliasedValue>("parentteretory.name")?.Value as string;
+
+                    isUSA =
+                        territory == "USA" ||
+                        parent == "USA";
+                }
+                #endregion
+
+                #region GetTier
+                int multiplier = 100;
+
+                QueryExpression tierQuery = new QueryExpression("tbs_tier");
+                tierQuery.ColumnSet.AddColumn("tbs_multiplier");
+                tierQuery.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, isUSA ? "Tier1" : "Tier2");
+                tierQuery.Criteria.AddCondition("tbs_type", ConditionOperator.Equal, 1);
+
+                Entity tierEnt = service.RetrieveMultiple(tierQuery).Entities.FirstOrDefault();
+                tracingService.Trace($"tier entity: {tierEnt?.Id}");
+                if (tierEnt != null) {
+                    multiplier = tierEnt.GetAttributeValue<int>("tbs_multiplier");
+                }
+                #endregion
+
+                #region Create Accessories
                 foreach (Entity accessory in accessories.Entities)
                 {
                     Entity panelAccessory = new Entity("tbs_opppanelaccessory");
@@ -112,8 +134,22 @@ namespace Falk_Plugins.Pricing_Master
                     panelAccessory["tbs_paneltype"] = panelType;
                     panelAccessory["tbs_panelthickness"] = panelThickness;
                     panelAccessory["tbs_accessory"] = accessory.ToEntityReference();
+                    panelAccessory["tbs_category"] = tierEnt.ToEntityReference();
+
+                    var unit = accessory.GetAttributeValue<AliasedValue>("pricing.tbs_unit")?.Value as EntityReference;
+                    var price = accessory.GetAttributeValue<AliasedValue>("pricing.tbs_price")?.Value as Money;
+
+                    panelAccessory["tbs_unit"] = unit;
+
+                    if (price != null)
+                    {
+                        panelAccessory["tbs_unitprice"] = new Money(price.Value * multiplier / 100m);
+                    }
+
                     service.Create(panelAccessory);
                 }
+
+                #endregion
             }
             catch (Exception ex)
             {
@@ -144,8 +180,6 @@ namespace Falk_Plugins.Pricing_Master
                     </link-entity>
                   </entity>
                 </fetch>";
-
-                tracingService.Trace("Trim");
 
                 EntityCollection trims = service.RetrieveMultiple(new FetchExpression(fetchXml));
 
