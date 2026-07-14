@@ -128,17 +128,11 @@ namespace Falk_Plugins.Pricing_Master
                 foreach (Entity trim in trims.Entities)
                 {
                     Entity panelTrim = new Entity("tbs_opppaneltrim");
-
-                    panelTrim["tbs_name"] = $"{opportunityProductName} | {trim.GetAttributeValue<string>("tbs_name")}";
-
                     panelTrim["tbs_opportunityproduct"] = new EntityReference("opportunityproduct", opportunityProductId);
-
                     panelTrim["tbs_paneltype"] = panelType;
-
                     panelTrim["tbs_panelthickness"] = panelThickness;
-
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
-
+                    panelTrim["tbs_iscustomtrim"] = false;
                     service.Create(panelTrim);
                 }
             }
