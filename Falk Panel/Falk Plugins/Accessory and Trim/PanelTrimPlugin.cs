@@ -138,10 +138,12 @@ namespace Falk_Plugins.Accessory_and_Trim
                 tracingService.Trace("Finish Name: " + finishName);
             }
 
-            tracingService.Trace("Finish Name: " + finishName);
-
             // Static Comparison for Setting Tier In Opp Panel Trim based on Finish
-            if (finishValue == 2 || finishValue == 3)
+            if (finishValue == 1)
+            {
+                categoryName = "Tier1";
+            }
+            else if (finishValue == 2 || finishValue == 3)
             {
                 if (finishName.Equals("304 Stainless", StringComparison.OrdinalIgnoreCase))
                 {
@@ -162,6 +164,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             QueryExpression tierQuery = new QueryExpression("tbs_tier");
             tierQuery.ColumnSet = new ColumnSet("tbs_multiplier", "tbs_name");
             tierQuery.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, categoryName);
+            tierQuery.Criteria.AddCondition("tbs_type", ConditionOperator.Equal, 1);
 
             Entity tier = service.RetrieveMultiple(tierQuery).Entities.FirstOrDefault();
 
@@ -211,13 +214,8 @@ namespace Falk_Plugins.Accessory_and_Trim
 
                 case 1: // Galvanized
                 default:
-
-                    decimal galvanizedUnitPrice = basePrice * multiplier;
-                    decimal galvanizedTotalPrice = galvanizedUnitPrice * quantity;
-
-                    panelTrim["tbs_totalprice"] = new Money(galvanizedTotalPrice);
-
-                    tracingService.Trace("Galvanized Rule Applied");
+                    decimal galvanizedTotal = basePrice * quantity;
+                    panelTrim["tbs_totalprice"] = new Money(galvanizedTotal);
                     return;
             }
 
