@@ -45,10 +45,7 @@ namespace Falk_Plugins.Pricing_Master
                             if (colorCategory != null)
                             {
                                 // Get Option Set Label
-                                string colorCategoryLabel = GetOptionSetLabel(
-                                    "tbs_color",
-                                    "tbs_colorcategory",
-                                    colorCategory.Value);
+                                string colorCategoryLabel = GetOptionSetLabel("tbs_color", "tbs_colorcategory", colorCategory.Value);
 
                                 // Set combined value
                                 targetEntity["tbs_name"] = $"{colorName} {colorCategoryLabel}";
@@ -84,7 +81,7 @@ namespace Falk_Plugins.Pricing_Master
 
         private void InitProperties(LocalPluginContext localcontext)
         {
-            //// Obtain the execution context service from the LocalContext.
+            // Obtain the execution context service from the LocalContext.
             context = localcontext.PluginExecutionContext;
             if (context == null)
             {
