@@ -18,42 +18,42 @@ namespace Falk_Console
                 {
                     Console.WriteLine("Console Application Started!");
 
-                    string excelPath = @"C:\Users\admin\Desktop\Book1.xlsx";
+                    //string excelPath = @"C:\Users\admin\Desktop\Book1.xlsx";
 
-                    var workbook = new XLWorkbook(excelPath);
-                    var sheet = workbook.Worksheet(1);
+                    //var workbook = new XLWorkbook(excelPath);
+                    //var sheet = workbook.Worksheet(1);
 
-                    foreach (var row in sheet.RowsUsed().Skip(1))
-                    {
-                        string accessoryDescription = row.Cell("E").GetString().Trim();
-                        string legacyDescription = row.Cell("D").GetString().Trim();
-                        string thicknessName = row.Cell("A").GetString().Trim();
+                    //foreach (var row in sheet.RowsUsed().Skip(1))
+                    //{
+                    //    string accessoryDescription = row.Cell("E").GetString().Trim();
+                    //    string legacyDescription = row.Cell("D").GetString().Trim();
+                    //    string thicknessName = row.Cell("A").GetString().Trim();
 
-                        Guid accessoryId = GetAccessory(organizationService, accessoryDescription, legacyDescription);
+                    //    Guid accessoryId = GetAccessory(organizationService, accessoryDescription, legacyDescription);
 
-                        Guid thicknessId = GetThickness(organizationService, thicknessName);
+                    //    Guid thicknessId = GetThickness(organizationService, thicknessName);
 
-                        if (accessoryId == Guid.Empty)
-                        {
-                            Console.WriteLine($"Accessory not found : {accessoryDescription}");
-                            continue;
-                        }
+                    //    if (accessoryId == Guid.Empty)
+                    //    {
+                    //        Console.WriteLine($"Accessory not found : {accessoryDescription}");
+                    //        continue;
+                    //    }
 
-                        if (thicknessId == Guid.Empty)
-                        {
-                            Console.WriteLine($"Thickness not found : {thicknessName}");
-                            continue;
-                        }
+                    //    if (thicknessId == Guid.Empty)
+                    //    {
+                    //        Console.WriteLine($"Thickness not found : {thicknessName}");
+                    //        continue;
+                    //    }
 
-                        Associate(organizationService, accessoryId, thicknessId);
+                    //    Associate(organizationService, accessoryId, thicknessId);
 
-                        Console.WriteLine($"Associated {accessoryDescription} -> {thicknessName}");
-                    }
+                    //    Console.WriteLine($"Associated {accessoryDescription} -> {thicknessName}");
+                    //}
 
-                    Console.WriteLine("Completed.");
-                    Console.ReadKey();
+                    //Console.WriteLine("Completed.");
+                    //Console.ReadKey();
 
-                    //AccessoriesQtyConsole.CalculateQty(organizationService);
+                    AccessoriesQtyConsole.CalculateQty(organizationService);
                 }
             }
             catch (Exception ex)
