@@ -51,7 +51,7 @@ namespace Falk_Plugins.Pricing_Master
 
                             EntityReference panelType = targetEntity.GetAttributeValue<EntityReference>("productid");
 
-                            CreatePanelAccessories(service, targetEntity, panelType, panelThickness);
+                            CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness);
 
                             CreatePanelTrims(service, targetEntity.Id, opportunityProductName, panelType, panelThickness);
                         }
@@ -64,12 +64,13 @@ namespace Falk_Plugins.Pricing_Master
                 throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records.", ex);
             }
         }
-        private void CreatePanelAccessories(IOrganizationService service, Entity opportunityProduct, EntityReference panelType, EntityReference panelThickness)
+        private void CreatePanelAccessories(IOrganizationService service, Guid opportunityProductId, EntityReference panelType, EntityReference panelThickness)
         {
             try
             {
+                #region List Accessories
                 QueryExpression query = new QueryExpression("tbs_accessory");
-                query.ColumnSet.AddColumns("tbs_accessoryid", "tbs_accessorypricing", "tbs_legacydescription", "tbs_name", "tbs_salesid", "tbs_unit");
+                query.ColumnSet.AddColumns("tbs_accessoryid");
                 LinkEntity pricing = query.AddLink("tbs_accessorypricing", "tbs_accessorypricing", "tbs_accessorypricingid");
                 pricing.EntityAlias = "pricing";
                 pricing.Columns.AddColumns("tbs_price", "tbs_unit");
@@ -78,20 +79,77 @@ namespace Falk_Plugins.Pricing_Master
                 thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
 
                 EntityCollection accessories = service.RetrieveMultiple(query);
+                tracingService.Trace($"accessories count: {accessories.Entities.Count}");
+                #endregion
 
+                #region Get User Info
+                QueryExpression userQuery = new QueryExpression("systemuser");
+                userQuery.ColumnSet = new ColumnSet(false);
+                userQuery.Criteria.AddCondition("systemuserid", ConditionOperator.Equal, context.InitiatingUserId);
+                LinkEntity teretory = userQuery.AddLink("territory", "territoryid", "territoryid");
+                teretory.EntityAlias = "teretory";
+                teretory.Columns.AddColumn("name");
+                LinkEntity parentteretory = teretory.AddLink("territory", "parentterritoryid", "territoryid", JoinOperator.LeftOuter);
+                parentteretory.EntityAlias = "parentteretory";
+                parentteretory.Columns.AddColumn("name");
+
+                Entity user = service.RetrieveMultiple(userQuery).Entities.FirstOrDefault();
+                tracingService.Trace($"User: {user?.Id}");
+                bool isUSA = false;
+
+                if (user != null)
+                {
+                    var territory =
+                        user.GetAttributeValue<AliasedValue>("teretory.name")?.Value as string;
+
+                    var parent =
+                        user.GetAttributeValue<AliasedValue>("parentteretory.name")?.Value as string;
+
+                    isUSA =
+                        territory == "USA" ||
+                        parent == "USA";
+                }
+                #endregion
+
+                #region GetTier
+                int multiplier = 100;
+
+                QueryExpression tierQuery = new QueryExpression("tbs_tier");
+                tierQuery.ColumnSet.AddColumn("tbs_multiplier");
+                tierQuery.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, isUSA ? "Tier1" : "Tier2");
+                tierQuery.Criteria.AddCondition("tbs_type", ConditionOperator.Equal, 1);
+
+                Entity tierEnt = service.RetrieveMultiple(tierQuery).Entities.FirstOrDefault();
+                tracingService.Trace($"tier entity: {tierEnt?.Id}");
+                if (tierEnt != null) {
+                    multiplier = tierEnt.GetAttributeValue<int>("tbs_multiplier");
+                }
+                #endregion
+
+                #region Create Accessories
                 foreach (Entity accessory in accessories.Entities)
                 {
                     Entity panelAccessory = new Entity("tbs_opppanelaccessory");
-                    panelAccessory["tbs_opportunityproduct"] = new EntityReference("opportunityproduct", opportunityProduct.Id);
+                    panelAccessory["tbs_opportunityproduct"] = new EntityReference("opportunityproduct", opportunityProductId);
                     panelAccessory["tbs_paneltype"] = panelType;
                     panelAccessory["tbs_panelthickness"] = panelThickness;
                     panelAccessory["tbs_accessory"] = accessory.ToEntityReference();
-                    panelAccessory["tbs_unit"] = (EntityReference)accessory.GetAttributeValue<AliasedValue>("pricing.tbs_unit").Value;
-                    //Take category from login user - if us - tier 1 else tier 2
-                    //panelAccessory["tbs_category"] = 
-                    panelAccessory["tbs_unitprice"] = (Money)accessory.GetAttributeValue<AliasedValue>("pricing.tbs_price").Value;
+                    panelAccessory["tbs_category"] = tierEnt.ToEntityReference();
+
+                    var unit = accessory.GetAttributeValue<AliasedValue>("pricing.tbs_unit")?.Value as EntityReference;
+                    var price = accessory.GetAttributeValue<AliasedValue>("pricing.tbs_price")?.Value as Money;
+
+                    panelAccessory["tbs_unit"] = unit;
+
+                    if (price != null)
+                    {
+                        panelAccessory["tbs_unitprice"] = new Money(price.Value * multiplier / 100m);
+                    }
+
                     service.Create(panelAccessory);
                 }
+
+                #endregion
             }
             catch (Exception ex)
             {

@@ -115,11 +115,11 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             switch (finishValue)
             {
-                case 2: // Interior Match
+                case (int)TrimFinish.InteriorMatch:
                     finishRef = opportunityProduct.Contains("tbs_interiorfinish") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_interiorfinish") : null;
                     break;
 
-                case 3: // Exterior Match
+                case (int)TrimFinish.ExteriorMatch:
                     finishRef = opportunityProduct.Contains("tbs_exteriorfinish") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_exteriorfinish") : null;
                     break;
             }
@@ -138,10 +138,12 @@ namespace Falk_Plugins.Accessory_and_Trim
                 tracingService.Trace("Finish Name: " + finishName);
             }
 
-            tracingService.Trace("Finish Name: " + finishName);
-
             // Static Comparison for Setting Tier In Opp Panel Trim based on Finish
-            if (finishValue == 2 || finishValue == 3)
+            if (finishValue == 0 || finishValue == 1)
+            {
+                categoryName = "Tier1";
+            }
+            else if (finishValue == 2 || finishValue == 3)
             {
                 if (finishName.Equals("304 Stainless", StringComparison.OrdinalIgnoreCase))
                 {
@@ -162,6 +164,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             QueryExpression tierQuery = new QueryExpression("tbs_tier");
             tierQuery.ColumnSet = new ColumnSet("tbs_multiplier", "tbs_name");
             tierQuery.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, categoryName);
+            tierQuery.Criteria.AddCondition("tbs_type", ConditionOperator.Equal, 1);
 
             Entity tier = service.RetrieveMultiple(tierQuery).Entities.FirstOrDefault();
 
@@ -199,25 +202,20 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             switch (finishValue)
             {
-                case 2: // Interior Match
+                case (int)TrimFinish.InteriorMatch:
                     colorRef = opportunityProduct.Contains("tbs_interiorcolor") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_interiorcolor") : null;
                     gaugeRef = opportunityProduct.Contains("tbs_interiorgauge") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_interiorgauge") : null;
                     break;
 
-                case 3: // Exterior Match
+                case (int)TrimFinish.ExteriorMatch:
                     colorRef = opportunityProduct.Contains("tbs_exteriorcolor") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_exteriorcolor") : null;
                     gaugeRef = opportunityProduct.Contains("tbs_exteriorgauge") ? opportunityProduct.GetAttributeValue<EntityReference>("tbs_exteriorgauge") : null;
                     break;
 
-                case 1: // Galvanized
+                case (int)TrimFinish.Galvanized:
                 default:
-
-                    decimal galvanizedUnitPrice = basePrice * multiplier;
-                    decimal galvanizedTotalPrice = galvanizedUnitPrice * quantity;
-
-                    panelTrim["tbs_totalprice"] = new Money(galvanizedTotalPrice);
-
-                    tracingService.Trace("Galvanized Rule Applied");
+                    decimal galvanizedTotal = basePrice * quantity;
+                    panelTrim["tbs_totalprice"] = new Money(galvanizedTotal);
                     return;
             }
 
@@ -226,7 +224,6 @@ namespace Falk_Plugins.Accessory_and_Trim
             if (colorRef != null)
             {
                 Entity color = service.Retrieve("tbs_color", colorRef.Id, new ColumnSet("tbs_isembossable"));
-
                 colorEmbossable = color.Contains("tbs_isembossable") ? color.GetAttributeValue<bool>("tbs_isembossable") : false;
             }
 
@@ -235,9 +232,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             if (gaugeRef != null)
             {
                 Entity gauge = service.Retrieve("tbs_gauge", gaugeRef.Id, new ColumnSet("tbs_name"));
-
                 string gaugeName = gauge.GetAttributeValue<string>("tbs_name") ?? string.Empty;
-
                 gaugeOK = !gaugeName.Equals("22ga", StringComparison.OrdinalIgnoreCase);
             }
 
@@ -250,7 +245,6 @@ namespace Falk_Plugins.Accessory_and_Trim
             if (opportunityRef != null)
             {
                 Entity opportunity = service.Retrieve("opportunity", opportunityRef.Id, new ColumnSet("tbs_embossedtrims"));
-
                 embossEnabled = opportunity.Contains("tbs_embossedtrims") ? opportunity.GetAttributeValue<bool>("tbs_embossedtrims") : false;
             }
 
@@ -259,13 +253,11 @@ namespace Falk_Plugins.Accessory_and_Trim
             if (embossEnabled && colorEmbossable && gaugeOK && trimNot22)
             {
                 calculatedUnitPrice = embossPrice * multiplier;
-
                 tracingService.Trace("Emboss Pricing Applied. EmbossPrice={0}, Multiplier={1}", embossPrice, multiplier);
             }
             else
             {
                 calculatedUnitPrice = basePrice * multiplier;
-
                 tracingService.Trace("Base Pricing Applied. BasePrice={0}, Multiplier={1}", basePrice, multiplier);
             }
 
@@ -463,7 +455,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             panelTrim["tbs_unit"] = settings.GetAttributeValue<EntityReference>("tbs_unit");
             panelTrim["tbs_unitprice"] = new Money(falkPrice);
             panelTrim["tbs_totalprice"] = new Money(falkPrice * quantity);
-            panelTrim["tbs_tier"] = new EntityReference("tbs_tier", new Guid(Tier1ID));
+            panelTrim["tbs_category"] = new EntityReference("tbs_tier", new Guid(Tier1ID));
 
             tracingService.Trace("Trim Tier ID: ", Tier1ID);
             tracingService.Trace("pcsPerSheet = {0}", pcsPerSheet);
