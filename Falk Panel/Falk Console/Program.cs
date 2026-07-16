@@ -52,10 +52,10 @@ namespace Falk_Console
 
                     ImportTrimData.ImportData(organizationService);
 
-                    Console.WriteLine("Completed.");
-                    Console.ReadKey();
+                    //Console.WriteLine("Completed.");
+                    //Console.ReadKey();
 
-                    //AccessoriesQtyConsole.CalculateQty(organizationService);
+                    AccessoriesQtyConsole.CalculateQty(organizationService);
                 }
             }
             catch (Exception ex)
