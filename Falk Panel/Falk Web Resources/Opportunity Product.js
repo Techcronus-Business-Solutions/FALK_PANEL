@@ -11,7 +11,6 @@ if (typeof $ === "undefined") {
 Falk.OpportunityProduct = {
     OnLoad: async function (executionContext) {
         const formContext = executionContext.getFormContext();
-
         formContext.getControl("tbs_exteriorfinish")
             .addPreSearch(function () {
                 Falk.OpportunityProduct.addExteriorFinishView(formContext);

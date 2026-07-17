@@ -57,6 +57,7 @@ namespace Falk_Plugins
                             catch (Exception e)
                             {
                                 tracingService.Trace($"Error Occurred in Calculating Total Sqft :{e.Message}");
+                                throw new InvalidPluginExecutionException(e.Message);
                             }
 
                             // Force rollup total amount of panels on the opportunity product
@@ -72,6 +73,7 @@ namespace Falk_Plugins
                             catch (Exception e)
                             {
                                 tracingService.Trace($"Error Occurred in Calculating Total Number of Panel :{e.Message}");
+                                throw new InvalidPluginExecutionException(e.Message);
                             }
                             #endregion
                         }
@@ -100,6 +102,7 @@ namespace Falk_Plugins
                                 catch (Exception e)
                                 {
                                     tracingService.Trace($"Error Occurred in Calculating Total Sqft :{e.Message}");
+                                    throw new InvalidPluginExecutionException(e.Message);
                                 }
                             }
 
@@ -118,6 +121,7 @@ namespace Falk_Plugins
                                 catch (Exception e)
                                 {
                                     tracingService.Trace($"Error Occurred in Calculating Total Number of Panel :{e.Message}");
+                                    throw new InvalidPluginExecutionException(e.Message);
                                 }
                             }
                             #endregion
@@ -148,10 +152,13 @@ namespace Falk_Plugins
                                 OpportunityProductToUpdate["quantity"] = totalSqFtSum;
                                 OpportunityProductToUpdate["tbs_linearfeet"] = linearFt;
                                 service.Update(OpportunityProductToUpdate);
+
+
                             }
                             catch (Exception e)
                             {
                                 tracingService.Trace($"Error Occurred in Calculating Total Sqft :{e.Message}");
+                                throw new InvalidPluginExecutionException(e.Message);
                             }
 
                             // Force rollup total amount of panels on the opportunity product if number of panel is changed
@@ -167,6 +174,7 @@ namespace Falk_Plugins
                             catch (Exception e)
                             {
                                 tracingService.Trace($"Error Occurred in Calculating Total Number of Panel :{e.Message}");
+                                throw new InvalidPluginExecutionException(e.Message);
                             }
                             #endregion
                         }

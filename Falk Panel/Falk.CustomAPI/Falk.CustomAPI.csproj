@@ -126,6 +126,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CalculateAccessoryQty.cs" />
     <Compile Include="OpportunityProductPricingCalculation.cs" />
     <Compile Include="CustomAPIBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
