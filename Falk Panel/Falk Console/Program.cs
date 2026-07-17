@@ -50,6 +50,8 @@ namespace Falk_Console
                     //    Console.WriteLine($"Associated {accessoryDescription} -> {thicknessName}");
                     //}
 
+                    ImportTrimData.ImportData(organizationService);
+
                     //Console.WriteLine("Completed.");
                     //Console.ReadKey();
 
@@ -74,7 +76,7 @@ namespace Falk_Console
 
             EntityCollection result = service.RetrieveMultiple(qe);
 
-            if(result.Entities.Count > 1)
+            if (result.Entities.Count > 1)
             {
                 Console.WriteLine("skipped");
                 Console.WriteLine("description - " + description);

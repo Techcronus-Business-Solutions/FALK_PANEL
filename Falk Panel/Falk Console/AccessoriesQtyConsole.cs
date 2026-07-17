@@ -9,12 +9,12 @@ using System.Web.Services.Description;
 using Microsoft.Xrm.Tooling.Connector;
 using System.Activities.Statements;
 
-namespace Falk_Console
-{
-    public class AccessoriesQtyConsole
-    {
-        public static Entity targetEntity = new Entity();
-        public static CrmServiceClient service;
+//namespace Falk_Console
+//{
+//    public class AccessoriesQtyConsole
+//    {
+//        public static Entity targetEntity = new Entity();
+//        public static CrmServiceClient service;
 
         public static void CalculateQty(CrmServiceClient serviceParam)
         {
@@ -23,14 +23,14 @@ namespace Falk_Console
                 service = serviceParam;
                 targetEntity = service.Retrieve("tbs_opppanelaccessory", new Guid("c3e20573-547f-f111-ab0e-6045bd06ea05"), new ColumnSet(true));
 
-                Guid oppProductId = GetOpportunityProductId();
-                Console.WriteLine("Opportunity ProductId = " + oppProductId.ToString());
+//                Guid oppProductId = GetOpportunityProductId();
+//                Console.WriteLine("Opportunity ProductId = " + oppProductId.ToString());
 
-                Entity opportunityProduct = GetOpportunityProduct(oppProductId);
+//                Entity opportunityProduct = GetOpportunityProduct(oppProductId);
 
-                EntityCollection accessories = GetAccessories(oppProductId);
+//                EntityCollection accessories = GetAccessories(oppProductId);
 
-                CalculationContext context = BuildCalculationContext(opportunityProduct);
+//                CalculationContext context = BuildCalculationContext(opportunityProduct);
 
                 CalculateAllAccessories(accessories, context);
             }
