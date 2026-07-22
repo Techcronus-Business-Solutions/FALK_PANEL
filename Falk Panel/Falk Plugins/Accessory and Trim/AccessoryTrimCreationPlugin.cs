@@ -77,6 +77,14 @@ namespace Falk_Plugins.Pricing_Master
                 LinkEntity thickness = query.AddLink("tbs_accessory_tbs_thickness", "tbs_accessoryid", "tbs_accessoryid");
                 thickness.EntityAlias = "thickness";
                 thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
+                LinkEntity cat = query.AddLink("tbs_itemcategory", "tbs_itemcategory", "tbs_itemcategoryid", JoinOperator.LeftOuter);
+                cat.EntityAlias = "cat";
+
+                LinkEntity rule = cat.AddLink("tbs_accessoryrules", "tbs_itemcategoryid", "tbs_category", JoinOperator.LeftOuter);
+                rule.EntityAlias = "rule";
+                rule.Columns.AddColumn("tbs_ruleclass");
+                rule.LinkCriteria.AddCondition("tbs_panel", ConditionOperator.Equal, panelType.Id);
+
 
                 EntityCollection accessories = service.RetrieveMultiple(query);
                 tracingService.Trace($"accessories count: {accessories.Entities.Count}");
@@ -135,6 +143,7 @@ namespace Falk_Plugins.Pricing_Master
                     panelAccessory["tbs_panelthickness"] = panelThickness;
                     panelAccessory["tbs_accessory"] = accessory.ToEntityReference();
                     panelAccessory["tbs_category"] = tierEnt.ToEntityReference();
+                    panelAccessory["tbs_isquantitycalculated"] = accessory.Contains("rule.tbs_ruleclass") && accessory.GetAttributeValue<AliasedValue>("rule.tbs_ruleclass").Value != null ? true : false;
 
                     var unit = accessory.GetAttributeValue<AliasedValue>("pricing.tbs_unit")?.Value as EntityReference;
                     var price = accessory.GetAttributeValue<AliasedValue>("pricing.tbs_price")?.Value as Money;
