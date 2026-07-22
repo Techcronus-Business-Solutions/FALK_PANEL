@@ -1,5 +1,5 @@
-﻿using Microsoft.Xrm.Sdk.Query;
-using Microsoft.Xrm.Sdk;
+﻿using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace Falk.CustomAPI
 {
-    public class CalculateAccessoryQty : CustomAPIBase
+    public class CalculateTrimQty : CustomAPIBase
     {
-        public CalculateAccessoryQty() : base(typeof(CalculateAccessoryQty)) { }
+        public CalculateTrimQty() : base(typeof(CalculateTrimQty)) { }
 
         #region Private Variables
         private IOrganizationService service { get; set; }
@@ -33,17 +33,17 @@ namespace Falk.CustomAPI
 
                 Entity opportunityProduct = GetOpportunityProduct(oppProductId);
 
-                EntityCollection accessories = GetAccessories(oppProductId);
+                EntityCollection trims = GetTrims(oppProductId);
 
                 CalculationContext calccontext = BuildCalculationContext(opportunityProduct);
 
-                CalculateAllAccessories(accessories, calccontext);
+                CalculateAllTrims(trims, calccontext);
 
             }
             catch (Exception ex)
             {
-                tracingService.Trace("CalculateAccessoryQty Custom API Exception: {0}", ex.ToString());
-                throw new InvalidPluginExecutionException($"Error in CalculateAccessoryQty Custom API: {ex.Message}");
+                tracingService.Trace("CalculateTrimyQty Custom API Exception: {0}", ex.ToString());
+                throw new InvalidPluginExecutionException($"Error in CalculateTrimQty Custom API: {ex.Message}");
             }
         }
 
@@ -51,29 +51,29 @@ namespace Falk.CustomAPI
         {
             return service.Retrieve("opportunityproduct", oppProductId, new ColumnSet("quantity", "tbs_linearfeet"));
         }
-        private EntityCollection GetAccessories(Guid opportunityProductId)
+        private EntityCollection GetTrims(Guid opportunityProductId)
         {
-            EntityCollection accessories = new EntityCollection();
+            EntityCollection trims = new EntityCollection();
 
             try
             {
-                QueryExpression query = new QueryExpression("tbs_opppanelaccessory");
-                query.ColumnSet = new ColumnSet("tbs_quantity", "tbs_accessory", "tbs_category", "tbs_unitprice", "tbs_paneltype", "tbs_usecustomquantity", "tbs_isquantitycalculated");
+                QueryExpression query = new QueryExpression("tbs_opppaneltrim");
+                query.ColumnSet = new ColumnSet("tbs_quantity", "tbs_trim", "tbs_category", "tbs_unitprice", "tbs_paneltype");
                 query.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, opportunityProductId);
-                query.AddOrder("tbs_accessory", OrderType.Ascending);
-                LinkEntity accessoryLink = query.AddLink("tbs_accessory", "tbs_accessory", "tbs_accessoryid");
-                accessoryLink.EntityAlias = "acc";
-                accessoryLink.Columns = new ColumnSet("tbs_itemcategory");
-                accessories = service.RetrieveMultiple(query);
-                Console.WriteLine(accessories.Entities.Count.ToString());
+                query.AddOrder("tbs_trim", OrderType.Ascending);
+                LinkEntity trimLink = query.AddLink("tbs_trim", "tbs_trim", "tbs_trimid");
+                trimLink.EntityAlias = "acc";
+                trimLink.Columns = new ColumnSet("tbs_itemcategory");
+                trims = service.RetrieveMultiple(query);
+                Console.WriteLine(trims.Entities.Count.ToString());
             }
             catch (Exception e)
             {
                 throw e;
             }
-            return accessories;
+            return trims;
         }
-        private int? CalculateQuantity(AccessoryConfiguration config, CalculationContext context)
+        private int? CalculateQuantity(TrimConfiguration config, CalculationContext context)
         {
             try
             {
@@ -81,6 +81,16 @@ namespace Falk.CustomAPI
 
                 if (string.IsNullOrEmpty(rule))
                 {
+                    Console.WriteLine("No Rule Identified - Need to fill quantity");
+
+                    if (config.Trim.Contains("tbs_quantity"))
+                    {
+                        Console.WriteLine("Manual Quantity = " + config.Trim.GetAttributeValue<int>("tbs_quantity"));
+                        return config.Trim.GetAttributeValue<int>("tbs_quantity");
+                    }
+
+
+
                     return null;
                 }
                 Console.WriteLine(rule);
@@ -90,12 +100,33 @@ namespace Falk.CustomAPI
 
                 switch (rule)
                 {
-                    case "Count / Div1":
-                        return (int)Math.Ceiling(
-                            GetDependencyValue(context, config.DepTbl1, config.DepCat1) / div1);
+                    case "CountA + CountB + CountC":
 
-                    case "SF / Div1":
-                        return (int)Math.Ceiling(context.SqFt / div1);
+                        decimal? val1 = GetDependencyValue(context, config.DepTbl1, config.DepCat1);
+                        decimal? val2 = GetDependencyValue(context, config.DepTbl2, config.DepCat2);
+                        decimal? val3 = GetDependencyValue(context, config.DepTbl3, config.DepCat3);
+
+                        if (!val1.HasValue && !val2.HasValue && !val3.HasValue)
+                            return null;
+
+                        return (int)Math.Ceiling((val1 ?? 0m) + (val2 ?? 0m) + (val3 ?? 0m));
+
+                    case "Count * Mult1":
+
+                        decimal? count = GetDependencyValue(context, config.DepTbl1, config.DepCat1);
+
+                        if (!count.HasValue)
+                            return null;
+
+                        return (int)Math.Ceiling(count.Value * div1);
+
+                    case "Count / Div1":
+                        decimal? count1 = GetDependencyValue(context, config.DepTbl1, config.DepCat1);
+
+                        if (!count1.HasValue)
+                            return null;
+
+                        return (int)Math.Ceiling((double)(count1.Value / div1));
 
                     case "LFT / Div1":
                         int? LFT = GetLineerFeetTrim(context.OppProdId);
@@ -105,86 +136,15 @@ namespace Falk.CustomAPI
                         }
                         return null;
 
-                    case "(SF / Div1) + ((CountA + CountB) / Div2)":
-                        return (int)Math.Ceiling(
-                            (context.SqFt / config.Mult1) + (GetDependencyValue(context, config.DepTbl1, config.DepCat1) +
-                                GetDependencyValue(context, config.DepTbl2, config.DepCat2) / config.Mult2));
-
-                    case "SF / Div1 / Div2":
-                        return (int)Math.Ceiling(context.SqFt / div1 / div2);
-
-                    case "LFP / Div1 / Div2":
-                        return (int)Math.Ceiling(context.LinearFeet / div1 / div2);
-
-                    case "(Count * Mult1) / Div1":
-                        return (int)Math.Ceiling(
-                            (GetDependencyValue(context, config.DepTbl1, config.DepCat1) * div1) / div2);
-
-                    case "(CountA + CountB) / Div1":
-                        return (int)Math.Ceiling(
-                            (
-                                GetDependencyValue(context, config.DepTbl1, config.DepCat1) +
-                                GetDependencyValue(context, config.DepTbl2, config.DepCat2)
-                            ) / div1);
-
-                    case "(LFT (Perim) * Mult1) / Div1":
-                        int? LFTP = GetLineerFeetPerim(context.OppProdId);
-                        if (LFTP.HasValue)
-                        {
-                            return (int)Math.Ceiling((LFTP.Value * div1) / div2);
-                        }
-                        return null;
-
-                    case "(2CountA + 2CountB + 4CountC) / Div1 / Div2":
-                        return (int)Math.Ceiling(
-                            (
-                                (2 * GetDependencyValue(context, config.DepTbl1, config.DepCat1)) +
-                                (2 * GetDependencyValue(context, config.DepTbl2, config.DepCat2)) +
-                                (4 * GetDependencyValue(context, config.DepTbl3, config.DepCat3))
-                            ) / div1 / div2);
-
-                    case "Count / Div1 / Div2":
-                        return (int)Math.Ceiling(
-                            GetDependencyValue(context, config.DepTbl1, config.DepCat1) / div1 / div2);
-
-                    case "(CountA + CountB + 2CountC) / Div1 / Div2":
-                        return (int)Math.Ceiling(
-                            (
-                                GetDependencyValue(context, config.DepTbl1, config.DepCat1) +
-                                GetDependencyValue(context, config.DepTbl2, config.DepCat2) +
-                                (2 * GetDependencyValue(context, config.DepTbl3, config.DepCat3))
-                            ) / div1 / div2);
-
                     case "Count":
-                        return (int)GetDependencyValue(
-                            context,
-                            config.DepTbl1,
-                            config.DepCat1);
+                        decimal? count2 = GetDependencyValue(context, config.DepTbl1, config.DepCat1);
 
-                    case "(2CountA + CountB) / Div1 / Div2":
-                        return (int)Math.Ceiling(
-                            (
-                                (2 * GetDependencyValue(context, config.DepTbl1, config.DepCat1)) +
-                                GetDependencyValue(context, config.DepTbl2, config.DepCat2)
-                            ) / div1 / div2);
+                        return count2.HasValue ? (int?)count2.Value : null;
 
-                    case "RDEK (cntPurlin * cntPanel) / Div1":
+                    case "RDEK Perimeter":
                         return null;
 
-                    case "RDEK Perimeter / Div1":
-                        return null;
-
-                    case "RDEK (cntPurlin * lenPurlin) / Div1":
-                        return null;
-
-                    case "Count * Mult1":
-                        return (int)Math.Ceiling(
-                            GetDependencyValue(context, config.DepTbl1, config.DepCat1) * div1);
-
-                    case "RDEK (cntJoint * lenJoint * Mult1) / Div1":
-                        return null;
-
-                    case "RDEK ((cntJoint * lenJoint) + LFP) / Div1 / Div2":
+                    case "RDEK cntJoint * lenJoint":
                         return null;
 
                     default:
@@ -286,18 +246,25 @@ namespace Falk.CustomAPI
             }
             return null;
         }
-        private decimal GetDependencyValue(CalculationContext context, OptionSetValue table, EntityReference category)
+        private decimal? GetDependencyValue(CalculationContext context, OptionSetValue table, EntityReference category)
         {
-            return context.Values[BuildKey(table, category)];
+            if (context.Values.TryGetValue(BuildKey(table, category), out decimal value))
+            {
+                return value;
+            }
+
+            return null;
+
         }
-        private void UpdateAccessoryQuantity(Entity oppPanelAcc, int qty)
+        private void UpdateTrimQuantity(Guid id, int qty)
         {
             try
             {
+                Console.WriteLine("Quantity to update - " + qty);
                 Entity update =
-                        new Entity("tbs_opppanelaccessory");
+                        new Entity("tbs_opppaneltrim");
 
-                update.Id = oppPanelAcc.Id;
+                update.Id = id;
 
                 update["tbs_quantity"] = qty;
 
@@ -308,30 +275,32 @@ namespace Falk.CustomAPI
                 throw e;
             }
         }
-        private void CalculateAllAccessories(EntityCollection accessories, CalculationContext context)
+        private void CalculateAllTrims(EntityCollection trims, CalculationContext context)
         {
             try
             {
-                Dictionary<Guid, AccessoryConfiguration> configs = new Dictionary<Guid, AccessoryConfiguration>();
+                Dictionary<Guid, TrimConfiguration> configs = new Dictionary<Guid, TrimConfiguration>();
 
-                foreach (Entity accessory in accessories.Entities)
+                foreach (Entity trim in trims.Entities)
                 {
-                    AccessoryConfiguration config = BuildAccessoryConfiguration(accessory);
+                    TrimConfiguration config = BuildTrimConfiguration(trim);
 
                     if (config != null)
                     {
-                        config.Accessory = accessory;      // new property
+                        config.Trim = trim;      // new property
                     }
-                    configs.Add(accessory.Id, config);
+                    configs.Add(trim.Id, config);
                 }
 
                 foreach (var config in configs.Values)
                 {
                     if (config != null)
                     {
-                        Console.WriteLine(config.Accessory);
-                        CalculateAccessory(config, configs, context);
+                        Console.WriteLine("panel trim = " + config.OpportunityTrimId);
+                        Console.WriteLine("Category = " + config.ItemCategory.Id);
+                        CalculateTrim(config, configs, context);
                     }
+                    Console.WriteLine(" \n \n \n \n");
                 }
             }
             catch (Exception e)
@@ -339,7 +308,7 @@ namespace Falk.CustomAPI
                 throw e;
             }
         }
-        private void CalculateAccessory(AccessoryConfiguration config, Dictionary<Guid, AccessoryConfiguration> configs, CalculationContext context)
+        private void CalculateTrim(TrimConfiguration config, Dictionary<Guid, TrimConfiguration> configs, CalculationContext context)
         {
             try
             {
@@ -353,23 +322,21 @@ namespace Falk.CustomAPI
 
                 ResolveDependency(config.DepTbl3, config.DepCat3, configs, context);
 
-                bool useCustomQty = config.Accessory.Contains("tbs_usecustomquantity") && config.Accessory.GetAttributeValue<bool>("tbs_usecustomquantity");
-
-                int? qty = useCustomQty && config.Accessory.Contains("tbs_quantity")
-                    ? config.Accessory.GetAttributeValue<int>("tbs_quantity")
-                    : CalculateQuantity(config, context);
+                int? qty = CalculateQuantity(config, context);
 
                 if (qty.HasValue)
                 {
                     context.Values[BuildKey(config.CurrentTable, config.ItemCategory)] = qty.Value;
+                    Console.WriteLine("context updated" + context);
 
                     config.Calculated = true;
-                    Console.WriteLine(config.Accessory);
+                    Console.WriteLine(config.OpportunityTrimId);
 
-                    if(config.Accessory.Contains("tbs_quantity") && config.Accessory.GetAttributeValue<int>("tbs_quantity") != qty.Value)
-                    {
-                        UpdateAccessoryQuantity(config.Accessory, qty.Value);
-                    }
+                    UpdateTrimQuantity(config.OpportunityTrimId, qty.Value);
+                }
+                else
+                {
+                    Console.WriteLine("Quantity null");
                 }
             }
             catch (Exception e)
@@ -377,7 +344,7 @@ namespace Falk.CustomAPI
                 throw e;
             }
         }
-        private void ResolveDependency(OptionSetValue table, EntityReference category, Dictionary<Guid, AccessoryConfiguration> configs, CalculationContext context)
+        private void ResolveDependency(OptionSetValue table, EntityReference category, Dictionary<Guid, TrimConfiguration> configs, CalculationContext context)
         {
             try
             {
@@ -385,27 +352,27 @@ namespace Falk.CustomAPI
                 {
                     return;
                 }
+                Console.WriteLine("Dependent Category = " + category.Id);
                 string key = BuildKey(table, category);
 
                 if (context.Values.ContainsKey(key))
                 {
-                    return;
+                    return;     // already calculated
                 }
 
                 var dependency = FindConfiguration(configs, table, category);
 
                 if (dependency == null)
-                {
                     throw new InvalidPluginExecutionException($"Dependency not found : {key}");
-                }
-                CalculateAccessory(dependency, configs, context);
+
+                CalculateTrim(dependency, configs, context);
             }
             catch (Exception e)
             {
                 throw e;
             }
         }
-        private AccessoryConfiguration FindConfiguration(Dictionary<Guid, AccessoryConfiguration> configs, OptionSetValue table, EntityReference category)
+        private TrimConfiguration FindConfiguration(Dictionary<Guid, TrimConfiguration> configs, OptionSetValue table, EntityReference category)
         {
             return configs.Values.Where(x => x != null).ToList().FirstOrDefault(x => x.CurrentTable.Value == table.Value && x.ItemCategory != null && x.ItemCategory.Id == category.Id);
         }
@@ -415,28 +382,30 @@ namespace Falk.CustomAPI
             {
                 SqFt = opportunityProduct.GetAttributeValue<decimal>("quantity"),
 
-                LinearFeet = opportunityProduct.GetAttributeValue<decimal>("tbs_linearfeet")
+                LinearFeet = opportunityProduct.GetAttributeValue<decimal>("tbs_linearfeet"),
+
+                OppProdId = opportunityProduct.ToEntityReference()
             };
         }
-        private AccessoryConfiguration BuildAccessoryConfiguration(Entity accessory)
+        private TrimConfiguration BuildTrimConfiguration(Entity trim)
         {
             try
             {
-                AccessoryConfiguration accConfig = new AccessoryConfiguration();
+                TrimConfiguration accConfig = new TrimConfiguration();
 
-                EntityReference panelType = accessory.GetAttributeValue<EntityReference>("tbs_paneltype");
-                EntityReference itemCategory = accessory.Contains("acc.tbs_itemcategory") ? accessory.GetAttributeValue<AliasedValue>("acc.tbs_itemcategory").Value as EntityReference : null;
+                EntityReference panelType = trim.GetAttributeValue<EntityReference>("tbs_paneltype");
+                EntityReference itemCategory = trim.Contains("acc.tbs_itemcategory") ? trim.GetAttributeValue<AliasedValue>("acc.tbs_itemcategory").Value as EntityReference : null;
                 if (itemCategory == null)
                 {
                     return null;
                 }
                 if (itemCategory != null)
                 {
-                    accConfig.Accessory = accessory;
+                    accConfig.OpportunityTrimId = trim.Id;
                     accConfig.ItemCategory = itemCategory;
-                    accConfig.CurrentTable = new OptionSetValue(1);
+                    accConfig.CurrentTable = new OptionSetValue(2);
 
-                    QueryExpression query = new QueryExpression("tbs_accessoryrules");
+                    QueryExpression query = new QueryExpression("tbs_trimrules");
                     query.ColumnSet.AddColumns("tbs_category", "tbs_dependenttablecategory1", "tbs_dependenttablecategory2", "tbs_dependenttablecategory3", "tbs_dependenttabletype1", "tbs_dependenttabletype2", "tbs_dependenttabletype3", "tbs_multiplier1", "tbs_multiplier2", "tbs_panel", "tbs_ruleclass");
                     query.Criteria.AddCondition("tbs_panel", ConditionOperator.Equal, panelType.Id);
                     query.Criteria.AddCondition("tbs_category", ConditionOperator.Equal, itemCategory.Id);
@@ -475,37 +444,6 @@ namespace Falk.CustomAPI
             return $"{table.Value}|{category.Id}";
         }
 
-        #region Classes
-        private class CalculationContext
-        {
-            public EntityReference OppProdId { get; set; }
-            public decimal SqFt { get; set; }
-
-            public decimal LinearFeet { get; set; }
-
-            public string PanelFamily { get; set; }
-
-            public Dictionary<string, decimal> Values
-                = new Dictionary<string, decimal>();
-        }
-        public class AccessoryConfiguration
-        {
-            public Entity Accessory { get; set; }
-            public bool Calculated { get; set; }
-            public OptionSetValue CurrentTable { get; set; }
-            public string RuleClass { get; set; }
-            public decimal Mult1 { get; set; }
-            public decimal Mult2 { get; set; }
-            public OptionSetValue DepTbl1 { get; set; }
-            public EntityReference DepCat1 { get; set; }
-            public OptionSetValue DepTbl2 { get; set; }
-            public EntityReference DepCat2 { get; set; }
-            public OptionSetValue DepTbl3 { get; set; }
-            public EntityReference DepCat3 { get; set; }
-            public EntityReference ItemCategory { get; set; }
-        }
-        #endregion
-
         private Guid GetInputGuid(string parameterName)
         {
             if (!context.InputParameters.Contains(parameterName))
@@ -518,6 +456,7 @@ namespace Falk.CustomAPI
 
             return id;
         }
+
         private void InitProperties(LocalPluginContext localcontext)
         {
             //// Obtain the execution context service from the LocalContext.
@@ -541,5 +480,38 @@ namespace Falk.CustomAPI
                 throw new InvalidPluginExecutionException("Failed to retrieve Tracing Service !");
             }
         }
+
+        #region Classes
+        private class CalculationContext
+        {
+            public EntityReference OppProdId { get; set; }
+            public decimal SqFt { get; set; }
+
+            public decimal LinearFeet { get; set; }
+
+            public string PanelFamily { get; set; }
+
+            public Dictionary<string, decimal> Values
+                = new Dictionary<string, decimal>();
+        }
+        public class TrimConfiguration
+        {
+            public Entity Trim { get; set; }
+            public bool Calculated { get; set; }
+            public OptionSetValue CurrentTable { get; set; }
+            public Guid OpportunityTrimId { get; set; }
+            public string RuleClass { get; set; }
+            public decimal Mult1 { get; set; }
+            public decimal Mult2 { get; set; }
+            public OptionSetValue DepTbl1 { get; set; }
+            public EntityReference DepCat1 { get; set; }
+            public OptionSetValue DepTbl2 { get; set; }
+            public EntityReference DepCat2 { get; set; }
+            public OptionSetValue DepTbl3 { get; set; }
+            public EntityReference DepCat3 { get; set; }
+            public EntityReference ItemCategory { get; set; }
+        }
+        #endregion
+
     }
 }

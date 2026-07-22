@@ -56,16 +56,16 @@ namespace Falk_Plugins.Accessory_and_Trim
                                 if (trimRef == null)
                                     throw new InvalidPluginExecutionException("Trim is required.");
 
-                                Entity trim = service.Retrieve("tbs_trim", trimRef.Id, new ColumnSet("tbs_unit", "tbs_price", "tbs_usdembossedprice", "tbs_description", "tbs_finish", "tbs_canadacustomerprice"));
+                                //Entity trim = service.Retrieve("tbs_trim", trimRef.Id, new ColumnSet("tbs_unit", "tbs_price", "tbs_usdembossedprice", "tbs_description", "tbs_finish", "tbs_canadacustomerprice"));
 
                                 #region Add Unit & Base Price in Panel Trim based on Trim
-                                Money unitPrice = trim.Contains("tbs_price") ? trim.GetAttributeValue<Money>("tbs_price") : new Money(0);
+                                //Money unitPrice = trim.Contains("tbs_price") ? trim.GetAttributeValue<Money>("tbs_price") : new Money(0);
 
-                                targetEntity["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
-                                targetEntity["tbs_unitprice"] = unitPrice;
+                                //targetEntity["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
+                                //targetEntity["tbs_unitprice"] = unitPrice;
                                 #endregion
 
-                                CalculatePanelTrimPrice(targetEntity, trim, opportunityProduct);
+                                //CalculatePanelTrimPrice(targetEntity, trim, opportunityProduct);
                             }
                         }
                     }

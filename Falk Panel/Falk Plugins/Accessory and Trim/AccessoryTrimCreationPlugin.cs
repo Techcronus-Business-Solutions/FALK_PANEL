@@ -170,27 +170,11 @@ namespace Falk_Plugins.Pricing_Master
         {
             try
             {
-                string fetchXml = $@"
-                <fetch distinct='true'>
-                  <entity name='tbs_trim'>
-                    <attribute name='tbs_trimid' />
-                    <attribute name='tbs_name' />
-                    <link-entity
-                        name='tbs_trim_tbs_thickness'
-                        from='tbs_trimid'
-                        to='tbs_trimid'
-                        intersect='true'>
-                      <filter>
-                        <condition
-                          attribute='tbs_thicknessid'
-                          operator='eq'
-                          value='{panelThickness.Id}' />
-                      </filter>
-                    </link-entity>
-                  </entity>
-                </fetch>";
-
-                EntityCollection trims = service.RetrieveMultiple(new FetchExpression(fetchXml));
+                QueryExpression query = new QueryExpression("tbs_trim");
+                query.ColumnSet.AddColumns("tbs_trimid", "tbs_name", "tbs_unit");
+                LinkEntity query_tbs_trim_tbs_thickness = query.AddLink("tbs_trim_tbs_thickness", "tbs_trimid", "tbs_trimid");
+                query_tbs_trim_tbs_thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
+                EntityCollection trims = service.RetrieveMultiple(query);
 
                 foreach (Entity trim in trims.Entities)
                 {
@@ -198,6 +182,7 @@ namespace Falk_Plugins.Pricing_Master
                     panelTrim["tbs_opportunityproduct"] = new EntityReference("opportunityproduct", opportunityProductId);
                     panelTrim["tbs_paneltype"] = panelType;
                     panelTrim["tbs_panelthickness"] = panelThickness;
+                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
                     service.Create(panelTrim);

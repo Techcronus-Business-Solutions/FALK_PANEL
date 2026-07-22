@@ -162,6 +162,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="TrimQtyConsole.cs" />
     <Compile Include="AccessoriesQtyConsole.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="ImportTrimData.cs" />

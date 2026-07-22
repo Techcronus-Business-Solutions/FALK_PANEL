@@ -127,6 +127,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CalculateAccessoryQty.cs" />
+    <Compile Include="CalculateTrimQty.cs" />
     <Compile Include="OpportunityProductPricingCalculation.cs" />
     <Compile Include="CustomAPIBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -167,9 +167,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Accessory and Trim\PanelAccessoryPlugin.cs" />
     <Compile Include="Accessory and Trim\AccessoryTrimCreationPlugin.cs" />
     <Compile Include="Accessory and Trim\AccessoriesQtyPlugin.cs" />
+    <Compile Include="Accessory and Trim\TrimsQtyPlugin.cs" />
     <Compile Include="EnumHelper.cs" />
     <Compile Include="Pricing Master\ColorPlugin.cs" />
     <Compile Include="Pricing Master\LineItemPlugin.cs" />
