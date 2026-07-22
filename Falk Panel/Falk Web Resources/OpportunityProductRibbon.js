@@ -27,8 +27,7 @@ Falk.OpportunityProductRibbon = {
         let exteriorEmboss = formContext.getAttribute("tbs_exterioremboss").getValue();
         let interiorEmboss = formContext.getAttribute("tbs_interioremboss").getValue();
 
-        if (!panelThickness || !exteriorFinish || !interiorFinish || !exteriorGauge ||
-            !interiorGauge || !exteriorColor || !interiorColor) {
+        if (!panelThickness || !exteriorFinish || !interiorFinish || !exteriorGauge || !interiorGauge) {
             Xrm.Navigation.openAlertDialog({ text: "Please fill in all pricing attributes before calculating." });
             return;
         }
@@ -41,8 +40,8 @@ Falk.OpportunityProductRibbon = {
             InteriorFinish: { "@odata.type": "Microsoft.Dynamics.CRM.tbs_finish", tbs_finishid: interiorFinish.id },
             ExteriorGauge: { "@odata.type": "Microsoft.Dynamics.CRM.tbs_gauge", tbs_gaugeid: exteriorGauge.id },
             InteriorGauge: { "@odata.type": "Microsoft.Dynamics.CRM.tbs_gauge", tbs_gaugeid: interiorGauge.id },
-            ExteriorColor: { "@odata.type": "Microsoft.Dynamics.CRM.tbs_color", tbs_colorid: exteriorColor.id },
-            InteriorColor: { "@odata.type": "Microsoft.Dynamics.CRM.tbs_color", tbs_colorid: interiorColor.id },
+            ExteriorColor: exteriorColor ? { "@odata.type": "Microsoft.Dynamics.CRM.tbs_color", tbs_colorid: exteriorColor.id } : null,
+            InteriorColor: interiorColor ? { "@odata.type": "Microsoft.Dynamics.CRM.tbs_color", tbs_colorid: interiorColor.id } : null,
             InteriorEmboss: interiorEmboss,
             ExteriorEmboss: exteriorEmboss,
 
