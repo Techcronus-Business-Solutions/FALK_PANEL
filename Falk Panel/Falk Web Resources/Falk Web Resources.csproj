@@ -49,6 +49,7 @@
     <Content Include="Line Item.js" />
     <Content Include="Opportunity Product.js" />
     <Content Include="OpportunityProductRibbon.js" />
+    <Content Include="Quote Product.js" />
     <Content Include="SalesLifecycleProcess.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

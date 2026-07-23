@@ -54,6 +54,18 @@ namespace Falk_Plugins.Pricing_Master
                             CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness);
 
                             CreatePanelTrims(service, targetEntity.Id, opportunityProductName, panelType, panelThickness);
+
+                            OrganizationRequest customApiRequestTrim = new OrganizationRequest("tbs_CalculateTrimQty");
+
+                            customApiRequestTrim["tbs_oppProduct"] = targetEntity.Id;
+
+                            OrganizationResponse customApiResponseTrim = service.Execute(customApiRequestTrim);
+
+                            OrganizationRequest customApiRequestAcces = new OrganizationRequest("tbs_CalculateAccessoryQty");
+
+                            customApiRequestAcces["tbs_oppProduct"] = targetEntity.Id;
+
+                            OrganizationResponse customApiResponseAcces = service.Execute(customApiRequestAcces);
                         }
                     }
                 }

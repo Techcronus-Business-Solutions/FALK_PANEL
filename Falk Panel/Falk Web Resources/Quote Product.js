@@ -1,0 +1,489 @@
+﻿if (typeof Falk === "undefined") {
+    Falk = {
+        __namespace: true,
+    };
+}
+if (typeof $ === "undefined") {
+    $ = parent.$;
+    Jquery = parent.Jquery;
+}
+
+Falk.QuoteProduct = {
+    OnLoad: async function (executionContext) {
+        const formContext = executionContext.getFormContext();
+        formContext.getControl("tbs_exteriorfinish")
+            .addPreSearch(function () {
+                Falk.QuoteProduct.addExteriorFinishView(formContext);
+            });
+
+        formContext.getControl("tbs_interiorfinish")
+            .addPreSearch(function () {
+                Falk.QuoteProduct.addInteriorFinishView(formContext);
+            });
+
+        formContext.getControl("tbs_exteriorgauge")
+            .addPreSearch(function () {
+                Falk.QuoteProduct.addExteriorGaugeView(formContext);
+            });
+
+        formContext.getControl("tbs_interiorgauge")
+            .addPreSearch(function () {
+                Falk.QuoteProduct.addInteriorGaugeView(formContext);
+            });
+
+        formContext.getControl("tbs_exteriorprofile")
+            .addPreSearch(function () {
+                Falk.QuoteProduct.addExteriorProfileView(formContext);
+            });
+
+        formContext.getControl("tbs_interiorprofile")
+            .addPreSearch(function () {
+                Falk.QuoteProduct.addInteriorProfileView(formContext);
+            });
+
+        formContext.getControl("tbs_exteriorcolor")
+            .addPreSearch(function () {
+                Falk.QuoteProduct.FilterExteriorColorLookup(formContext);
+            });
+
+        formContext.getControl("tbs_interiorcolor")
+            .addPreSearch(function () {
+                Falk.QuoteProduct.FilterInteriorColorLookup(formContext);
+            });
+
+        formContext.getAttribute("productid")
+            .addOnChange(async function () {
+                formContext.getAttribute("tbs_panelthickness").setValue(null);
+
+                formContext.getAttribute("tbs_exteriorfinish").setValue(null);
+                Falk.QuoteProduct.addExteriorFinishView(formContext);
+
+                formContext.getAttribute("tbs_interiorfinish").setValue(null);
+                Falk.QuoteProduct.addInteriorFinishView(formContext);
+
+                formContext.getAttribute("tbs_exteriorgauge").setValue(null);
+                Falk.QuoteProduct.addExteriorGaugeView(formContext);
+
+                formContext.getAttribute("tbs_interiorgauge").setValue(null);
+                Falk.QuoteProduct.addInteriorGaugeView(formContext);
+
+                formContext.getAttribute("tbs_exteriorprofile").setValue(null);
+                Falk.QuoteProduct.addExteriorProfileView(formContext);
+
+                formContext.getAttribute("tbs_interiorprofile").setValue(null);
+                Falk.QuoteProduct.addInteriorProfileView(formContext);
+
+                formContext.getAttribute("tbs_exterioremboss").setValue(false);
+                await Falk.QuoteProduct.EnableDisableExteriorEmboss(formContext);
+
+                formContext.getAttribute("tbs_interioremboss").setValue(false);
+                await Falk.QuoteProduct.EnableDisableInteriorEmboss(formContext);
+
+                formContext.getAttribute("tbs_exteriorcolor").setValue(null);
+                formContext.getAttribute("tbs_interiorcolor").setValue(null);
+            });
+
+        formContext.getAttribute("tbs_panelthickness")
+            .addOnChange(async function () {
+                await Falk.QuoteProduct.SetFieldsFromThickness(formContext);
+            });
+
+        formContext.getAttribute("tbs_interiorfinish")
+            ?.addOnChange(Falk.QuoteProduct.FinishOnChange);
+
+        formContext.getAttribute("tbs_exteriorfinish")
+            ?.addOnChange(Falk.QuoteProduct.FinishOnChange);
+
+        await Falk.QuoteProduct.FinishOnChange(executionContext);
+    },
+
+    addExteriorFinishView: function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+
+        if (!product)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+
+        const fetchXml =
+            "<fetch version='1.0' mapping='logical' distinct='true'>" +
+            "  <entity name='tbs_finish'>" +
+            "    <attribute name='tbs_name' />" +
+            "    <order attribute='tbs_name' />" +
+            "    <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
+            "       <filter>" +
+            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "       </filter>" +
+            "    </link-entity>" +
+            "  </entity>" +
+            "</fetch>";
+
+        const layoutXml =
+            "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
+            "   <row name='result' id='tbs_finishid'>" +
+            "      <cell name='tbs_name' width='250' />" +
+            "   </row>" +
+            "</grid>";
+
+        formContext.getControl("tbs_exteriorfinish").addCustomView(
+            "{541578de-e063-f111-a848-6045bd042c69}",
+            "tbs_finish",
+            "Filtered Exterior Finish",
+            fetchXml,
+            layoutXml,
+            true
+        );
+    },
+
+    addInteriorFinishView: function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+
+        if (!product)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+
+        const fetchXml =
+            "<fetch version='1.0' mapping='logical' distinct='true'>" +
+            "  <entity name='tbs_finish'>" +
+            "    <attribute name='tbs_name' />" +
+            "    <order attribute='tbs_name' />" +
+            "    <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
+            "       <filter>" +
+            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "       </filter>" +
+            "    </link-entity>" +
+            "  </entity>" +
+            "</fetch>";
+
+        const layoutXml =
+            "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
+            "   <row name='result' id='tbs_finishid'>" +
+            "      <cell name='tbs_name' width='250' />" +
+            "   </row>" +
+            "</grid>";
+
+        formContext.getControl("tbs_interiorfinish").addCustomView(
+            "{541578de-e063-f111-a848-6045bd042c70}",
+            "tbs_finish",
+            "Filtered Interior Finish",
+            fetchXml,
+            layoutXml,
+            true
+        );
+    },
+
+    addExteriorGaugeView: function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+
+        if (!product)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+
+        const fetchXml =
+            "<fetch version='1.0' mapping='logical' distinct='true'>" +
+            "  <entity name='tbs_gauge'>" +
+            "    <attribute name='tbs_name' />" +
+            "    <order attribute='tbs_name' />" +
+            "    <link-entity name='tbs_gauge_product' from='tbs_gaugeid' to='tbs_gaugeid' link-type='inner'>" +
+            "       <filter>" +
+            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "       </filter>" +
+            "    </link-entity>" +
+            "  </entity>" +
+            "</fetch>";
+
+        const layoutXml =
+            "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
+            "   <row name='result' id='tbs_gaugeid'>" +
+            "      <cell name='tbs_name' width='250' />" +
+            "   </row>" +
+            "</grid>";
+
+        formContext.getControl("tbs_exteriorgauge").addCustomView(
+            "{541578de-e063-f111-a848-6045bd042c71}",
+            "tbs_gauge",
+            "Filtered Exterior Gauge",
+            fetchXml,
+            layoutXml,
+            true
+        );
+    },
+
+    addInteriorGaugeView: function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+
+        if (!product)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+
+        const fetchXml =
+            "<fetch version='1.0' mapping='logical' distinct='true'>" +
+            "  <entity name='tbs_gauge'>" +
+            "    <attribute name='tbs_name' />" +
+            "    <order attribute='tbs_name' />" +
+            "    <link-entity name='tbs_gauge_product' from='tbs_gaugeid' to='tbs_gaugeid' link-type='inner'>" +
+            "       <filter>" +
+            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "       </filter>" +
+            "    </link-entity>" +
+            "  </entity>" +
+            "</fetch>";
+
+        const layoutXml =
+            "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
+            "   <row name='result' id='tbs_gaugeid'>" +
+            "      <cell name='tbs_name' width='250' />" +
+            "   </row>" +
+            "</grid>";
+
+        formContext.getControl("tbs_interiorgauge").addCustomView(
+            "{541578de-e063-f111-a848-6045bd042c72}",
+            "tbs_gauge",
+            "Filtered Interior Gauge",
+            fetchXml,
+            layoutXml,
+            true
+        );
+    },
+
+    addExteriorProfileView: function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+
+        if (!product)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+
+        const fetchXml =
+            "<fetch version='1.0' mapping='logical' distinct='true'>" +
+            "  <entity name='tbs_profile'>" +
+            "    <attribute name='tbs_name' />" +
+            "    <order attribute='tbs_name' />" +
+            "    <link-entity name='tbs_profile_product' from='tbs_profileid' to='tbs_profileid' link-type='inner'>" +
+            "       <filter>" +
+            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "       </filter>" +
+            "    </link-entity>" +
+            "  </entity>" +
+            "</fetch>";
+
+        const layoutXml =
+            "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
+            "   <row name='result' id='tbs_profileid'>" +
+            "      <cell name='tbs_name' width='250' />" +
+            "   </row>" +
+            "</grid>";
+
+        formContext.getControl("tbs_exteriorprofile").addCustomView(
+            "{541578de-e063-f111-a848-6045bd042c73}",
+            "tbs_profile",
+            "Filtered Exterior Profile",
+            fetchXml,
+            layoutXml,
+            true
+        );
+    },
+
+    addInteriorProfileView: function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+
+        if (!product)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+
+        const fetchXml =
+            "<fetch version='1.0' mapping='logical' distinct='true'>" +
+            "  <entity name='tbs_profile'>" +
+            "    <attribute name='tbs_name' />" +
+            "    <order attribute='tbs_name' />" +
+            "    <link-entity name='tbs_profile_product' from='tbs_profileid' to='tbs_profileid' link-type='inner'>" +
+            "       <filter>" +
+            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "       </filter>" +
+            "    </link-entity>" +
+            "  </entity>" +
+            "</fetch>";
+
+        const layoutXml =
+            "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
+            "   <row name='result' id='tbs_profileid'>" +
+            "      <cell name='tbs_name' width='250' />" +
+            "   </row>" +
+            "</grid>";
+
+        formContext.getControl("tbs_interiorprofile").addCustomView(
+            "{541578de-e063-f111-a848-6045bd042c74}",
+            "tbs_profile",
+            "Filtered Interior Profile",
+            fetchXml,
+            layoutXml,
+            true
+        );
+    },
+
+    FilterExteriorColorLookup: function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+        const finish = formContext.getAttribute("tbs_exteriorfinish").getValue();
+
+        if (!product || !finish)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+        const finishId = finish[0].id.replace(/[{}]/g, "");
+
+        const filter =
+            "<filter type='and'>" +
+            "<condition attribute='tbs_product' operator='eq' value='" + productId + "' />" +
+            "<condition attribute='tbs_finish' operator='eq' value='" + finishId + "' />" +
+            "</filter>";
+
+        formContext.getControl("tbs_exteriorcolor").addCustomFilter(filter, "tbs_color");
+    },
+
+    FilterInteriorColorLookup: function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+        const finish = formContext.getAttribute("tbs_interiorfinish").getValue();
+
+        if (!product || !finish)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+        const finishId = finish[0].id.replace(/[{}]/g, "");
+
+        const filter =
+            "<filter type='and'>" +
+            "<condition attribute='tbs_product' operator='eq' value='" + productId + "' />" +
+            "<condition attribute='tbs_finish' operator='eq' value='" + finishId + "' />" +
+            "</filter>";
+
+        formContext.getControl("tbs_interiorcolor").addCustomFilter(filter, "tbs_color");
+    },
+
+    EnableDisableExteriorEmboss: async function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+
+        if (!product)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+
+        try {
+            const product = await Xrm.WebApi.retrieveRecord("product", productId, "?$select=tbs_exteriorembossavailable");
+
+            const isExteriorembossAvailable = product["tbs_exteriorembossavailable"];
+            if (!isExteriorembossAvailable) {
+                formContext.getAttribute("tbs_exterioremboss").setValue(false);
+                formContext.getControl("tbs_exterioremboss").setDisabled(true);
+            }
+            else {
+                formContext.getControl("tbs_exterioremboss").setDisabled(false);
+            }
+        }
+        catch (error) {
+            console.error(error.message);
+        }
+    },
+
+    EnableDisableInteriorEmboss: async function (formContext) {
+        const product = formContext.getAttribute("productid").getValue();
+
+        if (!product)
+            return;
+
+        const productId = product[0].id.replace(/[{}]/g, "");
+
+        try {
+            const product = await Xrm.WebApi.retrieveRecord("product", productId, "?$select=tbs_interiorembossavailable");
+
+            const isInteriorembossAvailable = product["tbs_interiorembossavailable"];
+            if (!isInteriorembossAvailable) {
+                formContext.getAttribute("tbs_interioremboss").setValue(false);
+                formContext.getControl("tbs_interioremboss").setDisabled(true);
+            }
+            else {
+                formContext.getControl("tbs_interioremboss").setDisabled(false);
+            }
+        }
+        catch (error) {
+            console.error(error.message);
+        }
+    },
+
+    FinishOnChange: async function (executionContext) {
+        const formContext = executionContext.getFormContext();
+
+        const hpsFinishId = await Falk.QuoteProduct.GetEnvironmentVariableValue("tbs_FalkHPSFinishId");
+
+        if (!hpsFinishId)
+            return;
+
+        const interiorFinish = formContext.getAttribute("tbs_interiorfinish")?.getValue();
+        const exteriorFinish = formContext.getAttribute("tbs_exteriorfinish")?.getValue();
+
+        const normalizeGuid = (id) => id.replace(/[{}]/g, "").toLowerCase();
+
+        const envId = normalizeGuid(hpsFinishId);
+
+        // Interior
+        if (interiorFinish && normalizeGuid(interiorFinish[0].id) === envId) {
+            formContext.getAttribute("tbs_interioremboss").setValue(2); //HPS
+        }
+
+        // Exterior
+        if (exteriorFinish && normalizeGuid(exteriorFinish[0].id) === envId) {
+            formContext.getAttribute("tbs_exterioremboss").setValue(2); //HPS
+        }
+    },
+
+    GetEnvironmentVariableValue: async function (schemaName) {
+        const defResult = await Xrm.WebApi.retrieveMultipleRecords(
+            "environmentvariabledefinition",
+            `?$select=environmentvariabledefinitionid,defaultvalue&$filter=schemaname eq '${schemaName}'`
+        );
+        if (!defResult.entities || defResult.entities.length === 0) {
+            console.warn(
+                `No EnvironmentVariableDefinition found for schema '${schemaName}'`
+            );
+            return null;
+        }
+        const def = defResult.entities[0];
+        const definitionId = def.environmentvariabledefinitionid;
+        const defaultValue = def.defaultvalue;
+
+        // Query the value entity for the current environment override
+        const valResult = await Xrm.WebApi.retrieveMultipleRecords(
+            "environmentvariablevalue",
+            `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definitionId}`
+        );
+        if (valResult.entities && valResult.entities.length > 0) {
+            return valResult.entities[0].value;
+        }
+        // If no override exists, fall back to defaultValue
+        return defaultValue;
+    },
+
+    SetFieldsFromThickness: async function (formContext) {
+        const thickness = formContext.getAttribute("tbs_panelthickness")?.getValue();
+        if (!thickness) {
+            formContext.getAttribute("tbs_stackheight").setValue(null);
+            formContext.getAttribute("tbs_panelsperstack").setValue(null);
+            formContext.getAttribute("tbs_widthpanel").setValue(null);
+            return;
+        }
+
+        const thicknessId = thickness[0].id.replace(/[{}]/g, "");
+        const thicknessRecord = await Xrm.WebApi.retrieveRecord("tbs_thickness", thicknessId, "?$select=tbs_stackheight,tbs_maxpanelperstack,tbs_visiblepanelwidth");
+
+        const stackHeight = thicknessRecord["tbs_stackheight"];
+        const panelsPerStack = thicknessRecord["tbs_maxpanelperstack"];
+        const widthPanel = thicknessRecord["tbs_visiblepanelwidth"];
+
+        formContext.getAttribute("tbs_stackheight").setValue(stackHeight);
+        formContext.getAttribute("tbs_panelsperstack").setValue(panelsPerStack);
+        formContext.getAttribute("tbs_widthpanel").setValue(widthPanel);
+    }
+}
