@@ -51,21 +51,30 @@ namespace Falk_Plugins.Accessory_and_Trim
                             }
                             else
                             {
+                                tracingService.Trace("Standard Trim Pricing Calculation Started...");
                                 EntityReference trimRef = targetEntity.Contains("tbs_trim") ? targetEntity.GetAttributeValue<EntityReference>("tbs_trim") : null;
 
                                 if (trimRef == null)
                                     throw new InvalidPluginExecutionException("Trim is required.");
 
-                                //Entity trim = service.Retrieve("tbs_trim", trimRef.Id, new ColumnSet("tbs_unit", "tbs_price", "tbs_usdembossedprice", "tbs_description", "tbs_finish", "tbs_canadacustomerprice"));
+                                tracingService.Trace("Trim Exists...");
 
-                                #region Add Unit & Base Price in Panel Trim based on Trim
-                                //Money unitPrice = trim.Contains("tbs_price") ? trim.GetAttributeValue<Money>("tbs_price") : new Money(0);
+                                Entity trim = service.Retrieve("tbs_trim", trimRef.Id, new ColumnSet("tbs_name", "tbs_description", "tbs_itemcategory", "tbs_trimpricing"));
 
-                                //targetEntity["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
-                                //targetEntity["tbs_unitprice"] = unitPrice;
-                                #endregion
+                                EntityReference trimPricingRef = trim.Contains("tbs_trimpricing") ? trim.GetAttributeValue<EntityReference>("tbs_trimpricing") : null;
 
-                                //CalculatePanelTrimPrice(targetEntity, trim, opportunityProduct);
+                                if (trimPricingRef == null)
+                                {
+                                    targetEntity["tbs_unitprice"] = new Money(0);
+                                    tracingService.Trace("Trim Pricing Not Found!");
+                                    return;
+                                }
+
+                                tracingService.Trace("Standard Trim Pricing Exists...");
+
+                                Entity trimPricing = service.Retrieve("tbs_trimpricing", trimPricingRef.Id, new ColumnSet("tbs_unit", "tbs_finish", "tbs_description", "tbs_cost", "tbs_embossingmarkup", "tbs_canadacustomermargin", "tbs_canadacustomerprice", "tbs_cadembossedprice", "tbs_margin", "tbs_price", "tbs_usdembossedprice"));
+
+                                CalculatePanelTrimPrice(targetEntity, trimPricing, opportunityProduct);
                             }
                         }
                     }
@@ -78,9 +87,11 @@ namespace Falk_Plugins.Accessory_and_Trim
             }
         }
 
-        private void CalculatePanelTrimPrice(Entity panelTrim, Entity trim, Entity opportunityProduct)
+        private void CalculatePanelTrimPrice(Entity panelTrim, Entity trimPricing, Entity opportunityProduct)
         {
             tracingService.Trace("CalculatePanelTrimPrice Started");
+
+            panelTrim["tbs_unitprice"] = new Money(0);
 
             EntityReference trimRef = panelTrim.Contains("tbs_trim") ? panelTrim.GetAttributeValue<EntityReference>("tbs_trim") : null;
             EntityReference oppProductRef = panelTrim.Contains("tbs_opportunityproduct") ? panelTrim.GetAttributeValue<EntityReference>("tbs_opportunityproduct") : null;
@@ -93,15 +104,15 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             int quantity = panelTrim.Contains("tbs_quantity") ? panelTrim.GetAttributeValue<int>("tbs_quantity") : 1;
 
-            Money basePriceMoney = trim.GetAttributeValue<Money>("tbs_price") ?? new Money(0);
-            Money embossPriceMoney = trim.GetAttributeValue<Money>("tbs_usdembossedprice") ?? new Money(0);
+            Money basePriceMoney = trimPricing.GetAttributeValue<Money>("tbs_price") ?? new Money(0);
+            Money embossPriceMoney = trimPricing.GetAttributeValue<Money>("tbs_usdembossedprice") ?? new Money(0);
 
             decimal basePrice = basePriceMoney.Value;
             decimal embossPrice = embossPriceMoney.Value;
 
-            string trimDescription = trim.GetAttributeValue<string>("tbs_description") ?? string.Empty;
+            string trimDescription = trimPricing.GetAttributeValue<string>("tbs_description") ?? string.Empty;
 
-            OptionSetValue finishOption = trim.Contains("tbs_finish") ? trim.GetAttributeValue<OptionSetValue>("tbs_finish") : null;
+            OptionSetValue finishOption = trimPricing.Contains("tbs_finish") ? trimPricing.GetAttributeValue<OptionSetValue>("tbs_finish") : null;
 
             int finishValue = finishOption != null ? finishOption.Value : 0;
 
@@ -128,10 +139,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             if (finishRef != null)
             {
-                Entity finish = service.Retrieve(
-                    "tbs_finish",
-                    finishRef.Id,
-                    new ColumnSet("tbs_name"));
+                Entity finish = service.Retrieve("tbs_finish", finishRef.Id, new ColumnSet("tbs_name"));
 
                 finishName = finish.GetAttributeValue<string>("tbs_name") ?? "";
 
@@ -189,6 +197,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             {
                 decimal packagingTotal = basePrice * quantity;
 
+                panelTrim["tbs_unitprice"] = new Money(basePrice);
                 panelTrim["tbs_totalprice"] = new Money(packagingTotal);
 
                 tracingService.Trace("Packaging Rule Applied");
@@ -215,6 +224,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                 case (int)TrimFinish.Galvanized:
                 default:
                     decimal galvanizedTotal = basePrice * quantity;
+                    panelTrim["tbs_unitprice"] = new Money(basePrice);
                     panelTrim["tbs_totalprice"] = new Money(galvanizedTotal);
                     return;
             }
@@ -263,7 +273,8 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             decimal totalPrice = calculatedUnitPrice * quantity;
 
-            panelTrim["tbs_totalprice"] = new Money(totalPrice);
+            panelTrim["tbs_unitprice"] = new Money(calculatedUnitPrice);
+            //panelTrim["tbs_totalprice"] = new Money(totalPrice);
 
             tracingService.Trace("Total Price Updated. Quantity={0}, TotalPrice={1}", quantity, totalPrice);
             #endregion
@@ -454,7 +465,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             panelTrim["tbs_unit"] = settings.GetAttributeValue<EntityReference>("tbs_unit");
             panelTrim["tbs_unitprice"] = new Money(falkPrice);
-            panelTrim["tbs_totalprice"] = new Money(falkPrice * quantity);
+            //panelTrim["tbs_totalprice"] = new Money(falkPrice * quantity);
             panelTrim["tbs_category"] = new EntityReference("tbs_tier", new Guid(Tier1ID));
 
             tracingService.Trace("Trim Tier ID: ", Tier1ID);
