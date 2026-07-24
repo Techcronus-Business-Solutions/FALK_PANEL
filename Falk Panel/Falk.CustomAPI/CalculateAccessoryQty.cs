@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Crm.Sdk.Messages;
+using System.Activities.Statements;
 
 namespace Falk.CustomAPI
 {
@@ -37,6 +39,8 @@ namespace Falk.CustomAPI
 
                 CalculationContext calccontext = BuildCalculationContext(opportunityProduct);
 
+                AddTrimsIntoDictionary(oppProductId, calccontext);
+
                 CalculateAllAccessories(accessories, calccontext);
 
             }
@@ -50,6 +54,43 @@ namespace Falk.CustomAPI
         private Entity GetOpportunityProduct(Guid oppProductId)
         {
             return service.Retrieve("opportunityproduct", oppProductId, new ColumnSet("quantity", "tbs_linearfeet"));
+        }
+
+        private void AddTrimsIntoDictionary(Guid opportunityProductId, CalculationContext context)
+        {
+            QueryExpression query = new QueryExpression("tbs_opppaneltrim");
+            query.ColumnSet = new ColumnSet("tbs_quantity","tbs_trim");
+
+            query.Criteria.AddCondition("tbs_opportunityproduct",ConditionOperator.Equal,opportunityProductId);
+
+            LinkEntity trimLink = query.AddLink("tbs_trim","tbs_trim","tbs_trimid");
+
+            trimLink.EntityAlias = "trim";
+            trimLink.Columns = new ColumnSet("tbs_itemcategory");
+
+            EntityCollection trims = service.RetrieveMultiple(query);
+
+            tracingService.Trace($"Trim Count : {trims.Entities.Count}");
+
+            foreach (Entity trim in trims.Entities)
+            {
+                EntityReference category =
+                    trim.GetAttributeValue<AliasedValue>("trim.tbs_itemcategory")?.Value as EntityReference;
+
+                if (category == null)
+                    continue;
+
+                decimal qty = 0;
+
+                if (trim.Contains("tbs_quantity"))
+                    qty = trim.GetAttributeValue<int>("tbs_quantity");
+
+                string key = BuildKey(new OptionSetValue(2), category);
+
+                context.Values[key] = qty;
+
+                tracingService.Trace($"Trim Added : {key} = {qty}");
+            }
         }
         private EntityCollection GetAccessories(Guid opportunityProductId)
         {

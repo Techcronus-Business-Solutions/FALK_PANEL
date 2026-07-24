@@ -51,9 +51,13 @@ namespace Falk_Plugins.Pricing_Master
 
                             EntityReference panelType = targetEntity.GetAttributeValue<EntityReference>("productid");
 
+                            tracingService.Trace("Panel id " + panelType.Id.ToString());
+
                             CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness);
+                            tracingService.Trace("Panel Accessories created");
 
                             CreatePanelTrims(service, targetEntity.Id, opportunityProductName, panelType, panelThickness);
+                            tracingService.Trace("Panel Trims created");
 
                             OrganizationRequest customApiRequestTrim = new OrganizationRequest("tbs_CalculateTrimQty");
 
@@ -167,7 +171,8 @@ namespace Falk_Plugins.Pricing_Master
                         panelAccessory["tbs_unitprice"] = new Money(price.Value * multiplier / 100m);
                     }
 
-                    service.Create(panelAccessory);
+                    Guid panelAccesId = service.Create(panelAccessory);
+                    tracingService.Trace("accesory created" + panelAccesId);
                 }
 
                 #endregion
@@ -197,7 +202,8 @@ namespace Falk_Plugins.Pricing_Master
                     panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
-                    service.Create(panelTrim);
+                    Guid trimId = service.Create(panelTrim);
+                    tracingService.Trace("trim created" + trimId);
                 }
             }
             catch (Exception ex)
