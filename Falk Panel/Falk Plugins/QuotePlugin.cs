@@ -37,16 +37,18 @@ namespace Falk_Plugins
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
-                            Entity quoteProductEntity = (Entity)context.InputParameters["Target"];
+                            Entity quoteProduct = service.Retrieve("quotedetail",targetEntity.Id,new ColumnSet("tbs_opportunityproduct"));
 
-                            Entity quote = service.Retrieve("quote",quoteProductEntity.Id,new ColumnSet("opportunityid"));
+                            EntityReference oppProductRef = quoteProduct.GetAttributeValue<EntityReference>("tbs_opportunityproduct");
 
-                            QueryExpression query = new QueryExpression("opportunityproduct");
-                            query.ColumnSet = new ColumnSet(true);
-                            query.Criteria.AddCondition("opportunityid", ConditionOperator.Equal, quote.GetAttributeValue<EntityReference>("opportunityid"));
-                            EntityCollection oppProducts = service.RetrieveMultiple(query);
-
-                            EntityReference oppProduct = quoteProductEntity.GetAttributeValue<EntityReference>("opportunityproductid");
+                            if (oppProductRef == null)
+                            {
+                                tracingService.Trace("Opportunity Product mapping not found.");
+                                return;
+                            }
+                            CreatequoteLineItems(targetEntity.ToEntityReference(), oppProductRef);
+                            CreateQuotePanelAccessories(targetEntity.ToEntityReference(), oppProductRef);
+                            CreateQuotePanelTrims(targetEntity.ToEntityReference(), oppProductRef);
                         }
                     }
                 }
@@ -56,6 +58,91 @@ namespace Falk_Plugins
                 throw new InvalidPluginExecutionException(e.Message, e);
             }
         }
+
+        private void CreatequoteLineItems(EntityReference quoteProductRef, EntityReference oppProductRef)
+        {
+            QueryExpression query = new QueryExpression("tbs_lineitem");
+            query.ColumnSet = new ColumnSet(true);
+            query.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, oppProductRef.Id);
+
+            EntityCollection lineitems = service.RetrieveMultiple(query);
+
+            tracingService.Trace($"line items Found : {lineitems.Entities.Count}");
+
+            foreach (Entity oppLineItems in lineitems.Entities)
+            {
+                Entity quoteLineItems = new Entity("tbs_quotelineitem");
+
+                foreach (var attribute in oppLineItems.Attributes)
+                {
+                    if (attribute.Key == "tbs_lineitemid" || attribute.Key == "tbs_opportunityproduct")
+                        continue;
+
+                    quoteLineItems[attribute.Key] = attribute.Value;
+                }
+
+                quoteLineItems["tbs_quoteproduct"] = quoteProductRef;
+
+                service.Create(quoteLineItems);
+            }
+        }
+
+        private void CreateQuotePanelAccessories(EntityReference quoteProductRef, EntityReference oppProductRef)
+        {
+            QueryExpression query = new QueryExpression("tbs_opppanelaccessory");
+            query.ColumnSet = new ColumnSet(true);
+            query.Criteria.AddCondition("tbs_opportunityproduct",ConditionOperator.Equal,oppProductRef.Id);
+
+            EntityCollection accessories = service.RetrieveMultiple(query);
+
+            tracingService.Trace($"Accessories Found : {accessories.Entities.Count}");
+
+            foreach (Entity oppAccessory in accessories.Entities)
+            {
+                Entity quoteAccessory = new Entity("tbs_quotepanelaccessory");
+
+                foreach (var attribute in oppAccessory.Attributes)
+                {
+                    if (attribute.Key == "tbs_opppanelaccessoryid" ||attribute.Key == "tbs_opportunityproduct")
+                        continue;
+
+                    quoteAccessory[attribute.Key] = attribute.Value;
+                }
+
+                quoteAccessory["tbs_quoteproduct"] = quoteProductRef;
+
+                service.Create(quoteAccessory);
+            }
+        }
+
+        private void CreateQuotePanelTrims(EntityReference quoteProductRef, EntityReference oppProductRef)
+        {
+            QueryExpression query = new QueryExpression("tbs_opppaneltrim");
+            query.ColumnSet = new ColumnSet(true);
+            query.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, oppProductRef.Id);
+
+            EntityCollection trims = service.RetrieveMultiple(query);
+
+            tracingService.Trace($"Trims Found : {trims.Entities.Count}");
+
+            foreach (Entity oppTrim in trims.Entities)
+            {
+                Entity quoteTrim = new Entity("tbs_quotepaneltrim");
+
+                foreach (var attribute in oppTrim.Attributes)
+                {
+                    if (attribute.Key == "tbs_opppaneltrimid" || attribute.Key == "tbs_opportunityproduct")
+                        continue;
+
+                    quoteTrim[attribute.Key] = attribute.Value;
+                }
+
+                quoteTrim["tbs_quoteproduct"] = quoteProductRef;
+
+                service.Create(quoteTrim);
+            }
+        }
+
         private void InitProperties(LocalPluginContext localcontext)
         {
             //// Obtain the execution context service from the LocalContext.

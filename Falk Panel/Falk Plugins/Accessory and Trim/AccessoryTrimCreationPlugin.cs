@@ -3,6 +3,7 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using System;
+using System.Activities.Expressions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -191,6 +192,15 @@ namespace Falk_Plugins.Pricing_Master
                 query.ColumnSet.AddColumns("tbs_trimid", "tbs_name", "tbs_unit");
                 LinkEntity query_tbs_trim_tbs_thickness = query.AddLink("tbs_trim_tbs_thickness", "tbs_trimid", "tbs_trimid");
                 query_tbs_trim_tbs_thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
+
+                LinkEntity cat = query.AddLink("tbs_itemcategory", "tbs_itemcategory", "tbs_itemcategoryid", JoinOperator.LeftOuter);
+                cat.EntityAlias = "cat";
+
+                LinkEntity rule = cat.AddLink("tbs_trimrules", "tbs_itemcategoryid", "tbs_category", JoinOperator.LeftOuter);
+                rule.EntityAlias = "rule";
+                rule.Columns.AddColumn("tbs_ruleclass");
+                rule.LinkCriteria.AddCondition("tbs_panel", ConditionOperator.Equal, panelType.Id);
+
                 EntityCollection trims = service.RetrieveMultiple(query);
 
                 foreach (Entity trim in trims.Entities)
@@ -202,6 +212,8 @@ namespace Falk_Plugins.Pricing_Master
                     panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
+                    panelTrim["tbs_isquantitycalculated"] = trim.Contains("rule.tbs_ruleclass") && trim.GetAttributeValue<AliasedValue>("rule.tbs_ruleclass").Value != null ? true : false;
+
                     Guid trimId = service.Create(panelTrim);
                     tracingService.Trace("trim created" + trimId);
                 }
