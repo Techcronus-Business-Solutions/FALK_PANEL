@@ -65,7 +65,7 @@ namespace Falk.CustomAPI
                 trimLink.EntityAlias = "acc";
                 trimLink.Columns = new ColumnSet("tbs_itemcategory");
                 trims = service.RetrieveMultiple(query);
-                Console.WriteLine(trims.Entities.Count.ToString());
+                tracingService.Trace(trims.Entities.Count.ToString());
             }
             catch (Exception e)
             {
@@ -81,11 +81,11 @@ namespace Falk.CustomAPI
 
                 if (string.IsNullOrEmpty(rule))
                 {
-                    Console.WriteLine("No Rule Identified - Need to fill quantity");
+                    tracingService.Trace("No Rule Identified - Need to fill quantity");
 
                     if (config.Trim.Contains("tbs_quantity"))
                     {
-                        Console.WriteLine("Manual Quantity = " + config.Trim.GetAttributeValue<int>("tbs_quantity"));
+                        tracingService.Trace("Manual Quantity = " + config.Trim.GetAttributeValue<int>("tbs_quantity"));
                         return config.Trim.GetAttributeValue<int>("tbs_quantity");
                     }
 
@@ -93,7 +93,7 @@ namespace Falk.CustomAPI
 
                     return null;
                 }
-                Console.WriteLine(rule);
+                tracingService.Trace(rule);
 
                 decimal div1 = config.Mult1;
                 decimal div2 = config.Mult2;
@@ -197,55 +197,7 @@ namespace Falk.CustomAPI
             }
             return null;
         }
-        private int? GetLineerFeetPerim(EntityReference oppProd)
-        {
-            if (oppProd != null)
-            {
-                try
-                {
-                    string fetchXml = $@"
-                    <fetch aggregate='true'>
-                      <entity name='tbs_opppaneltrim'>
-                        <attribute name='tbs_quantity' alias='quantity' aggregate='sum' />
-                        <filter>
-                          <condition attribute='tbs_opportunityproduct' operator='eq' value='{oppProd.Id}' />
-                        </filter>
-                        <link-entity name='tbs_trim' from='tbs_trimid' to='tbs_trim'>
-                          <link-entity name='tbs_itemcategory' from='tbs_itemcategoryid' to='tbs_itemcategory'>
-                            <filter>
-                                <condition attribute='tbs_categoryname' operator='in'>
-                                  <value>High Eave</value>
-                                  <value>Rake Zee</value>
-                                  <value>Low Eave</value>
-                                  <value>Rake</value>
-                                  <value>Rake Transition</value>
-                                  <value>Ridge Closure</value>
-                                  <value>Ext Ridge</value>
-                                  <value>Int Ridge</value>
-                                  <value>Transition</value>
-                                  <value>Valley</value>
-                                  <value>Counter</value>
-                                </condition>
-                            </filter>
-                          </link-entity>
-                        </link-entity>
-                      </entity>
-                    </fetch>";
-
-                    Entity LFTP = service.RetrieveMultiple(new FetchExpression(fetchXml)).Entities.FirstOrDefault();
-                    if (LFTP != null)
-                    {
-                        int qty = (int)LFTP.GetAttributeValue<AliasedValue>("quantity").Value;
-                        return qty;
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw e;
-                }
-            }
-            return null;
-        }
+        
         private decimal? GetDependencyValue(CalculationContext context, OptionSetValue table, EntityReference category)
         {
             if (context.Values.TryGetValue(BuildKey(table, category), out decimal value))
@@ -260,7 +212,7 @@ namespace Falk.CustomAPI
         {
             try
             {
-                Console.WriteLine("Quantity to update - " + qty);
+                tracingService.Trace("Quantity to update - " + qty);
                 Entity update =
                         new Entity("tbs_opppaneltrim");
 
@@ -296,11 +248,11 @@ namespace Falk.CustomAPI
                 {
                     if (config != null)
                     {
-                        Console.WriteLine("panel trim = " + config.OpportunityTrimId);
-                        Console.WriteLine("Category = " + config.ItemCategory.Id);
+                        tracingService.Trace("panel trim = " + config.OpportunityTrimId);
+                        tracingService.Trace("Category = " + config.ItemCategory.Id);
                         CalculateTrim(config, configs, context);
                     }
-                    Console.WriteLine(" \n \n \n \n");
+                    tracingService.Trace(" \n \n \n \n");
                 }
             }
             catch (Exception e)
@@ -327,16 +279,16 @@ namespace Falk.CustomAPI
                 if (qty.HasValue)
                 {
                     context.Values[BuildKey(config.CurrentTable, config.ItemCategory)] = qty.Value;
-                    Console.WriteLine("context updated" + context);
+                    tracingService.Trace("context updated" + context);
 
                     config.Calculated = true;
-                    Console.WriteLine(config.OpportunityTrimId);
+                    tracingService.Trace(config.OpportunityTrimId.ToString());
 
                     UpdateTrimQuantity(config.OpportunityTrimId, qty.Value);
                 }
                 else
                 {
-                    Console.WriteLine("Quantity null");
+                    tracingService.Trace("Quantity null");
                 }
             }
             catch (Exception e)
@@ -352,7 +304,7 @@ namespace Falk.CustomAPI
                 {
                     return;
                 }
-                Console.WriteLine("Dependent Category = " + category.Id);
+                tracingService.Trace("Dependent Category = " + category.Id);
                 string key = BuildKey(table, category);
 
                 if (context.Values.ContainsKey(key))
@@ -413,7 +365,7 @@ namespace Falk.CustomAPI
 
                     if (rules.Entities.Count > 1)
                     {
-                        Console.WriteLine("Multiple Rules Found - Confused");
+                        tracingService.Trace("Multiple Rules Found - Confused");
                     }
                     else if (rules.Entities.Count > 0)
                     {

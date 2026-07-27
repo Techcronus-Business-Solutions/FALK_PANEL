@@ -31,7 +31,7 @@ namespace Falk.CustomAPI
             {
                 tracingService.Trace("execution started");
                 Guid oppProductId = GetInputGuid("tbs_oppProduct");
-                Console.WriteLine("Opportunity ProductId = " + oppProductId.ToString());
+                tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
 
                 Entity opportunityProduct = GetOpportunityProduct(oppProductId);
 
@@ -106,7 +106,7 @@ namespace Falk.CustomAPI
                 accessoryLink.EntityAlias = "acc";
                 accessoryLink.Columns = new ColumnSet("tbs_itemcategory");
                 accessories = service.RetrieveMultiple(query);
-                Console.WriteLine(accessories.Entities.Count.ToString());
+                tracingService.Trace(accessories.Entities.Count.ToString());
             }
             catch (Exception e)
             {
@@ -124,7 +124,7 @@ namespace Falk.CustomAPI
                 {
                     return null;
                 }
-                Console.WriteLine(rule);
+                tracingService.Trace(rule);
 
                 decimal div1 = config.Mult1;
                 decimal div2 = config.Mult2;
@@ -370,7 +370,7 @@ namespace Falk.CustomAPI
                 {
                     if (config != null)
                     {
-                        Console.WriteLine(config.Accessory);
+                        tracingService.Trace(config.Accessory.ToString());
                         CalculateAccessory(config, configs, context);
                     }
                 }
@@ -400,15 +400,29 @@ namespace Falk.CustomAPI
                     ? config.Accessory.GetAttributeValue<int>("tbs_quantity")
                     : CalculateQuantity(config, context);
 
+                tracingService.Trace($"Accessory: {config.ItemCategory.Id}");
+
+                tracingService.Trace($"Rule: {config.RuleClass}");
+
+                tracingService.Trace($"Calculated Qty: {(qty.HasValue ? qty.Value.ToString() : "NULL")}");
+
                 if (qty.HasValue)
                 {
+                    tracingService.Trace("Inside qty.HasValue");
                     context.Values[BuildKey(config.CurrentTable, config.ItemCategory)] = qty.Value;
 
                     config.Calculated = true;
-                    Console.WriteLine(config.Accessory);
+                    tracingService.Trace(config.Accessory.ToString());
 
-                    if(config.Accessory.Contains("tbs_quantity") && config.Accessory.GetAttributeValue<int>("tbs_quantity") != qty.Value)
+                    int currentQty = config.Accessory.GetAttributeValue<int?>("tbs_quantity") ?? 0;
+
+                    tracingService.Trace($"Current Qty : {currentQty}");
+                    tracingService.Trace($"Calculated Qty : {qty.Value}");
+
+                    if (currentQty != qty.Value)
                     {
+                        tracingService.Trace("Updating Accessory Quantity");
+
                         UpdateAccessoryQuantity(config.Accessory, qty.Value);
                     }
                 }
@@ -454,6 +468,8 @@ namespace Falk.CustomAPI
         {
             return new CalculationContext
             {
+                OppProdId = new EntityReference("opportunityproduct", opportunityProduct.Id),
+
                 SqFt = opportunityProduct.GetAttributeValue<decimal>("quantity"),
 
                 LinearFeet = opportunityProduct.GetAttributeValue<decimal>("tbs_linearfeet")
@@ -485,7 +501,7 @@ namespace Falk.CustomAPI
 
                     if (rules.Entities.Count > 1)
                     {
-                        Console.WriteLine("Multiple Rules Found - Confused");
+                        tracingService.Trace("Multiple Rules Found - Confused");
                     }
                     else if (rules.Entities.Count > 0)
                     {
