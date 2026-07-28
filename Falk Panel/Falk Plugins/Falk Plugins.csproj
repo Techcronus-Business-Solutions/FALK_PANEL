@@ -167,15 +167,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Accessory and Trim\AccessoryTrimCreationPlugin.cs" />
-    <Compile Include="Accessory and Trim\AccessoriesQtyPlugin.cs" />
-    <Compile Include="Accessory and Trim\TrimsQtyPlugin.cs" />
+    <Compile Include="Accessory and Trim\OpportunityProductPlugin.cs" />
     <Compile Include="EnumHelper.cs" />
     <Compile Include="Pricing Master\ColorPlugin.cs" />
     <Compile Include="Pricing Master\LineItemPlugin.cs" />
     <Compile Include="PluginBase.cs" />
     <Compile Include="Pricing Master\PricingMasterExteriorPlugin.cs" />
     <Compile Include="Pricing Master\PricingMasterInteriorPlugin.cs" />
+    <Compile Include="Pricing Master\QuoteLineItemPlugin.cs" />
     <Compile Include="Pricing Master\ThicknessPlugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QuotePlugin.cs" />

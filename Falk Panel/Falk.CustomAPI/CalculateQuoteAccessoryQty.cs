@@ -10,9 +10,9 @@ using System.Activities.Statements;
 
 namespace Falk.CustomAPI
 {
-    public class CalculateAccessoryQty : CustomAPIBase
+    public class CalculateQuoteAccessoryQty : CustomAPIBase
     {
-        public CalculateAccessoryQty() : base(typeof(CalculateAccessoryQty)) { }
+        public CalculateQuoteAccessoryQty() : base(typeof(CalculateQuoteAccessoryQty)) { }
 
         #region Private Variables
         private IOrganizationService service { get; set; }
@@ -30,16 +30,16 @@ namespace Falk.CustomAPI
             try
             {
                 tracingService.Trace("execution started");
-                Guid oppProductId = GetInputGuid("tbs_oppProduct");
-                tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
+                Guid quoteProductId = GetInputGuid("tbs_quoteProduct");
+                tracingService.Trace("Quote ProductId = " + quoteProductId.ToString());
 
-                Entity opportunityProduct = GetOpportunityProduct(oppProductId);
+                Entity quotedetail = GetQuoteProduct(quoteProductId);
 
-                EntityCollection accessories = GetAccessories(oppProductId);
+                EntityCollection accessories = GetAccessories(quoteProductId);
 
-                CalculationContext calccontext = BuildCalculationContext(opportunityProduct);
+                CalculationContext calccontext = BuildCalculationContext(quotedetail);
 
-                AddTrimsIntoDictionary(oppProductId, calccontext);
+                AddTrimsIntoDictionary(quoteProductId, calccontext);
 
                 CalculateAllAccessories(accessories, calccontext);
 
@@ -51,19 +51,19 @@ namespace Falk.CustomAPI
             }
         }
 
-        private Entity GetOpportunityProduct(Guid oppProductId)
+        private Entity GetQuoteProduct(Guid quoteProductId)
         {
-            return service.Retrieve("opportunityproduct", oppProductId, new ColumnSet("quantity", "tbs_linearfeet"));
+            return service.Retrieve("quotedetail", quoteProductId, new ColumnSet("quantity", "tbs_linearfeet"));
         }
 
-        private void AddTrimsIntoDictionary(Guid opportunityProductId, CalculationContext context)
+        private void AddTrimsIntoDictionary(Guid quoteProductId, CalculationContext context)
         {
-            QueryExpression query = new QueryExpression("tbs_opppaneltrim");
-            query.ColumnSet = new ColumnSet("tbs_quantity","tbs_trim");
+            QueryExpression query = new QueryExpression("tbs_quotepaneltrim");
+            query.ColumnSet = new ColumnSet("tbs_quantity", "tbs_trim");
 
-            query.Criteria.AddCondition("tbs_opportunityproduct",ConditionOperator.Equal,opportunityProductId);
+            query.Criteria.AddCondition("tbs_quoteproduct", ConditionOperator.Equal, quoteProductId);
 
-            LinkEntity trimLink = query.AddLink("tbs_trim","tbs_trim","tbs_trimid");
+            LinkEntity trimLink = query.AddLink("tbs_trim", "tbs_trim", "tbs_trimid");
 
             trimLink.EntityAlias = "trim";
             trimLink.Columns = new ColumnSet("tbs_itemcategory");
@@ -92,15 +92,15 @@ namespace Falk.CustomAPI
                 tracingService.Trace($"Trim Added : {key} = {qty}");
             }
         }
-        private EntityCollection GetAccessories(Guid opportunityProductId)
+        private EntityCollection GetAccessories(Guid QuoteProductId)
         {
             EntityCollection accessories = new EntityCollection();
 
             try
             {
-                QueryExpression query = new QueryExpression("tbs_opppanelaccessory");
+                QueryExpression query = new QueryExpression("tbs_quotepanelaccessory");
                 query.ColumnSet = new ColumnSet("tbs_quantity", "tbs_accessory", "tbs_category", "tbs_unitprice", "tbs_paneltype", "tbs_usecustomquantity", "tbs_isquantitycalculated");
-                query.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, opportunityProductId);
+                query.Criteria.AddCondition("tbs_quoteproduct", ConditionOperator.Equal, QuoteProductId);
                 query.AddOrder("tbs_accessory", OrderType.Ascending);
                 LinkEntity accessoryLink = query.AddLink("tbs_accessory", "tbs_accessory", "tbs_accessoryid");
                 accessoryLink.EntityAlias = "acc";
@@ -139,7 +139,7 @@ namespace Falk.CustomAPI
                         return (int)Math.Ceiling(context.SqFt / div1);
 
                     case "LFT / Div1":
-                        int? LFT = GetLineerFeetTrim(context.OppProdId);
+                        int? LFT = GetLineerFeetTrim(context.QuoteProdId);
                         if (LFT.HasValue)
                         {
                             return (int)Math.Ceiling(LFT.Value / div1);
@@ -169,7 +169,7 @@ namespace Falk.CustomAPI
                             ) / div1);
 
                     case "(LFT (Perim) * Mult1) / Div1":
-                        int? LFTP = GetLineerFeetPerim(context.OppProdId);
+                        int? LFTP = GetLineerFeetPerim(context.QuoteProdId);
                         if (LFTP.HasValue)
                         {
                             return (int)Math.Ceiling((LFTP.Value * div1) / div2);
@@ -237,18 +237,18 @@ namespace Falk.CustomAPI
                 throw e;
             }
         }
-        private int? GetLineerFeetTrim(EntityReference oppProd)
+        private int? GetLineerFeetTrim(EntityReference QuoteProd)
         {
-            if (oppProd != null)
+            if (QuoteProd != null)
             {
                 try
                 {
                     string fetchXml = $@"
                     <fetch aggregate='true'>
-                      <entity name='tbs_opppaneltrim'>
+                      <entity name='tbs_quotepaneltrim'>
                         <attribute name='tbs_quantity' alias='quantity' aggregate='sum' />
                         <filter>
-                          <condition attribute='tbs_opportunityproduct' operator='eq' value='{oppProd.Id}' />
+                          <condition attribute='tbs_quoteproduct' operator='eq' value='{QuoteProd.Id}' />
                         </filter>
                         <link-entity name='tbs_trim' from='tbs_trimid' to='tbs_trim'>
                           <link-entity name='tbs_itemcategory' from='tbs_itemcategoryid' to='tbs_itemcategory'>
@@ -278,18 +278,18 @@ namespace Falk.CustomAPI
             }
             return null;
         }
-        private int? GetLineerFeetPerim(EntityReference oppProd)
+        private int? GetLineerFeetPerim(EntityReference QuoteProd)
         {
-            if (oppProd != null)
+            if (QuoteProd != null)
             {
                 try
                 {
                     string fetchXml = $@"
                     <fetch aggregate='true'>
-                      <entity name='tbs_opppaneltrim'>
+                      <entity name='tbs_quotepaneltrim'>
                         <attribute name='tbs_quantity' alias='quantity' aggregate='sum' />
                         <filter>
-                          <condition attribute='tbs_opportunityproduct' operator='eq' value='{oppProd.Id}' />
+                          <condition attribute='tbs_quoteproduct' operator='eq' value='{QuoteProd.Id}' />
                         </filter>
                         <link-entity name='tbs_trim' from='tbs_trimid' to='tbs_trim'>
                           <link-entity name='tbs_itemcategory' from='tbs_itemcategoryid' to='tbs_itemcategory'>
@@ -331,14 +331,14 @@ namespace Falk.CustomAPI
         {
             return context.Values[BuildKey(table, category)];
         }
-        private void UpdateAccessoryQuantity(Entity oppPanelAcc, int qty)
+        private void UpdateAccessoryQuantity(Entity quotePanelAcc, int qty)
         {
             try
             {
                 Entity update =
-                        new Entity("tbs_opppanelaccessory");
+                        new Entity("tbs_quotepanelaccessory");
 
-                update.Id = oppPanelAcc.Id;
+                update.Id = quotePanelAcc.Id;
 
                 update["tbs_quantity"] = qty;
 
@@ -464,15 +464,15 @@ namespace Falk.CustomAPI
         {
             return configs.Values.Where(x => x != null).ToList().FirstOrDefault(x => x.CurrentTable.Value == table.Value && x.ItemCategory != null && x.ItemCategory.Id == category.Id);
         }
-        private CalculationContext BuildCalculationContext(Entity opportunityProduct)
+        private CalculationContext BuildCalculationContext(Entity quotedetail)
         {
             return new CalculationContext
             {
-                OppProdId = new EntityReference("opportunityproduct", opportunityProduct.Id),
+                QuoteProdId = new EntityReference("quotedetail", quotedetail.Id),
 
-                SqFt = opportunityProduct.GetAttributeValue<decimal>("quantity"),
+                SqFt = quotedetail.GetAttributeValue<decimal>("quantity"),
 
-                LinearFeet = opportunityProduct.GetAttributeValue<decimal>("tbs_linearfeet")
+                LinearFeet = quotedetail.GetAttributeValue<decimal>("tbs_linearfeet")
             };
         }
         private AccessoryConfiguration BuildAccessoryConfiguration(Entity accessory)
@@ -535,7 +535,7 @@ namespace Falk.CustomAPI
         #region Classes
         private class CalculationContext
         {
-            public EntityReference OppProdId { get; set; }
+            public EntityReference QuoteProdId { get; set; }
             public decimal SqFt { get; set; }
 
             public decimal LinearFeet { get; set; }
@@ -600,3 +600,4 @@ namespace Falk.CustomAPI
         }
     }
 }
+

@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace Falk.CustomAPI
 {
-    public class CalculateTrimQty : CustomAPIBase
+    public class CalculateQuoteTrimQty : CustomAPIBase
     {
-        public CalculateTrimQty() : base(typeof(CalculateTrimQty)) { }
+        public CalculateQuoteTrimQty() : base(typeof(CalculateQuoteTrimQty)) { }
 
         #region Private Variables
         private IOrganizationService service { get; set; }
@@ -28,14 +28,14 @@ namespace Falk.CustomAPI
             try
             {
                 tracingService.Trace("execution started");
-                Guid oppProductId = GetInputGuid("tbs_oppProduct");
-                Console.WriteLine("Opportunity ProductId = " + oppProductId.ToString());
+                Guid quoteProductId = GetInputGuid("tbs_quoteProduct");
+                Console.WriteLine("Quote ProductId = " + quoteProductId.ToString());
 
-                Entity opportunityProduct = GetOpportunityProduct(oppProductId);
+                Entity quoteProduct = GetQuoteProduct(quoteProductId);
 
-                EntityCollection trims = GetTrims(oppProductId);
+                EntityCollection trims = GetTrims(quoteProductId);
 
-                CalculationContext calccontext = BuildCalculationContext(opportunityProduct);
+                CalculationContext calccontext = BuildCalculationContext(quoteProduct);
 
                 CalculateAllTrims(trims, calccontext);
 
@@ -47,19 +47,19 @@ namespace Falk.CustomAPI
             }
         }
 
-        private Entity GetOpportunityProduct(Guid oppProductId)
+        private Entity GetQuoteProduct(Guid quoteProductId)
         {
-            return service.Retrieve("opportunityproduct", oppProductId, new ColumnSet("quantity", "tbs_linearfeet"));
+            return service.Retrieve("quotedetail", quoteProductId, new ColumnSet("quantity", "tbs_linearfeet"));
         }
-        private EntityCollection GetTrims(Guid opportunityProductId)
+        private EntityCollection GetTrims(Guid quoteProductId)
         {
             EntityCollection trims = new EntityCollection();
 
             try
             {
-                QueryExpression query = new QueryExpression("tbs_opppaneltrim");
+                QueryExpression query = new QueryExpression("tbs_quotepaneltrim");
                 query.ColumnSet = new ColumnSet("tbs_quantity", "tbs_trim", "tbs_category", "tbs_unitprice", "tbs_paneltype");
-                query.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, opportunityProductId);
+                query.Criteria.AddCondition("tbs_quoteproduct", ConditionOperator.Equal, quoteProductId);
                 query.AddOrder("tbs_trim", OrderType.Ascending);
                 LinkEntity trimLink = query.AddLink("tbs_trim", "tbs_trim", "tbs_trimid");
                 trimLink.EntityAlias = "acc";
@@ -129,7 +129,7 @@ namespace Falk.CustomAPI
                         return (int)Math.Ceiling((double)(count1.Value / div1));
 
                     case "LFT / Div1":
-                        int? LFT = GetLineerFeetTrim(context.OppProdId);
+                        int? LFT = GetLineerFeetTrim(context.QuoteProdId);
                         if (LFT.HasValue)
                         {
                             return (int)Math.Ceiling(LFT.Value / div1);
@@ -156,18 +156,18 @@ namespace Falk.CustomAPI
                 throw e;
             }
         }
-        private int? GetLineerFeetTrim(EntityReference oppProd)
+        private int? GetLineerFeetTrim(EntityReference quoteProd)
         {
-            if (oppProd != null)
+            if (quoteProd != null)
             {
                 try
                 {
                     string fetchXml = $@"
                     <fetch aggregate='true'>
-                      <entity name='tbs_opppaneltrim'>
+                      <entity name='tbs_quotepaneltrim'>
                         <attribute name='tbs_quantity' alias='quantity' aggregate='sum' />
                         <filter>
-                          <condition attribute='tbs_opportunityproduct' operator='eq' value='{oppProd.Id}' />
+                          <condition attribute='tbs_quoteproduct' operator='eq' value='{quoteProd.Id}' />
                         </filter>
                         <link-entity name='tbs_trim' from='tbs_trimid' to='tbs_trim'>
                           <link-entity name='tbs_itemcategory' from='tbs_itemcategoryid' to='tbs_itemcategory'>
@@ -197,7 +197,7 @@ namespace Falk.CustomAPI
             }
             return null;
         }
-        
+
         private decimal? GetDependencyValue(CalculationContext context, OptionSetValue table, EntityReference category)
         {
             if (context.Values.TryGetValue(BuildKey(table, category), out decimal value))
@@ -214,7 +214,7 @@ namespace Falk.CustomAPI
             {
                 tracingService.Trace("Quantity to update - " + qty);
                 Entity update =
-                        new Entity("tbs_opppaneltrim");
+                        new Entity("tbs_quotepaneltrim");
 
                 update.Id = id;
 
@@ -248,7 +248,7 @@ namespace Falk.CustomAPI
                 {
                     if (config != null)
                     {
-                        tracingService.Trace("panel trim = " + config.OpportunityTrimId);
+                        tracingService.Trace("panel trim = " + config.QuoteTrimId);
                         tracingService.Trace("Category = " + config.ItemCategory.Id);
                         CalculateTrim(config, configs, context);
                     }
@@ -282,9 +282,9 @@ namespace Falk.CustomAPI
                     tracingService.Trace("context updated" + context);
 
                     config.Calculated = true;
-                    tracingService.Trace(config.OpportunityTrimId.ToString());
+                    tracingService.Trace(config.QuoteTrimId.ToString());
 
-                    UpdateTrimQuantity(config.OpportunityTrimId, qty.Value);
+                    UpdateTrimQuantity(config.QuoteTrimId, qty.Value);
                 }
                 else
                 {
@@ -328,15 +328,15 @@ namespace Falk.CustomAPI
         {
             return configs.Values.Where(x => x != null).ToList().FirstOrDefault(x => x.CurrentTable.Value == table.Value && x.ItemCategory != null && x.ItemCategory.Id == category.Id);
         }
-        private CalculationContext BuildCalculationContext(Entity opportunityProduct)
+        private CalculationContext BuildCalculationContext(Entity quoteProduct)
         {
             return new CalculationContext
             {
-                SqFt = opportunityProduct.GetAttributeValue<decimal>("quantity"),
+                SqFt = quoteProduct.GetAttributeValue<decimal>("quantity"),
 
-                LinearFeet = opportunityProduct.GetAttributeValue<decimal>("tbs_linearfeet"),
+                LinearFeet = quoteProduct.GetAttributeValue<decimal>("tbs_linearfeet"),
 
-                OppProdId = opportunityProduct.ToEntityReference()
+                QuoteProdId = quoteProduct.ToEntityReference()
             };
         }
         private TrimConfiguration BuildTrimConfiguration(Entity trim)
@@ -353,7 +353,7 @@ namespace Falk.CustomAPI
                 }
                 if (itemCategory != null)
                 {
-                    accConfig.OpportunityTrimId = trim.Id;
+                    accConfig.QuoteTrimId = trim.Id;
                     accConfig.ItemCategory = itemCategory;
                     accConfig.CurrentTable = new OptionSetValue(2);
 
@@ -436,7 +436,7 @@ namespace Falk.CustomAPI
         #region Classes
         private class CalculationContext
         {
-            public EntityReference OppProdId { get; set; }
+            public EntityReference QuoteProdId { get; set; }
             public decimal SqFt { get; set; }
 
             public decimal LinearFeet { get; set; }
@@ -451,7 +451,7 @@ namespace Falk.CustomAPI
             public Entity Trim { get; set; }
             public bool Calculated { get; set; }
             public OptionSetValue CurrentTable { get; set; }
-            public Guid OpportunityTrimId { get; set; }
+            public Guid QuoteTrimId { get; set; }
             public string RuleClass { get; set; }
             public decimal Mult1 { get; set; }
             public decimal Mult2 { get; set; }

@@ -3,6 +3,7 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using System;
+using System.Activities.Expressions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,9 +11,9 @@ using System.Threading.Tasks;
 
 namespace Falk_Plugins.Pricing_Master
 {
-    public class AccessoryTrimCreationPlugin : PluginBase
+    public class OpportunityProductPlugin : PluginBase
     {
-        public AccessoryTrimCreationPlugin() : base(typeof(AccessoryTrimCreationPlugin)) { }
+        public OpportunityProductPlugin() : base(typeof(OpportunityProductPlugin)) { }
         #region Private Variables
         private IOrganizationService service { get; set; }
         private IPluginExecutionContext context { get; set; }
@@ -59,17 +60,70 @@ namespace Falk_Plugins.Pricing_Master
                             CreatePanelTrims(service, targetEntity.Id, opportunityProductName, panelType, panelThickness);
                             tracingService.Trace("Panel Trims created");
 
-                            OrganizationRequest customApiRequestTrim = new OrganizationRequest("tbs_CalculateTrimQty");
+                            UpdatePanelTrimQty(service, targetEntity.Id);
+                            UpdatePanelAccessQty(service, targetEntity.Id);                            
+                        }
+                        if (context.MessageName == CONST_UPDATE && context.Stage == PostOperation)
+                        {
+                            try
+                            {
+                                Guid oppProductId = targetEntity.Id;
+                                tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
+                                UpdatePanelTrimQty(service, oppProductId);
+                                UpdatePanelAccessQty(service, oppProductId);
 
-                            customApiRequestTrim["tbs_oppProduct"] = targetEntity.Id;
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidPluginExecutionException(ex.Message);
+                            }
+                        }
+                    }
 
-                            OrganizationResponse customApiResponseTrim = service.Execute(customApiRequestTrim);
+                    else if (targetEntity.LogicalName == "tbs_opppanelaccessory")
+                    {
+                        if (context.Depth > 1)
+                        {
+                            tracingService.Trace("Exiting because plugin depth is greater than 1.");
+                            return;
+                        }
+                        if (context.MessageName == CONST_UPDATE && context.Stage == PostOperation)
+                        {
+                            try
+                            {
+                                targetEntity = service.Retrieve("tbs_opppanelaccessory", targetEntity.Id, new ColumnSet("tbs_opportunityproduct"));
+                                Guid oppProductId = targetEntity.Contains("tbs_opportunityproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id : Guid.Empty;
+                                UpdatePanelAccessQty(service, oppProductId);
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidPluginExecutionException(ex.Message);
+                            }
+                        }
+                    }
+                    else if (targetEntity.LogicalName == "tbs_opppaneltrim")
+                    {
+                        if (context.Depth > 1)
+                        {
+                            tracingService.Trace("Exiting because plugin depth is greater than 1.");
+                            return;
+                        }
+                        if (context.MessageName == CONST_UPDATE && context.Stage == PostOperation)
+                        {
+                            try
+                            {
+                                targetEntity = service.Retrieve("tbs_opppaneltrim", targetEntity.Id, new ColumnSet("tbs_opportunityproduct"));
 
-                            OrganizationRequest customApiRequestAcces = new OrganizationRequest("tbs_CalculateAccessoryQty");
+                                Guid oppProductId = targetEntity.Contains("tbs_opportunityproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id : Guid.Empty;
+                                tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
 
-                            customApiRequestAcces["tbs_oppProduct"] = targetEntity.Id;
-
-                            OrganizationResponse customApiResponseAcces = service.Execute(customApiRequestAcces);
+                                UpdatePanelTrimQty(service, oppProductId);
+                                UpdatePanelAccessQty(service, oppProductId);
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidPluginExecutionException(ex.Message);
+                            }
                         }
                     }
                 }
@@ -145,7 +199,8 @@ namespace Falk_Plugins.Pricing_Master
 
                 Entity tierEnt = service.RetrieveMultiple(tierQuery).Entities.FirstOrDefault();
                 tracingService.Trace($"tier entity: {tierEnt?.Id}");
-                if (tierEnt != null) {
+                if (tierEnt != null)
+                {
                     multiplier = tierEnt.GetAttributeValue<int>("tbs_multiplier");
                 }
                 #endregion
@@ -191,6 +246,15 @@ namespace Falk_Plugins.Pricing_Master
                 query.ColumnSet.AddColumns("tbs_trimid", "tbs_name", "tbs_unit");
                 LinkEntity query_tbs_trim_tbs_thickness = query.AddLink("tbs_trim_tbs_thickness", "tbs_trimid", "tbs_trimid");
                 query_tbs_trim_tbs_thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
+
+                LinkEntity cat = query.AddLink("tbs_itemcategory", "tbs_itemcategory", "tbs_itemcategoryid", JoinOperator.LeftOuter);
+                cat.EntityAlias = "cat";
+
+                LinkEntity rule = cat.AddLink("tbs_trimrules", "tbs_itemcategoryid", "tbs_category", JoinOperator.LeftOuter);
+                rule.EntityAlias = "rule";
+                rule.Columns.AddColumn("tbs_ruleclass");
+                rule.LinkCriteria.AddCondition("tbs_panel", ConditionOperator.Equal, panelType.Id);
+
                 EntityCollection trims = service.RetrieveMultiple(query);
 
                 foreach (Entity trim in trims.Entities)
@@ -202,6 +266,8 @@ namespace Falk_Plugins.Pricing_Master
                     panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
+                    panelTrim["tbs_isquantitycalculated"] = trim.Contains("rule.tbs_ruleclass") && trim.GetAttributeValue<AliasedValue>("rule.tbs_ruleclass").Value != null ? true : false;
+
                     Guid trimId = service.Create(panelTrim);
                     tracingService.Trace("trim created" + trimId);
                 }
@@ -211,6 +277,27 @@ namespace Falk_Plugins.Pricing_Master
                 tracingService.Trace($"CreatePanelAccessoryAndTrim Error : {ex}");
                 throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records.", ex);
             }
+        }
+        
+        private void UpdatePanelAccessQty(IOrganizationService service, Guid oppProdId)
+        {
+            tracingService.Trace("Opportunity ProductId = " + oppProdId.ToString());
+
+            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateAccessoryQty");
+
+            customApiRequest["tbs_oppProduct"] = oppProdId;
+
+            OrganizationResponse customApiResponse = service.Execute(customApiRequest);
+        }
+        private void UpdatePanelTrimQty(IOrganizationService service, Guid oppProdId)
+        {
+            tracingService.Trace("Opportunity ProductId = " + oppProdId.ToString());
+
+            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateTrimQty");
+
+            customApiRequest["tbs_oppProduct"] = oppProdId;
+
+            OrganizationResponse customApiResponse = service.Execute(customApiRequest);
         }
         private void InitProperties(LocalPluginContext localcontext)
         {
