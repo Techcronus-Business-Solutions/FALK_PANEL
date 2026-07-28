@@ -394,11 +394,18 @@ namespace Falk.CustomAPI
 
                 ResolveDependency(config.DepTbl3, config.DepCat3, configs, context);
 
-                bool useCustomQty = config.Accessory.Contains("tbs_usecustomquantity") && config.Accessory.GetAttributeValue<bool>("tbs_usecustomquantity");
+                bool useCustomQty = config.Accessory.GetAttributeValue<bool>("tbs_usecustomquantity");
 
-                int? qty = useCustomQty && config.Accessory.Contains("tbs_quantity")
-                    ? config.Accessory.GetAttributeValue<int>("tbs_quantity")
-                    : CalculateQuantity(config, context);
+                int? qty;
+
+                if (useCustomQty)
+                {
+                    qty = config.Accessory.GetAttributeValue<int?>("tbs_quantity") ?? 0;
+                }
+                else
+                {
+                    qty = CalculateQuantity(config, context);
+                }
 
                 tracingService.Trace($"Accessory: {config.ItemCategory.Id}");
 

@@ -58,7 +58,7 @@ namespace Falk.CustomAPI
             try
             {
                 QueryExpression query = new QueryExpression("tbs_opppaneltrim");
-                query.ColumnSet = new ColumnSet("tbs_quantity", "tbs_trim", "tbs_category", "tbs_unitprice", "tbs_paneltype");
+                query.ColumnSet = new ColumnSet("tbs_quantity", "tbs_trim", "tbs_category", "tbs_unitprice", "tbs_paneltype", "tbs_usecustomquantity");
                 query.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, opportunityProductId);
                 query.AddOrder("tbs_trim", OrderType.Ascending);
                 LinkEntity trimLink = query.AddLink("tbs_trim", "tbs_trim", "tbs_trimid");
@@ -88,8 +88,6 @@ namespace Falk.CustomAPI
                         tracingService.Trace("Manual Quantity = " + config.Trim.GetAttributeValue<int>("tbs_quantity"));
                         return config.Trim.GetAttributeValue<int>("tbs_quantity");
                     }
-
-
 
                     return null;
                 }
@@ -274,7 +272,18 @@ namespace Falk.CustomAPI
 
                 ResolveDependency(config.DepTbl3, config.DepCat3, configs, context);
 
-                int? qty = CalculateQuantity(config, context);
+                bool useCustomQty = config.Trim.GetAttributeValue<bool>("tbs_usecustomquantity");
+
+                int? qty;
+
+                if (useCustomQty)
+                {
+                    qty = config.Trim.GetAttributeValue<int?>("tbs_quantity") ?? 0;
+                }
+                else
+                {
+                    qty = CalculateQuantity(config, context);
+                }
 
                 if (qty.HasValue)
                 {
@@ -284,7 +293,12 @@ namespace Falk.CustomAPI
                     config.Calculated = true;
                     tracingService.Trace(config.OpportunityTrimId.ToString());
 
-                    UpdateTrimQuantity(config.OpportunityTrimId, qty.Value);
+                    int currentQty = config.Trim.GetAttributeValue<int?>("tbs_quantity") ?? 0;
+
+                    if (currentQty != qty.Value)
+                    {
+                        UpdateTrimQuantity(config.OpportunityTrimId, qty.Value);
+                    }
                 }
                 else
                 {
