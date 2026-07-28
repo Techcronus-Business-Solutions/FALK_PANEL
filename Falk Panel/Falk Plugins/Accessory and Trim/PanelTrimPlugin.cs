@@ -142,7 +142,6 @@ namespace Falk_Plugins.Accessory_and_Trim
                 Entity finish = service.Retrieve("tbs_finish", finishRef.Id, new ColumnSet("tbs_name"));
 
                 finishName = finish.GetAttributeValue<string>("tbs_name") ?? "";
-
                 tracingService.Trace("Finish Name: " + finishName);
             }
 
@@ -473,23 +472,15 @@ namespace Falk_Plugins.Accessory_and_Trim
             tracingService.Trace("steelCostSF = {0}", steelCostSF);
             tracingService.Trace("steelCostLF = {0}", steelCostLF);
             tracingService.Trace("material = {0}", material);
-
             tracingService.Trace("flatstockCut = {0}", flatstockCut);
-
             tracingService.Trace("filmCostLF = {0}", filmCostLF);
             tracingService.Trace("protFilm = {0}", protFilm);
-
             tracingService.Trace("setupFee = {0}", setupFee);
             tracingService.Trace("setupAlloc = {0}", setupAlloc);
-
             tracingService.Trace("wearSlitter = {0}", wearSlitter);
-
             tracingService.Trace("bending = {0}", bending);
-
             tracingService.Trace("falkTransfer = {0}", falkTransfer);
-
             tracingService.Trace("falkPrice = {0}", falkPrice);
-
             tracingService.Trace("Custom Trim Price Calculated. Unit Price={0}, Qty={1}, Total={2}", falkPrice, quantity, falkPrice * quantity);
             #endregion
         }
