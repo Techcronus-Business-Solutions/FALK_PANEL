@@ -369,9 +369,11 @@ Falk.OpportunityProduct = {
                 " <entity name='tbs_color'>" +
                 "   <attribute name='tbs_name' />" +
                 "   <order attribute='tbs_name' />" +
-                "   <filter>" +
-                "      <condition attribute='tbs_finish' operator='eq' value='" + finishId + "' />" +
-                "   </filter>" +
+                "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
+                "       <filter>" +
+                "           <condition attribute='tbs_finishid' operator='eq' value='" + finishId + "' />" +
+                "       </filter>" +
+                "    </link-entity>" +
                 " </entity>" +
                 "</fetch>";
         }
@@ -425,9 +427,11 @@ Falk.OpportunityProduct = {
                 " <entity name='tbs_color'>" +
                 "   <attribute name='tbs_name' />" +
                 "   <order attribute='tbs_name' />" +
-                "   <filter>" +
-                "      <condition attribute='tbs_finish' operator='eq' value='" + finishId + "' />" +
-                "   </filter>" +
+                "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
+                "       <filter>" +
+                "           <condition attribute='tbs_finishid' operator='eq' value='" + finishId + "' />" +
+                "       </filter>" +
+                "    </link-entity>" +
                 " </entity>" +
                 "</fetch>";
         }
