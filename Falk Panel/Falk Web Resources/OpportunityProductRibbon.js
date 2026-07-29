@@ -81,16 +81,7 @@ Falk.OpportunityProductRibbon = {
             var exteriorembossprice = result["ExteriorEmbossPrice"];
             var calculatedbaseprice = result["CalculatedBasePrice"];
 
-            formContext.getAttribute("tbs_interiorfinishprice").setValue(interiorprice);
-            formContext.getAttribute("tbs_exteriorfinishprice").setValue(exteriorprice);
-            formContext.getAttribute("tbs_ribbingmodelsweatherprice").setValue(0);
-            formContext.getAttribute("tbs_ribbingmodeusinteriorprice").setValue(0);
-            formContext.getAttribute("tbs_embossinglsweatherprice").setValue(exteriorembossprice);
-            formContext.getAttribute("tbs_embossingusinteriorprice").setValue(interiorembossprice);
-            formContext.getAttribute("tbs_baseprice").setValue(calculatedbaseprice);
-
-            let TotalPropertyPrice = result.InteriorPrice + result.ExteriorPrice + result.ExteriorEmbossPrice + result.InteriorEmbossPrice;
-            formContext.getAttribute("tbs_totalpropertiesprice").setValue(TotalPropertyPrice);
+            return formContext.data.refresh(false);
         }).catch(function (error) {
             console.log(error.message);
         }).finally(function () {

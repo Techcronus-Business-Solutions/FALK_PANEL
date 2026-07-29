@@ -40,6 +40,8 @@ namespace Falk.CustomAPI
                 int? interiorEmboss = GetInputChoice("InteriorEmboss");
                 int? exteriorEmboss = GetInputChoice("ExteriorEmboss");
 
+                var opportunityProduct = GetInputRef("Target");
+
                 //throw new InvalidPluginExecutionException(exteriorFinish.Name + " " + exteriorColor.Name + " " + exteriorGauge.Name + " Color Category: " + interiorColor.Name + " tier: " + tier.Name + " exterior EMboss: " + exteriorEmboss + " Interior Emboss: " + interiorEmboss);
 
                 #region Calculate Interior/Exterior Finish Price
@@ -103,8 +105,6 @@ namespace Falk.CustomAPI
                 context.OutputParameters["ExteriorEmbossPrice"] = new Money(exteriorEmbossPrice);
                 #endregion
 
-                #region Set Total Pricing
-
                 #region Calculate Base Price
                 if (panelThickness == null || tier == null)
                 {
@@ -130,16 +130,22 @@ namespace Falk.CustomAPI
                 context.OutputParameters["CalculatedBasePrice"] = new Money(calculatedPrice);
                 #endregion
 
-                #region Calculate Small Order Upcharge
-                #endregion
+                #region Save Record In Opportunity Product
+                Entity oppProduct = new Entity("opportunityproduct", opportunityProduct.Id);
 
-                #region Calculate Price per unit
-                #endregion
+                oppProduct["tbs_interiorfinishprice"] = new Money(interiorPrice);
+                oppProduct["tbs_exteriorfinishprice"] = new Money(exteriorPrice);
+                oppProduct["tbs_ribbingmodelsweatherprice"] = new Money(0);
+                oppProduct["tbs_ribbingmodeusinteriorprice"] = new Money(0);
+                oppProduct["tbs_embossinglsweatherprice"] = new Money(exteriorEmbossPrice);
+                oppProduct["tbs_embossingusinteriorprice"] = new Money(interiorEmbossPrice);
+                oppProduct["tbs_baseprice"] = new Money(calculatedPrice);
 
-                #region Calculate Line Total
-                #endregion
+                decimal totalPropertyPrice = interiorPrice + exteriorPrice + interiorEmbossPrice + exteriorEmbossPrice;
+                oppProduct["tbs_totalpropertiesprice"] = new Money(totalPropertyPrice);
 
-                #endregion                
+                service.Update(oppProduct);
+                #endregion
             }
             catch (Exception ex)
             {
