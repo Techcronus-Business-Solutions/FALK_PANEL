@@ -40,6 +40,10 @@ namespace Falk.CustomAPI
                 int? interiorEmboss = GetInputChoice("InteriorEmboss");
                 int? exteriorEmboss = GetInputChoice("ExteriorEmboss");
 
+                var opportunityProduct = GetInputRef("Target");
+
+                //throw new InvalidPluginExecutionException(exteriorFinish.Name + " " + exteriorColor.Name + " " + exteriorGauge.Name + " Color Category: " + interiorColor.Name + " tier: " + tier.Name + " exterior EMboss: " + exteriorEmboss + " Interior Emboss: " + interiorEmboss);
+
                 #region Calculate Interior/Exterior Finish Price
                 var interiorConditions = new Dictionary<string, object>
                 {
@@ -101,18 +105,47 @@ namespace Falk.CustomAPI
                 context.OutputParameters["ExteriorEmbossPrice"] = new Money(exteriorEmbossPrice);
                 #endregion
 
-                #region Set Total Pricing
+                #region Calculate Base Price
+                if (panelThickness == null || tier == null)
+                {
+                    //target["tbs_baseprice"] = null;
+                    return;
+                }
 
-                #region Calculate Small Order Upcharge
+                Entity tierRecord = service.Retrieve("tbs_tier", tier.Id, new ColumnSet("tbs_multiplier"));
+
+                decimal multiplier = Convert.ToDecimal(tierRecord.GetAttributeValue<int>("tbs_multiplier"));
+
+                Entity thickness = service.Retrieve("tbs_thickness", panelThickness.Id, new ColumnSet("tbs_baseprice"));
+
+                Money basePriceMoney = thickness.GetAttributeValue<Money>("tbs_baseprice");
+
+                if (basePriceMoney == null)
+                {
+                    //target["tbs_baseprice"] = null;
+                    return;
+                }
+
+                decimal calculatedPrice = (basePriceMoney.Value * multiplier) / 100m;
+                context.OutputParameters["CalculatedBasePrice"] = new Money(calculatedPrice);
                 #endregion
 
-                #region Calculate Price per unit
-                #endregion
+                #region Save Record In Opportunity Product
+                Entity oppProduct = new Entity("opportunityproduct", opportunityProduct.Id);
 
-                #region Calculate Line Total
-                #endregion
+                oppProduct["tbs_interiorfinishprice"] = new Money(interiorPrice);
+                oppProduct["tbs_exteriorfinishprice"] = new Money(exteriorPrice);
+                oppProduct["tbs_ribbingmodelsweatherprice"] = new Money(0);
+                oppProduct["tbs_ribbingmodeusinteriorprice"] = new Money(0);
+                oppProduct["tbs_embossinglsweatherprice"] = new Money(exteriorEmbossPrice);
+                oppProduct["tbs_embossingusinteriorprice"] = new Money(interiorEmbossPrice);
+                oppProduct["tbs_baseprice"] = new Money(calculatedPrice);
 
-                #endregion                
+                decimal totalPropertyPrice = interiorPrice + exteriorPrice + interiorEmbossPrice + exteriorEmbossPrice;
+                oppProduct["tbs_totalpropertiesprice"] = new Money(totalPropertyPrice);
+
+                service.Update(oppProduct);
+                #endregion
             }
             catch (Exception ex)
             {
