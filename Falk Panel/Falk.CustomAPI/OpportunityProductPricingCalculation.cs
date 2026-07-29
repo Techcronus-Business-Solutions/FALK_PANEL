@@ -40,8 +40,6 @@ namespace Falk.CustomAPI
                 int? interiorEmboss = GetInputChoice("InteriorEmboss");
                 int? exteriorEmboss = GetInputChoice("ExteriorEmboss");
 
-                //throw new InvalidPluginExecutionException(exteriorFinish.Name + " " + exteriorColor.Name + " " + exteriorGauge.Name + " Color Category: " + interiorColor.Name + " tier: " + tier.Name + " exterior EMboss: " + exteriorEmboss + " Interior Emboss: " + interiorEmboss);
-
                 #region Calculate Interior/Exterior Finish Price
                 var interiorConditions = new Dictionary<string, object>
                 {

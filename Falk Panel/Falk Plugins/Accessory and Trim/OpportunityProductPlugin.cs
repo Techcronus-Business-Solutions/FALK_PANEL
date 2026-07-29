@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls;
 
 namespace Falk_Plugins.Pricing_Master
 {
@@ -44,9 +45,6 @@ namespace Falk_Plugins.Pricing_Master
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
                             tracingService.Trace("create");
-                            string opportunityProductName = targetEntity.GetAttributeValue<string>("opportunityproductname");
-
-                            tracingService.Trace(opportunityProductName);
                             EntityReference panelThickness = targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness");
                             tracingService.Trace(panelThickness.Id.ToString());
 
@@ -57,11 +55,11 @@ namespace Falk_Plugins.Pricing_Master
                             CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness);
                             tracingService.Trace("Panel Accessories created");
 
-                            CreatePanelTrims(service, targetEntity.Id, opportunityProductName, panelType, panelThickness);
+                            CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness);
                             tracingService.Trace("Panel Trims created");
 
                             UpdatePanelTrimQty(service, targetEntity.Id);
-                            UpdatePanelAccessQty(service, targetEntity.Id);                            
+                            UpdatePanelAccessQty(service, targetEntity.Id);
                         }
                         if (context.MessageName == CONST_UPDATE && context.Stage == PostOperation)
                         {
@@ -71,12 +69,59 @@ namespace Falk_Plugins.Pricing_Master
                                 tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
                                 UpdatePanelTrimQty(service, oppProductId);
                                 UpdatePanelAccessQty(service, oppProductId);
-
                             }
                             catch (Exception ex)
                             {
                                 throw new InvalidPluginExecutionException(ex.Message);
                             }
+                        }
+                        if (context.MessageName == CONST_UPDATE && context.Stage == PreOperation)
+                        {
+                            try
+                            {
+                                Entity PreImage = context.PreEntityImages["PreImage"];
+
+                                EntityReference panelThickness = targetEntity.Contains("tbs_panelthickness") ? targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness") : null;
+                                EntityReference prePanelThickness = PreImage.Contains("tbs_panelthickness") ? PreImage.GetAttributeValue<EntityReference>("tbs_panelthickness") : null;
+                                EntityReference panelType = PreImage.Contains("productid") ? PreImage.GetAttributeValue<EntityReference>("productid") : null;
+
+                                bool thicknessChanged = (panelThickness == null && prePanelThickness != null) || (panelThickness != null && prePanelThickness == null) || (panelThickness != null && prePanelThickness != null && panelThickness.Id != prePanelThickness.Id);
+
+                                if (!thicknessChanged)
+                                {
+                                    tracingService.Trace("Panel thickness not changed. Skipping delete logic.");
+                                    return;
+                                }
+
+                                tracingService.Trace("Panel thickness changed. Deleting related records.");
+
+                                Guid oppProductId = targetEntity.Id;
+                                tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
+
+                                DeleteOppAssociatedRecords(oppProductId);
+
+                                if (panelType != null)
+                                {
+                                    CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness);
+                                    tracingService.Trace("Panel Accessories created");
+
+                                    CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness);
+                                    tracingService.Trace("Panel Trims created");
+
+                                    UpdatePanelTrimQty(service, targetEntity.Id);
+                                    UpdatePanelAccessQty(service, targetEntity.Id);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidPluginExecutionException(ex.Message);
+                            }
+                        }
+                        if (context.MessageName == CONST_DELETE && context.Stage == PreOperation)
+                        {
+                            Guid oppProductId = targetEntity.Id;
+                            tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
+                            DeleteOppAssociatedRecords(oppProductId);
                         }
                     }
 
@@ -132,6 +177,41 @@ namespace Falk_Plugins.Pricing_Master
             {
                 tracingService.Trace($"CreatePanelAccessoryAndTrim Error : {ex}");
                 throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records.", ex);
+            }
+        }
+        private void DeleteOppAssociatedRecords(Guid oppProductId)
+        {
+            //Delete all line items related to opp prod
+            QueryExpression queryLineItem = new QueryExpression("tbs_lineitem");
+            queryLineItem.ColumnSet.AllColumns = false;
+            queryLineItem.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, oppProductId);
+            EntityCollection lineItems = service.RetrieveMultiple(queryLineItem);
+
+            foreach (Entity lineItem in lineItems.Entities)
+            {
+                service.Delete("tbs_lineitem", lineItem.Id);
+            }
+
+            //Delete all accessories related to opp prod
+            QueryExpression queryAccess = new QueryExpression("tbs_opppanelaccessory");
+            queryAccess.ColumnSet.AllColumns = false;
+            queryAccess.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, oppProductId);
+            EntityCollection accessories = service.RetrieveMultiple(queryAccess);
+
+            foreach (Entity access in accessories.Entities)
+            {
+                service.Delete("tbs_opppanelaccessory", access.Id);
+            }
+
+            //Delete all trims related to opp prod
+            QueryExpression queryTrim = new QueryExpression("tbs_opppaneltrim");
+            queryTrim.ColumnSet.AllColumns = false;
+            queryTrim.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, oppProductId);
+            EntityCollection trims = service.RetrieveMultiple(queryTrim);
+
+            foreach (Entity trim in trims.Entities)
+            {
+                service.Delete("tbs_opppaneltrim", trim.Id);
             }
         }
         private void CreatePanelAccessories(IOrganizationService service, Guid opportunityProductId, EntityReference panelType, EntityReference panelThickness)
@@ -238,7 +318,7 @@ namespace Falk_Plugins.Pricing_Master
                 throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records.", ex);
             }
         }
-        private void CreatePanelTrims(IOrganizationService service, Guid opportunityProductId, string opportunityProductName, EntityReference panelType, EntityReference panelThickness)
+        private void CreatePanelTrims(IOrganizationService service, Guid opportunityProductId, EntityReference panelType, EntityReference panelThickness)
         {
             try
             {
@@ -278,7 +358,7 @@ namespace Falk_Plugins.Pricing_Master
                 throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records.", ex);
             }
         }
-        
+
         private void UpdatePanelAccessQty(IOrganizationService service, Guid oppProdId)
         {
             tracingService.Trace("Opportunity ProductId = " + oppProdId.ToString());

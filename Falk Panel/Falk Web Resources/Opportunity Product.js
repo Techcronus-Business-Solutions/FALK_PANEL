@@ -11,48 +11,39 @@ if (typeof $ === "undefined") {
 Falk.OpportunityProduct = {
     OnLoad: async function (executionContext) {
         const formContext = executionContext.getFormContext();
-        formContext.getControl("tbs_exteriorfinish")
-            .addPreSearch(function () {
+        formContext.getControl("tbs_exteriorfinish").addPreSearch(function () {
                 Falk.OpportunityProduct.addExteriorFinishView(formContext);
             });
 
-        formContext.getControl("tbs_interiorfinish")
-            .addPreSearch(function () {
+        formContext.getControl("tbs_interiorfinish").addPreSearch(function () {
                 Falk.OpportunityProduct.addInteriorFinishView(formContext);
             });
 
-        formContext.getControl("tbs_exteriorgauge")
-            .addPreSearch(function () {
+        formContext.getControl("tbs_exteriorgauge").addPreSearch(function () {
                 Falk.OpportunityProduct.addExteriorGaugeView(formContext);
             });
 
-        formContext.getControl("tbs_interiorgauge")
-            .addPreSearch(function () {
+        formContext.getControl("tbs_interiorgauge").addPreSearch(function () {
                 Falk.OpportunityProduct.addInteriorGaugeView(formContext);
             });
 
-        formContext.getControl("tbs_exteriorprofile")
-            .addPreSearch(function () {
+        formContext.getControl("tbs_exteriorprofile").addPreSearch(function () {
                 Falk.OpportunityProduct.addExteriorProfileView(formContext);
             });
 
-        formContext.getControl("tbs_interiorprofile")
-            .addPreSearch(function () {
+        formContext.getControl("tbs_interiorprofile").addPreSearch(function () {
                 Falk.OpportunityProduct.addInteriorProfileView(formContext);
             });
 
-        formContext.getControl("tbs_exteriorcolor")
-            .addPreSearch(function () {
+        formContext.getControl("tbs_exteriorcolor").addPreSearch(function () {
                 Falk.OpportunityProduct.addExteriorColorView(formContext);
             });
 
-        formContext.getControl("tbs_interiorcolor")
-            .addPreSearch(function () {
+        formContext.getControl("tbs_interiorcolor").addPreSearch(function () {
                 Falk.OpportunityProduct.addInteriorColorView(formContext);
             });
 
-        formContext.getAttribute("productid")
-            .addOnChange(async function () {
+        formContext.getAttribute("productid").addOnChange(async function () {
                 formContext.getAttribute("tbs_panelthickness").setValue(null);
 
                 formContext.getAttribute("tbs_exteriorfinish").setValue(null);
@@ -83,16 +74,27 @@ Falk.OpportunityProduct = {
                 formContext.getAttribute("tbs_interiorcolor").setValue(null);
             });
 
-        formContext.getAttribute("tbs_panelthickness")
-            .addOnChange(async function () {
+        formContext.getAttribute("tbs_panelthickness").addOnChange(async function () {
                 await Falk.OpportunityProduct.SetFieldsFromThickness(formContext);
-            });
+        });
 
-        formContext.getAttribute("tbs_interiorfinish")
-            ?.addOnChange(Falk.OpportunityProduct.FinishOnChange);
+        formContext.getAttribute("tbs_priceleveltier").addOnChange(async function () {
+            const thickness = formContext.getAttribute("tbs_panelthickness")?.getValue();
+            if (!thickness) {
+                formContext.getAttribute("tbs_baseprice").setValue(null);
+                return;
+            }
+            const thicknessId = thickness[0].id.replace(/[{}]/g, "");
+            const thicknessRecord = await Xrm.WebApi.retrieveRecord("tbs_thickness", thicknessId, "?$select=tbs_baseprice");
 
-        formContext.getAttribute("tbs_exteriorfinish")
-            ?.addOnChange(Falk.OpportunityProduct.FinishOnChange);
+            const basePrice = thicknessRecord.tbs_baseprice || 0;
+
+            await Falk.OpportunityProduct.SetFieldsFromThickness(formContext, basePrice);
+        });
+
+        formContext.getAttribute("tbs_interiorfinish")?.addOnChange(Falk.OpportunityProduct.FinishOnChange);
+
+        formContext.getAttribute("tbs_exteriorfinish")?.addOnChange(Falk.OpportunityProduct.FinishOnChange);
 
         await Falk.OpportunityProduct.FinishOnChange(executionContext);
     },
@@ -560,18 +562,36 @@ Falk.OpportunityProduct = {
             formContext.getAttribute("tbs_stackheight").setValue(null);
             formContext.getAttribute("tbs_panelsperstack").setValue(null);
             formContext.getAttribute("tbs_widthpanel").setValue(null);
+            formContext.getAttribute("tbs_baseprice").setValue(null);
             return;
         }
 
         const thicknessId = thickness[0].id.replace(/[{}]/g, "");
-        const thicknessRecord = await Xrm.WebApi.retrieveRecord("tbs_thickness", thicknessId, "?$select=tbs_stackheight,tbs_maxpanelperstack,tbs_visiblepanelwidth");
+        const thicknessRecord = await Xrm.WebApi.retrieveRecord("tbs_thickness", thicknessId, "?$select=tbs_stackheight,tbs_maxpanelperstack,tbs_visiblepanelwidth,tbs_baseprice");
 
         const stackHeight = thicknessRecord["tbs_stackheight"];
         const panelsPerStack = thicknessRecord["tbs_maxpanelperstack"];
         const widthPanel = thicknessRecord["tbs_visiblepanelwidth"];
+        const basePrice = thicknessRecord.tbs_baseprice || 0;
 
         formContext.getAttribute("tbs_stackheight").setValue(stackHeight);
         formContext.getAttribute("tbs_panelsperstack").setValue(panelsPerStack);
         formContext.getAttribute("tbs_widthpanel").setValue(widthPanel);
+        await Falk.OpportunityProduct.SetFieldsFromThickness(formContext, basePrice);
+        
+    },
+    SetBasePrice: async function (formContext, basePrice) {
+        
+        const tier = formContext.getAttribute("tbs_priceleveltier").getValue();
+
+        if (!tier) {
+            formContext.getAttribute("tbs_baseprice").setValue(basePrice);
+            return;
+        }
+        const tierId = tier[0].id.replace(/[{}]/g, "");
+        const tierRecord = await Xrm.WebApi.retrieveRecord("tbs_tier", tierId, "?$select=tbs_multiplier");
+        const multiplier = tierRecord.tbs_multiplier;
+        const calculatedPrice = Number((basePrice * multiplier / 100).toFixed(2));
+        formContext.getAttribute("tbs_baseprice").setValue(calculatedPrice);
     }
 }
