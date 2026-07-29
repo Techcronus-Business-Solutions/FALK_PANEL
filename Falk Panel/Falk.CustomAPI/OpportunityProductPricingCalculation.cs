@@ -103,31 +103,6 @@ namespace Falk.CustomAPI
 
                 #region Set Total Pricing
 
-                #region Calculate Base Price
-                if (panelThickness == null || tier == null)
-                {
-                    //target["tbs_baseprice"] = null;
-                    return;
-                }
-
-                Entity tierRecord = service.Retrieve("tbs_tier", tier.Id, new ColumnSet("tbs_multiplier"));
-
-                decimal multiplier = Convert.ToDecimal(tierRecord.GetAttributeValue<int>("tbs_multiplier"));
-
-                Entity thickness = service.Retrieve("tbs_thickness", panelThickness.Id, new ColumnSet("tbs_baseprice"));
-
-                Money basePriceMoney = thickness.GetAttributeValue<Money>("tbs_baseprice");
-
-                if (basePriceMoney == null)
-                {
-                    //target["tbs_baseprice"] = null;
-                    return;
-                }
-
-                decimal calculatedPrice = (basePriceMoney.Value * multiplier) / 100m;
-                context.OutputParameters["CalculatedBasePrice"] = new Money(calculatedPrice);
-                #endregion
-
                 #region Calculate Small Order Upcharge
                 #endregion
 
