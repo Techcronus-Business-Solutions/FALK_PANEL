@@ -1,4 +1,5 @@
-﻿using Microsoft.Xrm.Sdk;
+﻿using Microsoft.Crm.Sdk.Messages;
+using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Collections.Generic;
@@ -38,6 +39,28 @@ namespace Falk.CustomAPI
                 CalculationContext calccontext = BuildCalculationContext(quoteProduct);
 
                 CalculateAllTrims(trims, calccontext);
+
+                try
+                {
+                    CalculateRollupFieldRequest calcularRollupAcces = new CalculateRollupFieldRequest
+                    {
+                        Target = new EntityReference("quotedetail", quoteProductId),
+                        FieldName = "tbs_accessoriespricetotal"
+                    };
+                    CalculateRollupFieldResponse calcularRollupAccesResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupAcces);
+
+                    CalculateRollupFieldRequest calcularRollupTrim = new CalculateRollupFieldRequest
+                    {
+                        Target = new EntityReference("quotedetail", quoteProductId),
+                        FieldName = "tbs_trimspricetotal"
+                    };
+                    CalculateRollupFieldResponse calcularRollupTrimResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupTrim);
+                }
+                catch (Exception e)
+                {
+                    tracingService.Trace($"Error Occurred in Calculating Rollup :{e.Message}");
+                    throw new InvalidPluginExecutionException(e.Message);
+                }
 
             }
             catch (Exception ex)

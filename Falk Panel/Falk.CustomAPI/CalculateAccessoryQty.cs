@@ -43,6 +43,28 @@ namespace Falk.CustomAPI
 
                 CalculateAllAccessories(accessories, calccontext);
 
+                try
+                {
+                    CalculateRollupFieldRequest calcularRollupAcces = new CalculateRollupFieldRequest
+                    {
+                        Target = new EntityReference("opportunityproduct", oppProductId),
+                        FieldName = "tbs_accessoriespricetotal"
+                    };
+                    CalculateRollupFieldResponse calcularRollupAccesResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupAcces);
+
+                    CalculateRollupFieldRequest calcularRollupTrim = new CalculateRollupFieldRequest
+                    {
+                        Target = new EntityReference("opportunityproduct", oppProductId),
+                        FieldName = "tbs_trimspricetotal"
+                    };
+                    CalculateRollupFieldResponse calcularRollupTrimResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupTrim);
+                }
+                catch (Exception e)
+                {
+                    tracingService.Trace($"Error Occurred in Calculating Rollup :{e.Message}");
+                    throw new InvalidPluginExecutionException(e.Message);
+                }
+
             }
             catch (Exception ex)
             {

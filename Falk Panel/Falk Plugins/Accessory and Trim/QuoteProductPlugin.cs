@@ -367,7 +367,7 @@ namespace Falk_Plugins.Pricing_Master
         {
             tracingService.Trace("Quote ProductId = " + quoteProdId.ToString());
 
-            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateAccessoryQty");
+            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateQuoteAccessoryQty");
 
             customApiRequest["tbs_quoteProduct"] = quoteProdId;
 
@@ -375,9 +375,10 @@ namespace Falk_Plugins.Pricing_Master
         }
         private void UpdatePanelTrimQty(IOrganizationService service, Guid quoteProdId)
         {
+            tracingService.Trace("Updating Quote Panel Trim Quantity");
             tracingService.Trace("Quote ProductId = " + quoteProdId.ToString());
 
-            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateTrimQty");
+            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateQuoteTrimQty");
 
             customApiRequest["tbs_quoteProduct"] = quoteProdId;
 

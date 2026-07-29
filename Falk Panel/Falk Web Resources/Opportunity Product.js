@@ -15,6 +15,10 @@ Falk.OpportunityProduct = {
     OnLoad: async function (executionContext) {
         const formContext = executionContext.getFormContext();
 
+        if (formContext.ui.getFormType() === 1) {
+            formContext.getAttribute("quantity").setValue(0);
+        }
+
         // Cache Environment Variables
         this.FRW42PanelId = await this.GetEnvironmentVariableValue("tbs_FRW42PanelId");
         this.FalkHPSFinishId = await this.GetEnvironmentVariableValue("tbs_FalkHPSFinishId");

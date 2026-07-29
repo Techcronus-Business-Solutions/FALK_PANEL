@@ -127,7 +127,6 @@ namespace Falk.CustomAPI
                 }
 
                 decimal calculatedPrice = (basePriceMoney.Value * multiplier) / 100m;
-                context.OutputParameters["CalculatedBasePrice"] = new Money(calculatedPrice);
                 #endregion
 
                 #region Save Record In Opportunity Product
@@ -143,6 +142,34 @@ namespace Falk.CustomAPI
 
                 decimal totalPropertyPrice = interiorPrice + exteriorPrice + interiorEmbossPrice + exteriorEmbossPrice;
                 oppProduct["tbs_totalpropertiesprice"] = new Money(totalPropertyPrice);
+
+                decimal usPrice = calculatedPrice + totalPropertyPrice;
+                oppProduct["tbs_usprice"] = new Money(usPrice);
+
+                Entity opp = service.Retrieve("opportunityproduct",opportunityProduct.Id,new ColumnSet("quantity", "tbs_usdpriceadjustment"));
+                decimal sqft = opp.GetAttributeValue<decimal>("quantity");
+                decimal upcharge = 0;
+
+                if (sqft > 0)
+                {
+                    if (sqft < 1000)
+                    {
+                        upcharge = (usPrice * 0.10m) + (1200m / sqft);
+                    }
+                    else if (sqft < 3500)
+                    {
+                        upcharge = (usPrice * 0.10m) + (750m / sqft);
+                    }
+                }
+                oppProduct["tbs_smallorderupcharge"] = new Money(upcharge);
+
+                decimal usdAdjustment = opp.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value ?? 0;
+                decimal pricePerUnit = usPrice + usdAdjustment + upcharge;
+
+                decimal lineTotal = sqft * pricePerUnit;
+                oppProduct["ispriceoverridden"] = true;
+                oppProduct["extendedamount"] = new Money(lineTotal);
+                oppProduct["priceperunit"] = new Money(pricePerUnit);
 
                 service.Update(oppProduct);
                 #endregion
