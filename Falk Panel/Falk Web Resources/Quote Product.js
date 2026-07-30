@@ -9,8 +9,16 @@ if (typeof $ === "undefined") {
 }
 
 Falk.QuoteProduct = {
+    FRW42PanelId: null,
+    FalkHPSFinishId: null,
+
     OnLoad: async function (executionContext) {
         const formContext = executionContext.getFormContext();
+
+        // Cache Environment Variables
+        this.FRW42PanelId = await this.GetEnvironmentVariableValue("tbs_FRW42PanelId");
+        this.FalkHPSFinishId = await this.GetEnvironmentVariableValue("tbs_FalkHPSFinishId");
+
         formContext.getControl("tbs_exteriorfinish")
             .addPreSearch(function () {
                 Falk.QuoteProduct.addExteriorFinishView(formContext);
@@ -43,12 +51,12 @@ Falk.QuoteProduct = {
 
         formContext.getControl("tbs_exteriorcolor")
             .addPreSearch(function () {
-                Falk.QuoteProduct.FilterExteriorColorLookup(formContext);
+                Falk.QuoteProduct.addExteriorColorView(formContext);
             });
 
         formContext.getControl("tbs_interiorcolor")
             .addPreSearch(function () {
-                Falk.QuoteProduct.FilterInteriorColorLookup(formContext);
+                Falk.QuoteProduct.addInteriorColorView(formContext);
             });
 
         formContext.getAttribute("productid")
@@ -88,11 +96,37 @@ Falk.QuoteProduct = {
                 await Falk.QuoteProduct.SetFieldsFromThickness(formContext);
             });
 
-        formContext.getAttribute("tbs_interiorfinish")
-            ?.addOnChange(Falk.QuoteProduct.FinishOnChange);
+        formContext.getAttribute("tbs_priceleveltier").addOnChange(async function () {
+            const thickness = formContext.getAttribute("tbs_panelthickness")?.getValue();
+            if (!thickness) {
+                formContext.getAttribute("tbs_baseprice").setValue(null);
+                return;
+            }
+            const thicknessId = thickness[0].id.replace(/[{}]/g, "");
+            const thicknessRecord = await Xrm.WebApi.retrieveRecord("tbs_thickness", thicknessId, "?$select=tbs_baseprice");
 
-        formContext.getAttribute("tbs_exteriorfinish")
-            ?.addOnChange(Falk.QuoteProduct.FinishOnChange);
+            const basePrice = thicknessRecord.tbs_baseprice || 0;
+
+            await Falk.OpportunityProduct.SetFieldsFromThickness(formContext, basePrice);
+        });
+
+        formContext.getAttribute("tbs_interiorfinish").addOnChange(function (executionContext) {
+            const formContext = executionContext.getFormContext();
+
+            formContext.getAttribute("tbs_interiorcolor").setValue(null);
+
+            Falk.QuoteProduct.addInteriorColorView(formContext);
+            Falk.QuoteProduct.FinishOnChange(executionContext);
+        });
+
+        formContext.getAttribute("tbs_exteriorfinish").addOnChange(function (executionContext) {
+            const formContext = executionContext.getFormContext();
+
+            formContext.getAttribute("tbs_exteriorcolor").setValue(null);
+
+            Falk.QuoteProduct.addExteriorColorView(formContext);
+            Falk.QuoteProduct.FinishOnChange(executionContext);
+        });
 
         await Falk.QuoteProduct.FinishOnChange(executionContext);
     },
@@ -110,6 +144,9 @@ Falk.QuoteProduct = {
             "  <entity name='tbs_finish'>" +
             "    <attribute name='tbs_name' />" +
             "    <order attribute='tbs_name' />" +
+            "    <filter>" +
+            "       <condition attribute='tbs_type' operator='eq' value='1' />" +
+            "    </filter>" +
             "    <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
             "       <filter>" +
             "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
@@ -148,6 +185,9 @@ Falk.QuoteProduct = {
             "  <entity name='tbs_finish'>" +
             "    <attribute name='tbs_name' />" +
             "    <order attribute='tbs_name' />" +
+            "    <filter>" +
+            "       <condition attribute='tbs_type' operator='eq' value='0' />" +
+            "    </filter>" +
             "    <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
             "       <filter>" +
             "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
@@ -174,21 +214,21 @@ Falk.QuoteProduct = {
     },
 
     addExteriorGaugeView: function (formContext) {
-        const product = formContext.getAttribute("productid").getValue();
+        const exteriorFinish = formContext.getAttribute("tbs_exteriorfinish").getValue();
 
-        if (!product)
+        if (!exteriorFinish)
             return;
 
-        const productId = product[0].id.replace(/[{}]/g, "");
+        const exteriorFinishId = exteriorFinish[0].id.replace(/[{}]/g, "");
 
         const fetchXml =
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
             "  <entity name='tbs_gauge'>" +
             "    <attribute name='tbs_name' />" +
             "    <order attribute='tbs_name' />" +
-            "    <link-entity name='tbs_gauge_product' from='tbs_gaugeid' to='tbs_gaugeid' link-type='inner'>" +
+            "    <link-entity name='tbs_gauge_tbs_finish' from='tbs_gaugeid' to='tbs_gaugeid' link-type='inner'>" +
             "       <filter>" +
-            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "           <condition attribute='tbs_finishid' operator='eq' value='" + exteriorFinishId + "' />" +
             "       </filter>" +
             "    </link-entity>" +
             "  </entity>" +
@@ -212,21 +252,21 @@ Falk.QuoteProduct = {
     },
 
     addInteriorGaugeView: function (formContext) {
-        const product = formContext.getAttribute("productid").getValue();
+        const interiorFinish = formContext.getAttribute("tbs_interiorfinish").getValue();
 
-        if (!product)
+        if (!interiorFinish)
             return;
 
-        const productId = product[0].id.replace(/[{}]/g, "");
+        const interiorFinishId = interiorFinish[0].id.replace(/[{}]/g, "");
 
         const fetchXml =
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
             "  <entity name='tbs_gauge'>" +
             "    <attribute name='tbs_name' />" +
             "    <order attribute='tbs_name' />" +
-            "    <link-entity name='tbs_gauge_product' from='tbs_gaugeid' to='tbs_gaugeid' link-type='inner'>" +
+            "    <link-entity name='tbs_gauge_tbs_finish' from='tbs_gaugeid' to='tbs_gaugeid' link-type='inner'>" +
             "       <filter>" +
-            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "           <condition attribute='tbs_finishid' operator='eq' value='" + interiorFinishId + "' />" +
             "       </filter>" +
             "    </link-entity>" +
             "  </entity>" +
@@ -262,6 +302,9 @@ Falk.QuoteProduct = {
             "  <entity name='tbs_profile'>" +
             "    <attribute name='tbs_name' />" +
             "    <order attribute='tbs_name' />" +
+            "    <filter>" +
+            "       <condition attribute='tbs_type' operator='eq' value='1' />" +
+            "    </filter>" +
             "    <link-entity name='tbs_profile_product' from='tbs_profileid' to='tbs_profileid' link-type='inner'>" +
             "       <filter>" +
             "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
@@ -300,6 +343,9 @@ Falk.QuoteProduct = {
             "  <entity name='tbs_profile'>" +
             "    <attribute name='tbs_name' />" +
             "    <order attribute='tbs_name' />" +
+            "    <filter>" +
+            "       <condition attribute='tbs_type' operator='eq' value='0' />" +
+            "    </filter>" +
             "    <link-entity name='tbs_profile_product' from='tbs_profileid' to='tbs_profileid' link-type='inner'>" +
             "       <filter>" +
             "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
@@ -325,7 +371,7 @@ Falk.QuoteProduct = {
         );
     },
 
-    FilterExteriorColorLookup: function (formContext) {
+    addExteriorColorView: function (formContext) {
         const product = formContext.getAttribute("productid").getValue();
         const finish = formContext.getAttribute("tbs_exteriorfinish").getValue();
 
@@ -335,16 +381,55 @@ Falk.QuoteProduct = {
         const productId = product[0].id.replace(/[{}]/g, "");
         const finishId = finish[0].id.replace(/[{}]/g, "");
 
-        const filter =
-            "<filter type='and'>" +
-            "<condition attribute='tbs_product' operator='eq' value='" + productId + "' />" +
-            "<condition attribute='tbs_finish' operator='eq' value='" + finishId + "' />" +
-            "</filter>";
+        const FRW42PanelId = Falk.QuoteProduct.FRW42PanelId;
 
-        formContext.getControl("tbs_exteriorcolor").addCustomFilter(filter, "tbs_color");
+        let fetchXml = "";
+
+        if (FRW42PanelId && FRW42PanelId.replace(/[{}]/g, "").toLowerCase() === productId.toLowerCase()) {
+            fetchXml =
+                "<fetch version='1.0' mapping='logical'>" +
+                " <entity name='tbs_color'>" +
+                "   <attribute name='tbs_name' />" +
+                "   <order attribute='tbs_name' />" +
+                "   <filter>" +
+                "      <condition attribute='tbs_paneltype' operator='eq' value='" + productId + "' />" +
+                "   </filter>" +
+                " </entity>" +
+                "</fetch>";
+
+        } else {
+            fetchXml =
+                "<fetch version='1.0' mapping='logical'>" +
+                " <entity name='tbs_color'>" +
+                "   <attribute name='tbs_name' />" +
+                "   <order attribute='tbs_name' />" +
+                "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
+                "       <filter>" +
+                "           <condition attribute='tbs_finishid' operator='eq' value='" + finishId + "' />" +
+                "       </filter>" +
+                "    </link-entity>" +
+                " </entity>" +
+                "</fetch>";
+        }
+
+        const layoutXml =
+            "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
+            "   <row name='result' id='tbs_colorid'>" +
+            "      <cell name='tbs_name' width='250' />" +
+            "   </row>" +
+            "</grid>";
+
+        formContext.getControl("tbs_exteriorcolor").addCustomView(
+            "{36e15928-2987-f111-ab0e-70a8a59a342e}",
+            "tbs_color",
+            "Filtered Exterior Colors",
+            fetchXml,
+            layoutXml,
+            true
+        );
     },
 
-    FilterInteriorColorLookup: function (formContext) {
+    addInteriorColorView: async function (formContext) {
         const product = formContext.getAttribute("productid").getValue();
         const finish = formContext.getAttribute("tbs_interiorfinish").getValue();
 
@@ -354,13 +439,52 @@ Falk.QuoteProduct = {
         const productId = product[0].id.replace(/[{}]/g, "");
         const finishId = finish[0].id.replace(/[{}]/g, "");
 
-        const filter =
-            "<filter type='and'>" +
-            "<condition attribute='tbs_product' operator='eq' value='" + productId + "' />" +
-            "<condition attribute='tbs_finish' operator='eq' value='" + finishId + "' />" +
-            "</filter>";
+        const FRW42PanelId = Falk.QuoteProduct.FRW42PanelId;
 
-        formContext.getControl("tbs_interiorcolor").addCustomFilter(filter, "tbs_color");
+        let fetchXml = "";
+
+        if (FRW42PanelId && FRW42PanelId.replace(/[{}]/g, "").toLowerCase() === productId.toLowerCase()) {
+            fetchXml =
+                "<fetch version='1.0' mapping='logical'>" +
+                " <entity name='tbs_color'>" +
+                "   <attribute name='tbs_name' />" +
+                "   <order attribute='tbs_name' />" +
+                "   <filter>" +
+                "      <condition attribute='tbs_paneltype' operator='eq' value='" + productId + "' />" +
+                "   </filter>" +
+                " </entity>" +
+                "</fetch>";
+
+        } else {
+            fetchXml =
+                "<fetch version='1.0' mapping='logical'>" +
+                " <entity name='tbs_color'>" +
+                "   <attribute name='tbs_name' />" +
+                "   <order attribute='tbs_name' />" +
+                "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
+                "       <filter>" +
+                "           <condition attribute='tbs_finishid' operator='eq' value='" + finishId + "' />" +
+                "       </filter>" +
+                "    </link-entity>" +
+                " </entity>" +
+                "</fetch>";
+        }
+
+        const layoutXml =
+            "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
+            "   <row name='result' id='tbs_colorid'>" +
+            "      <cell name='tbs_name' width='250' />" +
+            "   </row>" +
+            "</grid>";
+
+        formContext.getControl("tbs_interiorcolor").addCustomView(
+            "{ceb6d2b6-858a-f111-ab0f-70a8a59d3f87}",
+            "tbs_color",
+            "Filtered Exterior Colors",
+            fetchXml,
+            layoutXml,
+            true
+        );
     },
 
     EnableDisableExteriorEmboss: async function (formContext) {
@@ -416,7 +540,7 @@ Falk.QuoteProduct = {
     FinishOnChange: async function (executionContext) {
         const formContext = executionContext.getFormContext();
 
-        const hpsFinishId = await Falk.QuoteProduct.GetEnvironmentVariableValue("tbs_FalkHPSFinishId");
+        const hpsFinishId = Falk.QuoteProduct.FalkHPSFinishId;
 
         if (!hpsFinishId)
             return;
@@ -431,11 +555,19 @@ Falk.QuoteProduct = {
         // Interior
         if (interiorFinish && normalizeGuid(interiorFinish[0].id) === envId) {
             formContext.getAttribute("tbs_interioremboss").setValue(2); //HPS
+            formContext.getControl("tbs_interioremboss").setDisabled(true);
+        }
+        else {
+            formContext.getControl("tbs_interioremboss").setDisabled(false);
         }
 
         // Exterior
         if (exteriorFinish && normalizeGuid(exteriorFinish[0].id) === envId) {
             formContext.getAttribute("tbs_exterioremboss").setValue(2); //HPS
+            formContext.getControl("tbs_exterioremboss").setDisabled(true);
+        }
+        else {
+            formContext.getControl("tbs_exterioremboss").setDisabled(false);
         }
     },
 
@@ -472,18 +604,35 @@ Falk.QuoteProduct = {
             formContext.getAttribute("tbs_stackheight").setValue(null);
             formContext.getAttribute("tbs_panelsperstack").setValue(null);
             formContext.getAttribute("tbs_widthpanel").setValue(null);
+            formContext.getAttribute("tbs_baseprice").setValue(null);
             return;
         }
 
         const thicknessId = thickness[0].id.replace(/[{}]/g, "");
-        const thicknessRecord = await Xrm.WebApi.retrieveRecord("tbs_thickness", thicknessId, "?$select=tbs_stackheight,tbs_maxpanelperstack,tbs_visiblepanelwidth");
+        const thicknessRecord = await Xrm.WebApi.retrieveRecord("tbs_thickness", thicknessId, "?$select=tbs_stackheight,tbs_maxpanelperstack,tbs_visiblepanelwidth,tbs_baseprice");
 
         const stackHeight = thicknessRecord["tbs_stackheight"];
         const panelsPerStack = thicknessRecord["tbs_maxpanelperstack"];
         const widthPanel = thicknessRecord["tbs_visiblepanelwidth"];
+        const basePrice = thicknessRecord.tbs_baseprice || 0;
 
         formContext.getAttribute("tbs_stackheight").setValue(stackHeight);
         formContext.getAttribute("tbs_panelsperstack").setValue(panelsPerStack);
         formContext.getAttribute("tbs_widthpanel").setValue(widthPanel);
+        await Falk.QuoteProduct.SetBasePrice(formContext, basePrice);
+    },
+
+    SetBasePrice: async function (formContext, basePrice) {
+        const tier = formContext.getAttribute("tbs_priceleveltier").getValue();
+
+        if (!tier) {
+            formContext.getAttribute("tbs_baseprice").setValue(basePrice);
+            return;
+        }
+        const tierId = tier[0].id.replace(/[{}]/g, "");
+        const tierRecord = await Xrm.WebApi.retrieveRecord("tbs_tier", tierId, "?$select=tbs_multiplier");
+        const multiplier = tierRecord.tbs_multiplier;
+        const calculatedPrice = Number((basePrice * multiplier / 100).toFixed(2));
+        formContext.getAttribute("tbs_baseprice").setValue(calculatedPrice);
     }
 }

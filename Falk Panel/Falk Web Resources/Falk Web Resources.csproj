@@ -52,6 +52,7 @@
     <Content Include="OpportunityPanelTrim.js" />
     <Content Include="OpportunityProductRibbon.js" />
     <Content Include="Quote Product.js" />
+    <Content Include="QuoteProductRibbon.js" />
     <Content Include="SalesLifecycleProcess.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

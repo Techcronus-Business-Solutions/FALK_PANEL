@@ -553,11 +553,19 @@ Falk.OpportunityProduct = {
         // Interior
         if (interiorFinish && normalizeGuid(interiorFinish[0].id) === envId) {
             formContext.getAttribute("tbs_interioremboss").setValue(2); //HPS
+            formContext.getControl("tbs_interioremboss").setDisabled(true);
+        }
+        else {
+            formContext.getControl("tbs_interioremboss").setDisabled(false);
         }
 
         // Exterior
         if (exteriorFinish && normalizeGuid(exteriorFinish[0].id) === envId) {
             formContext.getAttribute("tbs_exterioremboss").setValue(2); //HPS
+            formContext.getControl("tbs_exterioremboss").setDisabled(true);
+        }
+        else {
+            formContext.getControl("tbs_exterioremboss").setDisabled(false);
         }
     },
 
@@ -609,11 +617,10 @@ Falk.OpportunityProduct = {
         formContext.getAttribute("tbs_stackheight").setValue(stackHeight);
         formContext.getAttribute("tbs_panelsperstack").setValue(panelsPerStack);
         formContext.getAttribute("tbs_widthpanel").setValue(widthPanel);
-        await Falk.OpportunityProduct.SetFieldsFromThickness(formContext, basePrice);
-        
+        await Falk.OpportunityProduct.SetBasePrice(formContext, basePrice);
     },
+
     SetBasePrice: async function (formContext, basePrice) {
-        
         const tier = formContext.getAttribute("tbs_priceleveltier").getValue();
 
         if (!tier) {
