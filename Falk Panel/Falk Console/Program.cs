@@ -93,7 +93,9 @@ namespace Falk_Console
                     //Console.ReadKey();
 
                     //AccessoriesQtyConsole.CalculateQty(organizationService);
-                    TrimQtyConsole.CalculateQty(organizationService);
+                    //TrimQtyConsole.CalculateQty(organizationService);
+
+                    PricingMasterInterior.ImportPricingMasterInteriorData(organizationService);
                 }
             }
             catch (Exception ex)
