@@ -20,8 +20,10 @@ namespace Falk_Console
             var productLookup = GetLookupDictionary(service, "product", "name");
             var thicknessLookup = GetLookupDictionary(service, "tbs_thickness", "tbs_name");
             var colorLookup = GetLookupDictionary(service, "tbs_color", "tbs_name");
-            var finishLookup = GetLookupDictionary(service, "tbs_finish", "tbs_name");
+            var finishLookup = GetLookupDictionaryFinish(service, "tbs_finish", "tbs_name");
             var gaugeLookup = GetLookupDictionary(service, "tbs_gauge", "tbs_name");
+
+            int counter = 1;
 
             foreach (var item in excelData)
             {
@@ -71,7 +73,9 @@ namespace Falk_Console
 
                     //service.Create(pricingMaster);
 
+                    Console.WriteLine($"Counter : {counter}");
                     Console.WriteLine($"Imported : {item.PanelThickness} - {item.InteriorFinish} - {item.InteriorGauge} - {item.InteriorColorCategory}");
+                    counter++;
                 }
                 catch (Exception ex)
                 {
@@ -126,6 +130,30 @@ namespace Falk_Console
             QueryExpression query = new QueryExpression(entityName);
             query.ColumnSet = new ColumnSet(primaryField);
 
+            EntityCollection result = service.RetrieveMultiple(query);
+
+            foreach (Entity entity in result.Entities)
+            {
+                if (entity.Contains(primaryField))
+                {
+                    string name = entity.GetAttributeValue<string>(primaryField);
+
+                    if (!dictionary.ContainsKey(name))
+                        dictionary.Add(name.Trim(), entity.Id);
+                }
+            }
+
+            return dictionary;
+        }
+
+        private static Dictionary<string, Guid> GetLookupDictionaryFinish(IOrganizationService service, string entityName, string primaryField)
+        {
+            Dictionary<string, Guid> dictionary =
+                new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+
+            QueryExpression query = new QueryExpression(entityName);
+            query.ColumnSet = new ColumnSet(primaryField);
+            query.Criteria.AddCondition("tbs_type",ConditionOperator.Equal,1);
             EntityCollection result = service.RetrieveMultiple(query);
 
             foreach (Entity entity in result.Entities)
