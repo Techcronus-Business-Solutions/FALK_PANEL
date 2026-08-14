@@ -8,7 +8,7 @@ if (typeof $ === "undefined") {
     Jquery = parent.Jquery;
 }
 
-Falk.QuoteProduct = {
+Falk.OrderProduct = {
     FRW42PanelId: null,
     FalkHPSFinishId: null,
 
@@ -16,51 +16,51 @@ Falk.QuoteProduct = {
         const formContext = executionContext.getFormContext();
 
         // Cache Environment Variables
-        Falk.QuoteProduct.FRW42PanelId = await this.GetEnvironmentVariableValue("tbs_FRW42PanelId");
+        Falk.OrderProduct.FRW42PanelId = await Falk.OrderProduct.GetEnvironmentVariableValue("tbs_FRW42PanelId");
 
-        const jsonText = await Falk.QuoteProduct.GetEnvironmentVariableValue(
+        const jsonText = await Falk.OrderProduct.GetEnvironmentVariableValue(
             "tbs_FalkHPSFinishId"
         );
-        Falk.QuoteProduct.FalkHPSFinishId = JSON.parse(jsonText);
+        Falk.OrderProduct.FalkHPSFinishId = JSON.parse(jsonText);
 
         formContext.getControl("tbs_exteriorfinish")
             .addPreSearch(function () {
-                Falk.QuoteProduct.addExteriorFinishView(formContext);
+                Falk.OrderProduct.addExteriorFinishView(formContext);
             });
 
         formContext.getControl("tbs_interiorfinish")
             .addPreSearch(function () {
-                Falk.QuoteProduct.addInteriorFinishView(formContext);
+                Falk.OrderProduct.addInteriorFinishView(formContext);
             });
 
         formContext.getControl("tbs_exteriorgauge")
             .addPreSearch(function () {
-                Falk.QuoteProduct.addExteriorGaugeView(formContext);
+                Falk.OrderProduct.addExteriorGaugeView(formContext);
             });
 
         formContext.getControl("tbs_interiorgauge")
             .addPreSearch(function () {
-                Falk.QuoteProduct.addInteriorGaugeView(formContext);
+                Falk.OrderProduct.addInteriorGaugeView(formContext);
             });
 
         formContext.getControl("tbs_exteriorprofile")
             .addPreSearch(function () {
-                Falk.QuoteProduct.addExteriorProfileView(formContext);
+                Falk.OrderProduct.addExteriorProfileView(formContext);
             });
 
         formContext.getControl("tbs_interiorprofile")
             .addPreSearch(function () {
-                Falk.QuoteProduct.addInteriorProfileView(formContext);
+                Falk.OrderProduct.addInteriorProfileView(formContext);
             });
 
         formContext.getControl("tbs_exteriorcolor")
             .addPreSearch(function () {
-                Falk.QuoteProduct.addExteriorColorView(formContext);
+                Falk.OrderProduct.addExteriorColorView(formContext);
             });
 
         formContext.getControl("tbs_interiorcolor")
             .addPreSearch(function () {
-                Falk.QuoteProduct.addInteriorColorView(formContext);
+                Falk.OrderProduct.addInteriorColorView(formContext);
             });
 
         formContext.getAttribute("productid")
@@ -68,28 +68,28 @@ Falk.QuoteProduct = {
                 formContext.getAttribute("tbs_panelthickness").setValue(null);
 
                 formContext.getAttribute("tbs_exteriorfinish").setValue(null);
-                Falk.QuoteProduct.addExteriorFinishView(formContext);
+                Falk.OrderProduct.addExteriorFinishView(formContext);
 
                 formContext.getAttribute("tbs_interiorfinish").setValue(null);
-                Falk.QuoteProduct.addInteriorFinishView(formContext);
+                Falk.OrderProduct.addInteriorFinishView(formContext);
 
                 formContext.getAttribute("tbs_exteriorgauge").setValue(null);
-                Falk.QuoteProduct.addExteriorGaugeView(formContext);
+                Falk.OrderProduct.addExteriorGaugeView(formContext);
 
                 formContext.getAttribute("tbs_interiorgauge").setValue(null);
-                Falk.QuoteProduct.addInteriorGaugeView(formContext);
+                Falk.OrderProduct.addInteriorGaugeView(formContext);
 
                 formContext.getAttribute("tbs_exteriorprofile").setValue(null);
-                Falk.QuoteProduct.addExteriorProfileView(formContext);
+                Falk.OrderProduct.addExteriorProfileView(formContext);
 
                 formContext.getAttribute("tbs_interiorprofile").setValue(null);
-                Falk.QuoteProduct.addInteriorProfileView(formContext);
+                Falk.OrderProduct.addInteriorProfileView(formContext);
 
                 formContext.getAttribute("tbs_exterioremboss").setValue(false);
-                await Falk.QuoteProduct.EnableDisableExteriorEmboss(formContext);
+                await Falk.OrderProduct.EnableDisableExteriorEmboss(formContext);
 
                 formContext.getAttribute("tbs_interioremboss").setValue(false);
-                await Falk.QuoteProduct.EnableDisableInteriorEmboss(formContext);
+                await Falk.OrderProduct.EnableDisableInteriorEmboss(formContext);
 
                 formContext.getAttribute("tbs_exteriorcolor").setValue(null);
                 formContext.getAttribute("tbs_interiorcolor").setValue(null);
@@ -97,7 +97,7 @@ Falk.QuoteProduct = {
 
         formContext.getAttribute("tbs_panelthickness")
             .addOnChange(async function () {
-                await Falk.QuoteProduct.SetFieldsFromThickness(formContext);
+                await Falk.OrderProduct.SetFieldsFromThickness(formContext);
             });
 
         formContext.getAttribute("tbs_priceleveltier").addOnChange(async function () {
@@ -111,7 +111,7 @@ Falk.QuoteProduct = {
 
             const basePrice = thicknessRecord.tbs_baseprice || 0;
 
-            await Falk.OpportunityProduct.SetFieldsFromThickness(formContext, basePrice);
+            await Falk.OrderProduct.SetFieldsFromThickness(formContext, basePrice);
         });
 
         formContext.getAttribute("tbs_interiorfinish").addOnChange(function (executionContext) {
@@ -119,8 +119,8 @@ Falk.QuoteProduct = {
 
             formContext.getAttribute("tbs_interiorcolor").setValue(null);
 
-            Falk.QuoteProduct.addInteriorColorView(formContext);
-            Falk.QuoteProduct.FinishOnChange(executionContext);
+            Falk.OrderProduct.addInteriorColorView(formContext);
+            Falk.OrderProduct.FinishOnChange(executionContext);
         });
 
         formContext.getAttribute("tbs_exteriorfinish").addOnChange(function (executionContext) {
@@ -128,8 +128,8 @@ Falk.QuoteProduct = {
 
             formContext.getAttribute("tbs_exteriorcolor").setValue(null);
 
-            Falk.QuoteProduct.addExteriorColorView(formContext);
-            Falk.QuoteProduct.FinishOnChange(executionContext);
+            Falk.OrderProduct.addExteriorColorView(formContext);
+            Falk.OrderProduct.FinishOnChange(executionContext);
         });
     },
 
@@ -383,7 +383,7 @@ Falk.QuoteProduct = {
         const productId = product[0].id.replace(/[{}]/g, "");
         const finishId = finish[0].id.replace(/[{}]/g, "");
 
-        const FRW42PanelId = Falk.QuoteProduct.FRW42PanelId;
+        const FRW42PanelId = Falk.OrderProduct.FRW42PanelId;
 
         let fetchXml = "";
 
@@ -441,7 +441,7 @@ Falk.QuoteProduct = {
         const productId = product[0].id.replace(/[{}]/g, "");
         const finishId = finish[0].id.replace(/[{}]/g, "");
 
-        const FRW42PanelId = Falk.QuoteProduct.FRW42PanelId;
+        const FRW42PanelId = Falk.OrderProduct.FRW42PanelId;
 
         let fetchXml = "";
 
@@ -542,7 +542,7 @@ Falk.QuoteProduct = {
     FinishOnChange: async function (executionContext) {
         const formContext = executionContext.getFormContext();
 
-        const hpsFinishIds = Falk.QuoteProduct.FalkHPSFinishId;
+        const hpsFinishIds = Falk.OrderProduct.FalkHPSFinishId;
 
         if (!hpsFinishIds)
             return;
@@ -624,7 +624,7 @@ Falk.QuoteProduct = {
         formContext.getAttribute("tbs_stackheight").setValue(stackHeight);
         formContext.getAttribute("tbs_panelsperstack").setValue(panelsPerStack);
         formContext.getAttribute("tbs_widthpanel").setValue(widthPanel);
-        await Falk.QuoteProduct.SetBasePrice(formContext, basePrice);
+        await Falk.OrderProduct.SetBasePrice(formContext, basePrice);
     },
 
     SetBasePrice: async function (formContext, basePrice) {

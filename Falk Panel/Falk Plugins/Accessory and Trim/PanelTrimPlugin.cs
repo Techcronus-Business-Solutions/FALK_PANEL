@@ -125,6 +125,53 @@ namespace Falk_Plugins.Accessory_and_Trim
                             }
                         }
                     }
+                    else if (targetEntity.LogicalName == "tbs_orderpaneltrim")
+                    {
+                        // ---------------- CREATE (PreOperation) ----------------
+                        if (context.Stage == PreOperation && context.MessageName == CONST_CREATE)
+                        {
+                            EntityReference orderProductRef = targetEntity.Contains("tbs_orderproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_orderproduct") : null;
+
+                            if (orderProductRef == null)
+                                return;
+
+                            Entity orderProduct = service.Retrieve("salesorderdetail", orderProductRef.Id, new ColumnSet("salesorderdetailid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge", "tbs_interiorfinish", "tbs_exteriorfinish"));
+
+                            bool isCustomTrim = targetEntity.GetAttributeValue<bool>("tbs_iscustomtrim");
+
+                            if (isCustomTrim)
+                            {
+                                CalculateCustomPanelTrimPrice(targetEntity, orderProduct);
+                            }
+                            else
+                            {
+                                tracingService.Trace("Standard Trim Pricing Calculation Started...");
+                                EntityReference trimRef = targetEntity.Contains("tbs_trim") ? targetEntity.GetAttributeValue<EntityReference>("tbs_trim") : null;
+
+                                if (trimRef == null)
+                                    throw new InvalidPluginExecutionException("Trim is required.");
+
+                                tracingService.Trace("Trim Exists...");
+
+                                Entity trim = service.Retrieve("tbs_trim", trimRef.Id, new ColumnSet("tbs_name", "tbs_description", "tbs_itemcategory", "tbs_trimpricing"));
+
+                                EntityReference trimPricingRef = trim.Contains("tbs_trimpricing") ? trim.GetAttributeValue<EntityReference>("tbs_trimpricing") : null;
+
+                                if (trimPricingRef == null)
+                                {
+                                    targetEntity["tbs_unitprice"] = new Money(0);
+                                    tracingService.Trace("Trim Pricing Not Found!");
+                                    return;
+                                }
+
+                                tracingService.Trace("Standard Trim Pricing Exists...");
+
+                                Entity trimPricing = service.Retrieve("tbs_trimpricing", trimPricingRef.Id, new ColumnSet("tbs_unit", "tbs_finish", "tbs_description", "tbs_cost", "tbs_embossingmarkup", "tbs_canadacustomermargin", "tbs_canadacustomerprice", "tbs_cadembossedprice", "tbs_margin", "tbs_price", "tbs_usdembossedprice"));
+
+                                CalculatePanelTrimPrice(targetEntity, trimPricing, orderProduct);
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -145,9 +192,17 @@ namespace Falk_Plugins.Accessory_and_Trim
             EntityReference parentRef = null;
 
             if (panelTrim.LogicalName == "tbs_opppaneltrim")
+            {
                 parentRef = panelTrim.Contains("tbs_opportunityproduct") ? panelTrim.GetAttributeValue<EntityReference>("tbs_opportunityproduct") : null;
-            else
+            }
+            else if (panelTrim.LogicalName == "tbs_quotepaneltrim")
+            {
                 parentRef = panelTrim.Contains("tbs_quoteproduct") ? panelTrim.GetAttributeValue<EntityReference>("tbs_quoteproduct") : null;
+            }
+            else if (panelTrim.LogicalName == "tbs_orderpaneltrim")
+            {
+                parentRef = panelTrim.Contains("tbs_orderproduct") ? panelTrim.GetAttributeValue<EntityReference>("tbs_orderproduct") : null;
+            }
 
             if (trimRef == null || parentRef == null)
             {
@@ -302,7 +357,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             bool embossEnabled = false;
 
-            if(parentProduct.LogicalName == "opportunity")
+            if (parentProduct.LogicalName == "opportunity")
             {
                 EntityReference opportunityRef = parentProduct.GetAttributeValue<EntityReference>("opportunityid");
 
@@ -321,7 +376,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                     Entity quote = service.Retrieve("quote", quoteRef.Id, new ColumnSet("tbs_embossedtrims"));
                     embossEnabled = quote.Contains("tbs_embossedtrims") ? quote.GetAttributeValue<bool>("tbs_embossedtrims") : false;
                 }
-            }            
+            }
 
             decimal calculatedUnitPrice;
 
@@ -422,13 +477,23 @@ namespace Falk_Plugins.Accessory_and_Trim
                     embossEnabled = opportunity.Contains("tbs_embossedtrims") ? opportunity.GetAttributeValue<bool>("tbs_embossedtrims") : false;
                 }
             }
-            else
+            else if (parentProduct.LogicalName == "quote")
             {
                 EntityReference quoteRef = parentProduct.GetAttributeValue<EntityReference>("quoteid");
 
                 if (quoteRef != null)
                 {
                     Entity quote = service.Retrieve("quote", quoteRef.Id, new ColumnSet("tbs_embossedtrims"));
+                    embossEnabled = quote.Contains("tbs_embossedtrims") ? quote.GetAttributeValue<bool>("tbs_embossedtrims") : false;
+                }
+            }
+            else if (parentProduct.LogicalName == "salesorder")
+            {
+                EntityReference orderRef = parentProduct.GetAttributeValue<EntityReference>("salesorderid");
+
+                if (orderRef != null)
+                {
+                    Entity quote = service.Retrieve("salesorder", orderRef.Id, new ColumnSet("tbs_embossedtrims"));
                     embossEnabled = quote.Contains("tbs_embossedtrims") ? quote.GetAttributeValue<bool>("tbs_embossedtrims") : false;
                 }
             }

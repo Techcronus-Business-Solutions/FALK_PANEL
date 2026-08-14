@@ -133,6 +133,7 @@
     <Compile Include="OpportunityProductPricingCalculation.cs" />
     <Compile Include="CustomAPIBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="OrderProductPricingCalculation.cs" />
     <Compile Include="QuoteProductPricingCalculation.cs" />
   </ItemGroup>
   <ItemGroup>

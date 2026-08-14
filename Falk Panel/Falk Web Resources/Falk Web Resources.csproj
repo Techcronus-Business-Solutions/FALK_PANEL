@@ -48,10 +48,12 @@
     <Content Include="Lead.js" />
     <Content Include="Line Item.js" />
     <Content Include="Opportunity Product.js" />
+    <Content Include="Order Product.js" />
     <Content Include="QuotePanelTrim.js" />
     <Content Include="OpportunityPanelTrim.js" />
     <Content Include="OpportunityProductRibbon.js" />
     <Content Include="Quote Product.js" />
+    <Content Include="OrderProductRibbon.js" />
     <Content Include="QuoteProductRibbon.js" />
     <Content Include="SalesLifecycleProcess.js" />
   </ItemGroup>
