@@ -21,7 +21,11 @@ Falk.OpportunityProduct = {
 
         // Cache Environment Variables
         this.FRW42PanelId = await this.GetEnvironmentVariableValue("tbs_FRW42PanelId");
-        this.FalkHPSFinishId = await this.GetEnvironmentVariableValue("tbs_FalkHPSFinishId");
+
+        const jsonText = await Falk.OpportunityProduct.GetEnvironmentVariableValue(
+            "tbs_FalkHPSFinishId"
+        );
+        Falk.OpportunityProduct.FalkHPSFinishId = JSON.parse(jsonText);
 
         formContext.getControl("tbs_exteriorfinish")
             .addPreSearch(function () {
@@ -36,62 +40,62 @@ Falk.OpportunityProduct = {
             });
 
         formContext.getControl("tbs_exteriorgauge").addPreSearch(function () {
-                Falk.OpportunityProduct.addExteriorGaugeView(formContext);
-            });
+            Falk.OpportunityProduct.addExteriorGaugeView(formContext);
+        });
 
         formContext.getControl("tbs_interiorgauge").addPreSearch(function () {
-                Falk.OpportunityProduct.addInteriorGaugeView(formContext);
-            });
+            Falk.OpportunityProduct.addInteriorGaugeView(formContext);
+        });
 
         formContext.getControl("tbs_exteriorprofile").addPreSearch(function () {
-                Falk.OpportunityProduct.addExteriorProfileView(formContext);
-            });
+            Falk.OpportunityProduct.addExteriorProfileView(formContext);
+        });
 
         formContext.getControl("tbs_interiorprofile").addPreSearch(function () {
-                Falk.OpportunityProduct.addInteriorProfileView(formContext);
-            });
+            Falk.OpportunityProduct.addInteriorProfileView(formContext);
+        });
 
         formContext.getControl("tbs_exteriorcolor").addPreSearch(function () {
-                Falk.OpportunityProduct.addExteriorColorView(formContext);
-            });
+            Falk.OpportunityProduct.addExteriorColorView(formContext);
+        });
 
         formContext.getControl("tbs_interiorcolor").addPreSearch(function () {
-                Falk.OpportunityProduct.addInteriorColorView(formContext);
-            });
+            Falk.OpportunityProduct.addInteriorColorView(formContext);
+        });
 
         formContext.getAttribute("productid").addOnChange(async function () {
-                formContext.getAttribute("tbs_panelthickness").setValue(null);
+            formContext.getAttribute("tbs_panelthickness").setValue(null);
 
-                formContext.getAttribute("tbs_exteriorfinish").setValue(null);
-                Falk.OpportunityProduct.addExteriorFinishView(formContext);
+            formContext.getAttribute("tbs_exteriorfinish").setValue(null);
+            Falk.OpportunityProduct.addExteriorFinishView(formContext);
 
-                formContext.getAttribute("tbs_interiorfinish").setValue(null);
-                Falk.OpportunityProduct.addInteriorFinishView(formContext);
+            formContext.getAttribute("tbs_interiorfinish").setValue(null);
+            Falk.OpportunityProduct.addInteriorFinishView(formContext);
 
-                formContext.getAttribute("tbs_exteriorgauge").setValue(null);
-                Falk.OpportunityProduct.addExteriorGaugeView(formContext);
+            formContext.getAttribute("tbs_exteriorgauge").setValue(null);
+            Falk.OpportunityProduct.addExteriorGaugeView(formContext);
 
-                formContext.getAttribute("tbs_interiorgauge").setValue(null);
-                Falk.OpportunityProduct.addInteriorGaugeView(formContext);
+            formContext.getAttribute("tbs_interiorgauge").setValue(null);
+            Falk.OpportunityProduct.addInteriorGaugeView(formContext);
 
-                formContext.getAttribute("tbs_exteriorprofile").setValue(null);
-                Falk.OpportunityProduct.addExteriorProfileView(formContext);
+            formContext.getAttribute("tbs_exteriorprofile").setValue(null);
+            Falk.OpportunityProduct.addExteriorProfileView(formContext);
 
-                formContext.getAttribute("tbs_interiorprofile").setValue(null);
-                Falk.OpportunityProduct.addInteriorProfileView(formContext);
+            formContext.getAttribute("tbs_interiorprofile").setValue(null);
+            Falk.OpportunityProduct.addInteriorProfileView(formContext);
 
-                formContext.getAttribute("tbs_exterioremboss").setValue(false);
-                await Falk.OpportunityProduct.EnableDisableExteriorEmboss(formContext);
+            formContext.getAttribute("tbs_exterioremboss").setValue(false);
+            await Falk.OpportunityProduct.EnableDisableExteriorEmboss(formContext);
 
-                formContext.getAttribute("tbs_interioremboss").setValue(false);
-                await Falk.OpportunityProduct.EnableDisableInteriorEmboss(formContext);
+            formContext.getAttribute("tbs_interioremboss").setValue(false);
+            await Falk.OpportunityProduct.EnableDisableInteriorEmboss(formContext);
 
-                formContext.getAttribute("tbs_exteriorcolor").setValue(null);
-                formContext.getAttribute("tbs_interiorcolor").setValue(null);
-            });
+            formContext.getAttribute("tbs_exteriorcolor").setValue(null);
+            formContext.getAttribute("tbs_interiorcolor").setValue(null);
+        });
 
         formContext.getAttribute("tbs_panelthickness").addOnChange(async function () {
-                await Falk.OpportunityProduct.SetFieldsFromThickness(formContext);
+            await Falk.OpportunityProduct.SetFieldsFromThickness(formContext);
         });
 
         formContext.getAttribute("tbs_priceleveltier").addOnChange(async function () {
@@ -125,8 +129,6 @@ Falk.OpportunityProduct = {
             Falk.OpportunityProduct.addExteriorColorView(formContext);
             Falk.OpportunityProduct.FinishOnChange(executionContext);
         });
-
-        await Falk.OpportunityProduct.FinishOnChange(executionContext);
     },
 
     addExteriorFinishView: function (formContext) {
@@ -535,37 +537,40 @@ Falk.OpportunityProduct = {
         }
     },
 
-    FinishOnChange: function (executionContext) {
+    FinishOnChange: async function (executionContext) {
         const formContext = executionContext.getFormContext();
 
-        const hpsFinishId = Falk.OpportunityProduct.FalkHPSFinishId;
+        const hpsFinishIds = Falk.OpportunityProduct.FalkHPSFinishId;
 
-        if (!hpsFinishId)
+        if (!hpsFinishIds)
             return;
 
         const interiorFinish = formContext.getAttribute("tbs_interiorfinish")?.getValue();
         const exteriorFinish = formContext.getAttribute("tbs_exteriorfinish")?.getValue();
 
-        const normalizeGuid = (id) => id.replace(/[{}]/g, "").toLowerCase();
+        const normalizeGuid = (id) => id ? id.replace(/[{}]/g, "").toLowerCase() : null;
 
-        const envId = normalizeGuid(hpsFinishId);
+        const interiorHpsId = normalizeGuid(hpsFinishIds.Interior);
+        const exteriorHpsId = normalizeGuid(hpsFinishIds.Exterior);
 
         // Interior
-        if (interiorFinish && normalizeGuid(interiorFinish[0].id) === envId) {
+        if (interiorFinish && interiorHpsId && normalizeGuid(interiorFinish[0].id) === interiorHpsId) {
             formContext.getAttribute("tbs_interioremboss").setValue(2); //HPS
             formContext.getControl("tbs_interioremboss").setDisabled(true);
         }
         else {
             formContext.getControl("tbs_interioremboss").setDisabled(false);
+            formContext.getAttribute("tbs_interioremboss").setValue(null);
         }
 
         // Exterior
-        if (exteriorFinish && normalizeGuid(exteriorFinish[0].id) === envId) {
+        if (exteriorFinish && exteriorHpsId && normalizeGuid(exteriorFinish[0].id) === exteriorHpsId) {
             formContext.getAttribute("tbs_exterioremboss").setValue(2); //HPS
             formContext.getControl("tbs_exterioremboss").setDisabled(true);
         }
         else {
             formContext.getControl("tbs_exterioremboss").setDisabled(false);
+            formContext.getAttribute("tbs_exterioremboss").setValue(null);
         }
     },
 

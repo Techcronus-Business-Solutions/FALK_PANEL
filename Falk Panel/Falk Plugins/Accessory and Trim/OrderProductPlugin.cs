@@ -9,11 +9,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Falk_Plugins.Pricing_Master
+namespace Falk_Plugins.Accessory_and_Trim
 {
-    public class QuoteProductPlugin : PluginBase
+    public class OrderProductPlugin : PluginBase
     {
-        public QuoteProductPlugin() : base(typeof(QuoteProductPlugin)) { }
+        public OrderProductPlugin() : base(typeof(OrderProductPlugin)) { }
+
         #region Private Variables
         private IOrganizationService service { get; set; }
         private IPluginExecutionContext context { get; set; }
@@ -21,6 +22,7 @@ namespace Falk_Plugins.Pricing_Master
         private IOrganizationServiceFactory factory { get; set; }
         private Entity targetEntity { get; set; }
         #endregion
+
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
         {
 
@@ -35,7 +37,7 @@ namespace Falk_Plugins.Pricing_Master
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
                 {
                     targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
-                    if (targetEntity.LogicalName == "quotedetail")
+                    if (targetEntity.LogicalName == "salesorderdetail")
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
                         {
@@ -44,9 +46,9 @@ namespace Falk_Plugins.Pricing_Master
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
                             tracingService.Trace("create");
-                            string quoteProductName = targetEntity.GetAttributeValue<string>("quotedetailname");
+                            string orderProductName = targetEntity.GetAttributeValue<string>("salesorderdetailname");
 
-                            tracingService.Trace(quoteProductName);
+                            tracingService.Trace(orderProductName);
                             EntityReference panelThickness = targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness");
                             tracingService.Trace(panelThickness.Id.ToString());
 
@@ -67,10 +69,10 @@ namespace Falk_Plugins.Pricing_Master
                         {
                             try
                             {
-                                Guid quoteProductId = targetEntity.Id;
-                                tracingService.Trace("Quote ProductId = " + quoteProductId.ToString());
-                                UpdatePanelTrimQty(service, quoteProductId);
-                                UpdatePanelAccessQty(service, quoteProductId);
+                                Guid orderProductId = targetEntity.Id;
+                                tracingService.Trace("Quote ProductId = " + orderProductId.ToString());
+                                UpdatePanelTrimQty(service, orderProductId);
+                                UpdatePanelAccessQty(service, orderProductId);
 
                             }
                             catch (Exception ex)
@@ -122,13 +124,12 @@ namespace Falk_Plugins.Pricing_Master
                         }
                         if (context.MessageName == CONST_DELETE && context.Stage == PreOperation)
                         {
-                            Guid quoteProductId = targetEntity.Id;
-                            tracingService.Trace("Quote ProductId = " + quoteProductId.ToString());
-                            DeleteQuoteAssociatedRecords(quoteProductId);
+                            Guid orderProductId = targetEntity.Id;
+                            tracingService.Trace("Quote ProductId = " + orderProductId.ToString());
+                            DeleteQuoteAssociatedRecords(orderProductId);
                         }
                     }
-
-                    else if (targetEntity.LogicalName == "tbs_quotepanelaccessory")
+                    else if (targetEntity.LogicalName == "tbs_orderpanelaccessory")
                     {
                         if (context.Depth > 1)
                         {
@@ -139,9 +140,9 @@ namespace Falk_Plugins.Pricing_Master
                         {
                             try
                             {
-                                targetEntity = service.Retrieve("tbs_quotepanelaccessory", targetEntity.Id, new ColumnSet("tbs_quoteproduct"));
-                                Guid quoteProductId = targetEntity.Contains("tbs_quoteproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id : Guid.Empty;
-                                UpdatePanelAccessQty(service, quoteProductId);
+                                targetEntity = service.Retrieve("tbs_orderpanelaccessory", targetEntity.Id, new ColumnSet("tbs_orderproduct"));
+                                Guid orderProductId = targetEntity.Contains("tbs_orderproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_orderproduct").Id : Guid.Empty;
+                                UpdatePanelAccessQty(service, orderProductId);
                             }
                             catch (Exception ex)
                             {
@@ -149,7 +150,7 @@ namespace Falk_Plugins.Pricing_Master
                             }
                         }
                     }
-                    else if (targetEntity.LogicalName == "tbs_quotepaneltrim")
+                    else if (targetEntity.LogicalName == "tbs_orderpaneltrim")
                     {
                         if (context.Depth > 1)
                         {
@@ -160,13 +161,13 @@ namespace Falk_Plugins.Pricing_Master
                         {
                             try
                             {
-                                targetEntity = service.Retrieve("tbs_quotepaneltrim", targetEntity.Id, new ColumnSet("tbs_quoteproduct"));
+                                targetEntity = service.Retrieve("tbs_orderpaneltrim", targetEntity.Id, new ColumnSet("tbs_orderproduct"));
 
-                                Guid quoteProductId = targetEntity.Contains("tbs_quoteproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id : Guid.Empty;
-                                tracingService.Trace("Quote ProductId = " + quoteProductId.ToString());
+                                Guid orderProductId = targetEntity.Contains("tbs_orderproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_orderproduct").Id : Guid.Empty;
+                                tracingService.Trace("Quote ProductId = " + orderProductId.ToString());
 
-                                UpdatePanelTrimQty(service, quoteProductId);
-                                UpdatePanelAccessQty(service, quoteProductId);
+                                UpdatePanelTrimQty(service, orderProductId);
+                                UpdatePanelAccessQty(service, orderProductId);
                             }
                             catch (Exception ex)
                             {
@@ -178,47 +179,48 @@ namespace Falk_Plugins.Pricing_Master
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"CreatePanelAccessoryAndTrim Error : {ex}");
-                throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records.", ex);
+                tracingService.Trace($"Create Order Product Panel Accessory and Panel Trim Error : {ex}");
+                throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records for Order Product.", ex);
             }
         }
 
         private void DeleteQuoteAssociatedRecords(Guid quoteProductId)
         {
             //Delete all line items related to quote prod
-            QueryExpression queryLineItem = new QueryExpression("tbs_quotelineitem");
+            QueryExpression queryLineItem = new QueryExpression("tbs_orderlineitem");
             queryLineItem.ColumnSet.AllColumns = false;
-            queryLineItem.Criteria.AddCondition("tbs_quoteproduct", ConditionOperator.Equal, quoteProductId);
+            queryLineItem.Criteria.AddCondition("tbs_orderproduct", ConditionOperator.Equal, quoteProductId);
             EntityCollection lineItems = service.RetrieveMultiple(queryLineItem);
 
             foreach (Entity lineItem in lineItems.Entities)
             {
-                service.Delete("tbs_quotelineitem", lineItem.Id);
+                service.Delete("tbs_orderlineitem", lineItem.Id);
             }
 
             //Delete all accessories related to quote prod
-            QueryExpression queryAccess = new QueryExpression("tbs_quotepanelaccessory");
+            QueryExpression queryAccess = new QueryExpression("tbs_orderpanelaccessory");
             queryAccess.ColumnSet.AllColumns = false;
-            queryAccess.Criteria.AddCondition("tbs_quoteproduct", ConditionOperator.Equal, quoteProductId);
+            queryAccess.Criteria.AddCondition("tbs_orderproduct", ConditionOperator.Equal, quoteProductId);
             EntityCollection accessories = service.RetrieveMultiple(queryAccess);
 
             foreach (Entity access in accessories.Entities)
             {
-                service.Delete("tbs_quotepanelaccessory", access.Id);
+                service.Delete("tbs_orderpanelaccessory", access.Id);
             }
 
             //Delete all trims related to quote prod
-            QueryExpression queryTrim = new QueryExpression("tbs_quotepaneltrim");
+            QueryExpression queryTrim = new QueryExpression("tbs_orderpaneltrim");
             queryTrim.ColumnSet.AllColumns = false;
-            queryTrim.Criteria.AddCondition("tbs_quoteproduct", ConditionOperator.Equal, quoteProductId);
+            queryTrim.Criteria.AddCondition("tbs_orderproduct", ConditionOperator.Equal, quoteProductId);
             EntityCollection trims = service.RetrieveMultiple(queryTrim);
 
             foreach (Entity trim in trims.Entities)
             {
-                service.Delete("tbs_quotepaneltrim", trim.Id);
+                service.Delete("tbs_orderpaneltrim", trim.Id);
             }
         }
-        private void CreatePanelAccessories(IOrganizationService service, Guid quoteProductId, EntityReference panelType, EntityReference panelThickness)
+
+        private void CreatePanelAccessories(IOrganizationService service, Guid orderProductId, EntityReference panelType, EntityReference panelThickness)
         {
             try
             {
@@ -292,8 +294,8 @@ namespace Falk_Plugins.Pricing_Master
                 #region Create Accessories
                 foreach (Entity accessory in accessories.Entities)
                 {
-                    Entity panelAccessory = new Entity("tbs_quotepanelaccessory");
-                    panelAccessory["tbs_quoteproduct"] = new EntityReference("quotedetail", quoteProductId);
+                    Entity panelAccessory = new Entity("tbs_orderpanelaccessory");
+                    panelAccessory["tbs_orderproduct"] = new EntityReference("salesorderdetail", orderProductId);
                     panelAccessory["tbs_paneltype"] = panelType;
                     panelAccessory["tbs_panelthickness"] = panelThickness;
                     panelAccessory["tbs_accessory"] = accessory.ToEntityReference();
@@ -322,7 +324,8 @@ namespace Falk_Plugins.Pricing_Master
                 throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records.", ex);
             }
         }
-        private void CreatePanelTrims(IOrganizationService service, Guid quoteProductId, EntityReference panelType, EntityReference panelThickness)
+
+        private void CreatePanelTrims(IOrganizationService service, Guid orderProductId, EntityReference panelType, EntityReference panelThickness)
         {
             try
             {
@@ -343,8 +346,8 @@ namespace Falk_Plugins.Pricing_Master
 
                 foreach (Entity trim in trims.Entities)
                 {
-                    Entity panelTrim = new Entity("tbs_quotepaneltrim");
-                    panelTrim["tbs_quoteproduct"] = new EntityReference("quotedetail", quoteProductId);
+                    Entity panelTrim = new Entity("tbs_orderpaneltrim");
+                    panelTrim["tbs_quoteproduct"] = new EntityReference("quotedetail", orderProductId);
                     panelTrim["tbs_paneltype"] = panelType;
                     panelTrim["tbs_panelthickness"] = panelThickness;
                     panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();
@@ -363,27 +366,29 @@ namespace Falk_Plugins.Pricing_Master
             }
         }
 
-        private void UpdatePanelAccessQty(IOrganizationService service, Guid quoteProdId)
+        private void UpdatePanelAccessQty(IOrganizationService service, Guid orderProductId)
         {
-            tracingService.Trace("Quote ProductId = " + quoteProdId.ToString());
+            tracingService.Trace("Order ProductId = " + orderProductId.ToString());
 
             OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateQuoteAccessoryQty");
 
-            customApiRequest["tbs_quoteProduct"] = quoteProdId;
+            customApiRequest["tbs_orderproduct"] = orderProductId;
 
             OrganizationResponse customApiResponse = service.Execute(customApiRequest);
         }
-        private void UpdatePanelTrimQty(IOrganizationService service, Guid quoteProdId)
+
+        private void UpdatePanelTrimQty(IOrganizationService service, Guid orderProductId)
         {
             tracingService.Trace("Updating Quote Panel Trim Quantity");
-            tracingService.Trace("Quote ProductId = " + quoteProdId.ToString());
+            tracingService.Trace("Order ProductId = " + orderProductId.ToString());
 
             OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateQuoteTrimQty");
 
-            customApiRequest["tbs_quoteProduct"] = quoteProdId;
+            customApiRequest["tbs_orderproduct"] = orderProductId;
 
             OrganizationResponse customApiResponse = service.Execute(customApiRequest);
         }
+
         private void InitProperties(LocalPluginContext localcontext)
         {
             //// Obtain the execution context service from the LocalContext.

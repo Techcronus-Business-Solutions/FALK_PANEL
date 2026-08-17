@@ -168,6 +168,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Accessory and Trim\OpportunityProductPlugin.cs" />
+    <Compile Include="Accessory and Trim\OrderProductPlugin.cs" />
     <Compile Include="Accessory and Trim\QuoteProductPlugin.cs" />
     <Compile Include="EnumHelper.cs" />
     <Compile Include="OpportunityProductPricingPlugin.cs" />

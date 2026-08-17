@@ -12,7 +12,7 @@ namespace Falk_Console
         public static CrmServiceClient CreateConnection()
         {
             //Step 1 - Retrieving CRM Essential Information.
-            string sEnvironment = "https://falk-sandbox.crm.dynamics.com";
+            string sEnvironment = "https://falk-uat.crm.dynamics.com/";
             string sUserKey = "crmintegration@falkpanel.com";
             string sUserPassword = "TechronusCRM24426";
 

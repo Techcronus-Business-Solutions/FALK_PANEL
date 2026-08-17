@@ -274,7 +274,7 @@ namespace Falk_Plugins.Pricing_Master
 
                 QueryExpression tierQuery = new QueryExpression("tbs_tier");
                 tierQuery.ColumnSet.AddColumn("tbs_multiplier");
-                tierQuery.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, isUSA ? "Tier1" : "Tier2");
+                tierQuery.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, "Tier1");
                 tierQuery.Criteria.AddCondition("tbs_type", ConditionOperator.Equal, 1);
 
                 Entity tierEnt = service.RetrieveMultiple(tierQuery).Entities.FirstOrDefault();
