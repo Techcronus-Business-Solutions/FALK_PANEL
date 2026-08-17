@@ -127,7 +127,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CalculateAccessoryQty.cs" />
+    <Compile Include="CalculateOrderAccessoryQty.cs" />
     <Compile Include="CalculateQuoteAccessoryQty.cs" />
+    <Compile Include="CalculateOrderTrimQty.cs" />
     <Compile Include="CalculateQuoteTrimQty.cs" />
     <Compile Include="CalculateTrimQty.cs" />
     <Compile Include="OpportunityProductPricingCalculation.cs" />

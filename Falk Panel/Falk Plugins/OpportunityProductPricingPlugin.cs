@@ -82,6 +82,10 @@ namespace Falk_Plugins.Pricing_Master
             }
         }
 
+        private decimal roundValues(decimal value)
+        {
+            return Math.Round(value, 2, MidpointRounding.AwayFromZero);
+        }
         private void CalculatePricing(Entity target, Entity preImage)
         {
             decimal basePrice = target.GetAttributeValue<Money>("tbs_baseprice")?.Value
@@ -92,8 +96,8 @@ namespace Falk_Plugins.Pricing_Master
                 ?? preImage.GetAttributeValue<Money>("tbs_totalpropertiesprice")?.Value
                 ?? 0;
 
-            decimal usPrice = basePrice + totalPropertyPrice;
-            target["tbs_usprice"] = new Money(usPrice);
+            decimal usPrice = roundValues(basePrice) + roundValues(totalPropertyPrice);
+            target["tbs_usprice"] = new Money(roundValues(usPrice));
 
             decimal sqft = target.Contains("quantity")
                 ? target.GetAttributeValue<decimal>("quantity")
@@ -117,13 +121,13 @@ namespace Falk_Plugins.Pricing_Master
                 }
             }
 
-            target["tbs_smallorderupcharge"] = new Money(upcharge);
+            target["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
 
-            decimal pricePerUnit = usPrice + usdAdjustment + upcharge;
+            decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
 
             target["ispriceoverridden"] = true;
-            target["priceperunit"] = new Money(pricePerUnit);
-            target["extendedamount"] = new Money(pricePerUnit * sqft);
+            target["priceperunit"] = new Money(roundValues(pricePerUnit));
+            target["extendedamount"] = new Money(roundValues(pricePerUnit) * roundValues(sqft));
         }
     }
 }

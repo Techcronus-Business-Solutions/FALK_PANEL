@@ -107,7 +107,7 @@ Falk.QuoteProduct = {
 
             const basePrice = thicknessRecord.tbs_baseprice || 0;
 
-            await Falk.OpportunityProduct.SetFieldsFromThickness(formContext, basePrice);
+            await Falk.QuoteProduct.SetFieldsFromThickness(formContext, basePrice);
         });
 
         formContext.getAttribute("tbs_interiorfinish").addOnChange(function (executionContext) {
@@ -623,7 +623,7 @@ Falk.QuoteProduct = {
     },
 
     SetBasePrice: async function (formContext, basePrice) {
-        const tier = formContext.getAttribute("tbs_priceleveltier").getValue();
+        const tier = formContext.getAttribute("tbs_priceleveltier")?.getValue();
 
         if (!tier) {
             formContext.getAttribute("tbs_baseprice").setValue(basePrice);

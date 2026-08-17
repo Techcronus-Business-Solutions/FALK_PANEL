@@ -132,22 +132,25 @@ namespace Falk.CustomAPI
                 #region Save Record In Opportunity Product
                 Entity oppProduct = new Entity("opportunityproduct", opportunityProduct.Id);
 
-                oppProduct["tbs_interiorfinishprice"] = new Money(interiorPrice);
-                oppProduct["tbs_exteriorfinishprice"] = new Money(exteriorPrice);
+                oppProduct["tbs_interiorfinishprice"] = new Money(roundValues(interiorPrice));
+                oppProduct["tbs_exteriorfinishprice"] = new Money(roundValues(exteriorPrice));
                 oppProduct["tbs_ribbingmodelsweatherprice"] = new Money(0);
                 oppProduct["tbs_ribbingmodeusinteriorprice"] = new Money(0);
-                oppProduct["tbs_embossinglsweatherprice"] = new Money(exteriorEmbossPrice);
-                oppProduct["tbs_embossingusinteriorprice"] = new Money(interiorEmbossPrice);
-                oppProduct["tbs_baseprice"] = new Money(calculatedPrice);
+                oppProduct["tbs_embossinglsweatherprice"] = new Money(roundValues(exteriorEmbossPrice));
+                oppProduct["tbs_embossingusinteriorprice"] = new Money(roundValues(interiorEmbossPrice));
+                oppProduct["tbs_baseprice"] = new Money(roundValues(calculatedPrice));
 
-                decimal totalPropertyPrice = interiorPrice + exteriorPrice + interiorEmbossPrice + exteriorEmbossPrice;
-                oppProduct["tbs_totalpropertiesprice"] = new Money(totalPropertyPrice);
+                decimal totalPropertyPrice = roundValues(interiorPrice) + roundValues(exteriorPrice) + roundValues(interiorEmbossPrice) + roundValues(exteriorEmbossPrice);
+                oppProduct["tbs_totalpropertiesprice"] = new Money(roundValues(totalPropertyPrice));
 
-                decimal usPrice = calculatedPrice + totalPropertyPrice;
-                oppProduct["tbs_usprice"] = new Money(usPrice);
+                decimal usPrice = roundValues(calculatedPrice) + roundValues(totalPropertyPrice);
+                tracingService.Trace(usPrice.ToString());
+                oppProduct["tbs_usprice"] = new Money(roundValues(usPrice));
 
                 Entity opp = service.Retrieve("opportunityproduct",opportunityProduct.Id,new ColumnSet("quantity", "tbs_usdpriceadjustment"));
                 decimal sqft = opp.GetAttributeValue<decimal>("quantity");
+                tracingService.Trace(sqft.ToString());
+
                 decimal upcharge = 0;
 
                 if (sqft > 0)
@@ -161,15 +164,22 @@ namespace Falk.CustomAPI
                         upcharge = (usPrice * 0.10m) + (750m / sqft);
                     }
                 }
-                oppProduct["tbs_smallorderupcharge"] = new Money(upcharge);
+                tracingService.Trace(upcharge.ToString());
+
+                oppProduct["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
 
                 decimal usdAdjustment = opp.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value ?? 0;
-                decimal pricePerUnit = usPrice + usdAdjustment + upcharge;
+                decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
 
-                decimal lineTotal = sqft * pricePerUnit;
+                decimal lineTotal = sqft * roundValues(pricePerUnit);
+
+                tracingService.Trace(pricePerUnit.ToString());
+
+                tracingService.Trace(lineTotal.ToString());
+
                 oppProduct["ispriceoverridden"] = true;
-                oppProduct["extendedamount"] = new Money(lineTotal);
-                oppProduct["priceperunit"] = new Money(pricePerUnit);
+                oppProduct["priceperunit"] = new Money(roundValues(pricePerUnit));
+                oppProduct["baseamount"] = new Money(roundValues(lineTotal));
 
                 service.Update(oppProduct);
                 #endregion
@@ -179,6 +189,11 @@ namespace Falk.CustomAPI
                 tracingService.Trace("OpportunityProductPricingCalculation Custom API Exception: {0}", ex.ToString());
                 throw new InvalidPluginExecutionException($"Error in OpportunityProductPricingCalculation Custom API: {ex.Message}");
             }
+        }
+
+        private decimal roundValues(decimal value)
+        {
+            return Math.Round(value, 2,MidpointRounding.AwayFromZero);
         }
 
         private EntityReference GetInputRef(string parameterName, bool required = true)

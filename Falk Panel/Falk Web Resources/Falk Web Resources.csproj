@@ -45,7 +45,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="AccountRibbon.js" />
     <Content Include="Lead.js" />
+    <Content Include="Quote Line Item.js" />
     <Content Include="Line Item.js" />
     <Content Include="Opportunity Product.js" />
     <Content Include="QuotePanelTrim.js" />
@@ -53,6 +55,7 @@
     <Content Include="OpportunityProductRibbon.js" />
     <Content Include="Quote Product.js" />
     <Content Include="QuoteProductRibbon.js" />
+    <Content Include="RFQTask.js" />
     <Content Include="SalesLifecycleProcess.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -621,7 +621,7 @@ Falk.OpportunityProduct = {
     },
 
     SetBasePrice: async function (formContext, basePrice) {
-        const tier = formContext.getAttribute("tbs_priceleveltier").getValue();
+        const tier = formContext.getAttribute("tbs_priceleveltier")?.getValue();
 
         if (!tier) {
             formContext.getAttribute("tbs_baseprice").setValue(basePrice);
