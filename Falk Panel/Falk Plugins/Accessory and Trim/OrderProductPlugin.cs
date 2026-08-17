@@ -73,7 +73,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                             try
                             {
                                 Guid orderProductId = targetEntity.Id;
-                                tracingService.Trace("Quote ProductId = " + orderProductId.ToString());
+                                tracingService.Trace("Order ProductId = " + orderProductId.ToString());
                                 UpdatePanelTrimQty(service, orderProductId);
                                 UpdatePanelAccessQty(service, orderProductId);
 
@@ -104,7 +104,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                                 tracingService.Trace("Panel thickness changed. Deleting related records.");
 
                                 Guid quoteProductId = targetEntity.Id;
-                                tracingService.Trace("Quote ProductId = " + quoteProductId.ToString());
+                                tracingService.Trace("Order ProductId = " + quoteProductId.ToString());
 
                                 DeleteQuoteAssociatedRecords(quoteProductId);
 
@@ -128,7 +128,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                         if (context.MessageName == CONST_DELETE && context.Stage == PreOperation)
                         {
                             Guid orderProductId = targetEntity.Id;
-                            tracingService.Trace("Quote ProductId = " + orderProductId.ToString());
+                            tracingService.Trace("Order ProductId = " + orderProductId.ToString());
                             DeleteQuoteAssociatedRecords(orderProductId);
                         }
                     }
@@ -373,21 +373,21 @@ namespace Falk_Plugins.Accessory_and_Trim
         {
             tracingService.Trace("Order ProductId = " + orderProductId.ToString());
 
-            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateQuoteAccessoryQty");
+            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateOrderAccessoryQty");
 
-            customApiRequest["tbs_orderproduct"] = orderProductId;
+            customApiRequest["tbs_orderProduct"] = orderProductId;
 
             OrganizationResponse customApiResponse = service.Execute(customApiRequest);
         }
 
         private void UpdatePanelTrimQty(IOrganizationService service, Guid orderProductId)
         {
-            tracingService.Trace("Updating Quote Panel Trim Quantity");
+            tracingService.Trace("Updating Order Panel Trim Quantity");
             tracingService.Trace("Order ProductId = " + orderProductId.ToString());
 
-            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateQuoteTrimQty");
+            OrganizationRequest customApiRequest = new OrganizationRequest("tbs_CalculateOrderTrimQty");
 
-            customApiRequest["tbs_orderproduct"] = orderProductId;
+            customApiRequest["tbs_orderProduct"] = orderProductId;
 
             OrganizationResponse customApiResponse = service.Execute(customApiRequest);
         }

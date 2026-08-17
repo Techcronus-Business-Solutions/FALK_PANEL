@@ -44,14 +44,14 @@ namespace Falk.CustomAPI
                 {
                     CalculateRollupFieldRequest calcularRollupAcces = new CalculateRollupFieldRequest
                     {
-                        Target = new EntityReference("orderdetail", orderProductId),
+                        Target = new EntityReference("salesorderdetail", orderProductId),
                         FieldName = "tbs_accessoriespricetotal"
                     };
                     CalculateRollupFieldResponse calcularRollupAccesResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupAcces);
 
                     CalculateRollupFieldRequest calcularRollupTrim = new CalculateRollupFieldRequest
                     {
-                        Target = new EntityReference("orderdetail", orderProductId),
+                        Target = new EntityReference("salesorderdetail", orderProductId),
                         FieldName = "tbs_trimspricetotal"
                     };
                     CalculateRollupFieldResponse calcularRollupTrimResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupTrim);
@@ -72,7 +72,7 @@ namespace Falk.CustomAPI
 
         private Entity GetOrderProduct(Guid orderProductId)
         {
-            return service.Retrieve("orderdetail", orderProductId, new ColumnSet("quantity", "tbs_linearfeet"));
+            return service.Retrieve("salesorderdetail", orderProductId, new ColumnSet("quantity", "tbs_linearfeet"));
         }
         private EntityCollection GetTrims(Guid orderProductId)
         {
