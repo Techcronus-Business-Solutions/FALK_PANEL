@@ -180,6 +180,7 @@
     <Compile Include="Pricing Master\QuoteLineItemPlugin.cs" />
     <Compile Include="Pricing Master\ThicknessPlugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="OrderPlugin.cs" />
     <Compile Include="QuotePlugin.cs" />
     <Compile Include="QuoteProductPricingPlugin.cs" />
     <Compile Include="SalesLifecycle\SalesLifecycleProcessPlugin.cs" />
