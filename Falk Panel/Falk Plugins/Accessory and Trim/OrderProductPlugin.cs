@@ -49,6 +49,9 @@ namespace Falk_Plugins.Accessory_and_Trim
                             string orderProductName = targetEntity.GetAttributeValue<string>("salesorderdetailname");
 
                             tracingService.Trace(orderProductName);
+
+                            tracingService.Trace(targetEntity.Contains("tbs_panelthickness").ToString());
+
                             EntityReference panelThickness = targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness");
                             tracingService.Trace(panelThickness.Id.ToString());
 
@@ -347,7 +350,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                 foreach (Entity trim in trims.Entities)
                 {
                     Entity panelTrim = new Entity("tbs_orderpaneltrim");
-                    panelTrim["tbs_quoteproduct"] = new EntityReference("quotedetail", orderProductId);
+                    panelTrim["tbs_orderproduct"] = new EntityReference("salesorderdetail", orderProductId);
                     panelTrim["tbs_paneltype"] = panelType;
                     panelTrim["tbs_panelthickness"] = panelThickness;
                     panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();

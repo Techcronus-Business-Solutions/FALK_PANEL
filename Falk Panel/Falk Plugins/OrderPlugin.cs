@@ -37,9 +37,9 @@ namespace Falk_Plugins
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
-                            Entity orderProduct = service.Retrieve("salesorderdetail", targetEntity.Id,new ColumnSet("tbs_quotedetail"));
+                            Entity orderProduct = service.Retrieve("salesorderdetail", targetEntity.Id,new ColumnSet("tbs_quoteproduct"));
 
-                            EntityReference quoteProductRef = orderProduct.GetAttributeValue<EntityReference>("tbs_quotedetail");
+                            EntityReference quoteProductRef = orderProduct.GetAttributeValue<EntityReference>("tbs_quoteproduct");
 
                             if (quoteProductRef == null)
                             {
@@ -137,10 +137,11 @@ namespace Falk_Plugins
                     orderTrim[attribute.Key] = attribute.Value;
                 }
 
-                quoteTrim["tbs_orderproduct"] = orderProductRef;
+                orderTrim["tbs_orderproduct"] = orderProductRef;
 
-                service.Create(quoteTrim);
+                service.Create(orderTrim);
             }
+            tracingService.Trace("trims Created");
         }
 
         private void InitProperties(LocalPluginContext localcontext)
