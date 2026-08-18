@@ -178,8 +178,8 @@ namespace Falk.CustomAPI
                 tracingService.Trace(lineTotal.ToString());
 
                 salesorderdetail["ispriceoverridden"] = true;
-                salesorderdetail["extendedamount"] = new Money(lineTotal);
                 salesorderdetail["priceperunit"] = new Money(pricePerUnit);
+                salesorderdetail["baseamount"] = new Money(lineTotal);
 
                 service.Update(salesorderdetail);
                 #endregion

@@ -12,9 +12,9 @@ using System.Web.UI.WebControls;
 
 namespace Falk_Plugins.Pricing_Master
 {
-    public class QuoteProductPricingPlugin : PluginBase
+    public class OrderProductPricingPlugin : PluginBase
     {
-        public QuoteProductPricingPlugin() : base(typeof(QuoteProductPricingPlugin)) { }
+        public OrderProductPricingPlugin() : base(typeof(OrderProductPricingPlugin)) { }
         #region Private Variables
         private IOrganizationService service { get; set; }
         private IPluginExecutionContext context { get; set; }
@@ -36,11 +36,11 @@ namespace Falk_Plugins.Pricing_Master
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
                 {
                     targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
-                    if (targetEntity.LogicalName == "quotedetail")
+                    if (targetEntity.LogicalName == "salesorderdetail")
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
                         {
-                            CalculatePricing(targetEntity, new Entity("quotedetail"));
+                            CalculatePricing(targetEntity, new Entity("salesorderdetail"));
                         }
 
                         if (context.MessageName == CONST_UPDATE && context.Stage == PreOperation)

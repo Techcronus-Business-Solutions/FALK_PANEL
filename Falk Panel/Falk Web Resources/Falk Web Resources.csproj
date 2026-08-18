@@ -47,6 +47,7 @@
   <ItemGroup>
     <Content Include="AccountRibbon.js" />
     <Content Include="Lead.js" />
+    <Content Include="Order Line Item.js" />
     <Content Include="Quote Line Item.js" />
     <Content Include="Line Item.js" />
     <Content Include="Opportunity Product.js" />

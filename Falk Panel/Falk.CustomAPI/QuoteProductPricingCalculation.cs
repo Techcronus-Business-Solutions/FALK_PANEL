@@ -144,7 +144,7 @@ namespace Falk.CustomAPI
                 quoteDetail["tbs_totalpropertiesprice"] = new Money(roundValues(totalPropertyPrice));
 
                 decimal usPrice = roundValues(calculatedPrice) + roundValues(totalPropertyPrice);
-                tracingService.Trace(usPrice.ToString());
+                tracingService.Trace(roundValues(usPrice).ToString());
                 quoteDetail["tbs_usprice"] = new Money(roundValues(usPrice));
 
                 Entity opp = service.Retrieve("quotedetail", quoteProduct.Id, new ColumnSet("quantity", "tbs_usdpriceadjustment"));
@@ -164,7 +164,7 @@ namespace Falk.CustomAPI
                         upcharge = (usPrice * 0.10m) + (750m / sqft);
                     }
                 }
-                tracingService.Trace(upcharge.ToString());
+                tracingService.Trace(roundValues(upcharge).ToString());
 
                 quoteDetail["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
 
@@ -173,13 +173,13 @@ namespace Falk.CustomAPI
 
                 decimal lineTotal = sqft * roundValues(pricePerUnit);
 
-                tracingService.Trace(pricePerUnit.ToString());
+                tracingService.Trace(roundValues(pricePerUnit).ToString());
 
-                tracingService.Trace(lineTotal.ToString());
+                tracingService.Trace(roundValues(lineTotal).ToString());
 
                 quoteDetail["ispriceoverridden"] = true;
-                quoteDetail["extendedamount"] = new Money(roundValues(lineTotal));
                 quoteDetail["priceperunit"] = new Money(roundValues(pricePerUnit));
+                quoteDetail["baseamount"] = new Money(roundValues(lineTotal));
 
                 service.Update(quoteDetail);
                 #endregion
