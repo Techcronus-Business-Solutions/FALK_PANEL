@@ -42,13 +42,31 @@ namespace Falk_Plugins
                             try
                             {
                                 decimal width = targetEntity.Contains("tbs_widthpanel") ? targetEntity.GetAttributeValue<decimal>("tbs_widthpanel") : 0;
-                                Entity QuoteProduct = service.Retrieve("quotedetail", targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id, new ColumnSet("quantity"));
+                                Guid quoteProd  = targetEntity.Contains("tbs_quoteproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id : Guid.Empty;
 
-                                decimal totalSqFtSum = GetDecimalAttributeValue(QuoteProduct, "quantity") + GetDecimalAttributeValue(targetEntity, "tbs_totalsqft");
-                                decimal linearFt = width > 0 ? (totalSqFtSum * 12) / width : 0;
+                                string fetchXml = $@"
+                                            <fetch aggregate='true'>
+                                              <entity name='tbs_quotelineitem'>
+                                                <attribute name='tbs_totalsqft' alias='sqft' aggregate='sum' />
+                                                <filter>
+                                                  <condition attribute='tbs_quoteproduct' operator='eq' value='{quoteProd}' />
+                                                </filter>
+                                              </entity>
+                                            </fetch>";
+
+                                Entity SQFT = service.RetrieveMultiple(new FetchExpression(fetchXml)).Entities.FirstOrDefault();
+                                decimal totalSQFT = 0;
+                                if (SQFT != null)
+                                {
+                                    totalSQFT = (decimal)SQFT.GetAttributeValue<AliasedValue>("sqft").Value;
+                                }
+                                tracingService.Trace("SQFT");
+
+                                //decimal totalSqFtSum = GetDecimalAttributeValue(QuoteProduct, "quantity") + GetDecimalAttributeValue(targetEntity, "tbs_totalsqft");
+                                decimal linearFt = width > 0 ? (totalSQFT * 12) / width : 0;
 
                                 Entity QuoteProductToUpdate = new Entity("quotedetail", targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id);
-                                QuoteProductToUpdate["quantity"] = totalSqFtSum;
+                                QuoteProductToUpdate["quantity"] = totalSQFT;
                                 QuoteProductToUpdate["tbs_linearfeet"] = linearFt;
                                 service.Update(QuoteProductToUpdate);
                             }
@@ -87,13 +105,31 @@ namespace Falk_Plugins
                                 try
                                 {
                                     decimal width = targetEntity.Contains("tbs_widthpanel") ? targetEntity.GetAttributeValue<decimal>("tbs_widthpanel") : PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
-                                    Entity QuoteProduct = service.Retrieve("quotedetail", PreImage.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id, new ColumnSet("quantity"));
+                                    Guid quoteProd = PreImage.Contains("tbs_quoteproduct") ? PreImage.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id : Guid.Empty;
 
-                                    decimal totalSqFtSum = GetDecimalAttributeValue(QuoteProduct, "quantity") + GetDecimalAttributeValue(targetEntity, "tbs_totalsqft") - GetDecimalAttributeValue(PreImage, "tbs_totalsqft");
-                                    decimal linearFt = width > 0 ? (totalSqFtSum * 12) / width : 0;
+                                    string fetchXml = $@"
+                                            <fetch aggregate='true'>
+                                              <entity name='tbs_quotelineitem'>
+                                                <attribute name='tbs_totalsqft' alias='sqft' aggregate='sum' />
+                                                <filter>
+                                                  <condition attribute='tbs_quoteproduct' operator='eq' value='{quoteProd}' />
+                                                </filter>
+                                              </entity>
+                                            </fetch>";
 
-                                    Entity QuoteProductToUpdate = new Entity("quotedetail", QuoteProduct.Id);
-                                    QuoteProductToUpdate["quantity"] = totalSqFtSum;
+                                    Entity SQFT = service.RetrieveMultiple(new FetchExpression(fetchXml)).Entities.FirstOrDefault();
+                                    decimal totalSQFT = 0;
+                                    if (SQFT != null)
+                                    {
+                                        totalSQFT = (decimal)SQFT.GetAttributeValue<AliasedValue>("sqft").Value;
+                                    }
+                                    tracingService.Trace("SQFT");
+
+                                    //decimal totalSqFtSum = GetDecimalAttributeValue(QuoteProduct, "quantity") + GetDecimalAttributeValue(targetEntity, "tbs_totalsqft") - GetDecimalAttributeValue(PreImage, "tbs_totalsqft");
+                                    decimal linearFt = width > 0 ? (totalSQFT * 12) / width : 0;
+
+                                    Entity QuoteProductToUpdate = new Entity("quotedetail", quoteProd);
+                                    QuoteProductToUpdate["quantity"] = totalSQFT;
                                     QuoteProductToUpdate["tbs_linearfeet"] = linearFt;
                                     service.Update(QuoteProductToUpdate);
                                 }
@@ -141,13 +177,30 @@ namespace Falk_Plugins
                             try
                             {
                                 decimal width = PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
-                                Entity QuoteProduct = service.Retrieve("quotedetail", PreImage.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id, new ColumnSet("quantity"));
+                                Guid quoteProd = targetEntity.Contains("tbs_quoteproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id : Guid.Empty;
 
-                                decimal totalSqFtSum = GetDecimalAttributeValue(QuoteProduct, "quantity") - GetDecimalAttributeValue(PreImage, "tbs_totalsqft");
-                                decimal linearFt = width > 0 ? (totalSqFtSum * 12) / width : 0;
+                                string fetchXml = $@"
+                                            <fetch aggregate='true'>
+                                              <entity name='tbs_quotelineitem'>
+                                                <attribute name='tbs_totalsqft' alias='sqft' aggregate='sum' />
+                                                <filter>
+                                                  <condition attribute='tbs_quoteproduct' operator='eq' value='{quoteProd}' />
+                                                </filter>
+                                              </entity>
+                                            </fetch>";
 
-                                Entity QuoteProductToUpdate = new Entity("quotedetail", QuoteProduct.Id);
-                                QuoteProductToUpdate["quantity"] = totalSqFtSum;
+                                Entity SQFT = service.RetrieveMultiple(new FetchExpression(fetchXml)).Entities.FirstOrDefault();
+                                decimal totalSQFT = 0;
+                                if (SQFT != null)
+                                {
+                                    totalSQFT = (decimal)SQFT.GetAttributeValue<AliasedValue>("sqft").Value;
+                                }
+                                tracingService.Trace("SQFT");
+
+                                decimal linearFt = width > 0 ? (totalSQFT * 12) / width : 0;
+
+                                Entity QuoteProductToUpdate = new Entity("quotedetail", quoteProd);
+                                QuoteProductToUpdate["quantity"] = totalSQFT;
                                 QuoteProductToUpdate["tbs_linearfeet"] = linearFt;
                                 service.Update(QuoteProductToUpdate);
 

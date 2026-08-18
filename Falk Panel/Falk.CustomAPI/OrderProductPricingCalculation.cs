@@ -132,44 +132,54 @@ namespace Falk.CustomAPI
                 #region Save Record In Order Product
                 Entity salesorderdetail = new Entity("salesorderdetail", orderProduct.Id);
 
-                salesorderdetail["tbs_interiorprice"] = new Money(interiorPrice);
-                salesorderdetail["tbs_exteriorprice"] = new Money(exteriorPrice);
+                salesorderdetail["tbs_interiorprice"] = new Money(roundValues(interiorPrice));
+                salesorderdetail["tbs_exteriorprice"] = new Money(roundValues(exteriorPrice));
                 salesorderdetail["tbs_ribbingmodelsweatherprice"] = new Money(0);
                 salesorderdetail["tbs_ribbingmodeusinteriorprice"] = new Money(0);
-                salesorderdetail["tbs_embossinglsweatherprice"] = new Money(exteriorEmbossPrice);
-                salesorderdetail["tbs_embossingusinteriorprice"] = new Money(interiorEmbossPrice);
-                salesorderdetail["tbs_baseprice"] = new Money(calculatedPrice);
+                salesorderdetail["tbs_embossinglsweatherprice"] = new Money(roundValues(exteriorEmbossPrice));
+                salesorderdetail["tbs_embossingusinteriorprice"] = new Money(roundValues(interiorEmbossPrice));
+                salesorderdetail["tbs_baseprice"] = new Money(roundValues(calculatedPrice));
 
-                decimal totalPropertyPrice = interiorPrice + exteriorPrice + interiorEmbossPrice + exteriorEmbossPrice;
-                salesorderdetail["tbs_totalpropertiesprice"] = new Money(totalPropertyPrice);
+                decimal totalPropertyPrice = roundValues(interiorPrice) + roundValues(exteriorPrice) + roundValues(interiorEmbossPrice) + roundValues(exteriorEmbossPrice);
+                salesorderdetail["tbs_totalpropertiesprice"] = new Money(roundValues(totalPropertyPrice));
 
-                decimal usPrice = calculatedPrice + totalPropertyPrice;
-                salesorderdetail["tbs_usprice"] = new Money(usPrice);
+                decimal usPrice = roundValues(calculatedPrice) + roundValues(totalPropertyPrice);
+                tracingService.Trace(usPrice.ToString());
+                salesorderdetail["tbs_usprice"] = new Money(roundValues(usPrice));
 
-                //Entity order = service.Retrieve("salesorderdetail", orderProduct.Id, new ColumnSet("quantity", "tbs_usdpriceadjustment"));
-                //decimal sqft = order.GetAttributeValue<decimal>("quantity");
-                //decimal upcharge = 0;
+                Entity order = service.Retrieve("salesorderdetail", orderProduct.Id, new ColumnSet("quantity", "tbs_usdpriceadjustment"));
+                decimal sqft = order.GetAttributeValue<decimal>("quantity");
+                tracingService.Trace(sqft.ToString());
 
-                //if (sqft > 0)
-                //{
-                //    if (sqft < 1000)
-                //    {
-                //        upcharge = (usPrice * 0.10m) + (1200m / sqft);
-                //    }
-                //    else if (sqft < 3500)
-                //    {
-                //        upcharge = (usPrice * 0.10m) + (750m / sqft);
-                //    }
-                //}
-                //salesorderdetail["tbs_smallorderupcharge"] = new Money(upcharge);
+                decimal upcharge = 0;
 
-                //decimal usdAdjustment = order.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value ?? 0;
-                //decimal pricePerUnit = usPrice + usdAdjustment + upcharge;
+                if (sqft > 0)
+                {
+                    if (sqft < 1000)
+                    {
+                        upcharge = (usPrice * 0.10m) + (1200m / sqft);
+                    }
+                    else if (sqft < 3500)
+                    {
+                        upcharge = (usPrice * 0.10m) + (750m / sqft);
+                    }
+                }
+                tracingService.Trace(upcharge.ToString());
 
-                //decimal lineTotal = sqft * pricePerUnit;
-                //salesorderdetail["ispriceoverridden"] = true;
-                //salesorderdetail["extendedamount"] = new Money(lineTotal);
-                //salesorderdetail["priceperunit"] = new Money(pricePerUnit);
+                salesorderdetail["tbs_smallorderupcharge"] = new Money(upcharge);
+
+                decimal usdAdjustment = order.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value ?? 0;
+                decimal pricePerUnit = usPrice + usdAdjustment + upcharge;
+
+                decimal lineTotal = sqft * pricePerUnit;
+
+                tracingService.Trace(pricePerUnit.ToString());
+
+                tracingService.Trace(lineTotal.ToString());
+
+                salesorderdetail["ispriceoverridden"] = true;
+                salesorderdetail["extendedamount"] = new Money(lineTotal);
+                salesorderdetail["priceperunit"] = new Money(pricePerUnit);
 
                 service.Update(salesorderdetail);
                 #endregion
@@ -179,6 +189,11 @@ namespace Falk.CustomAPI
                 tracingService.Trace("OrderProductPricingCalculation Custom API Exception: {0}", ex.ToString());
                 throw new InvalidPluginExecutionException($"Error in OrderProductPricingCalculation Custom API: {ex.Message}");
             }
+        }
+
+        private decimal roundValues(decimal value)
+        {
+            return Math.Round(value, 2, MidpointRounding.AwayFromZero);
         }
 
         private EntityReference GetInputRef(string parameterName, bool required = true)
