@@ -19,7 +19,6 @@ namespace Falk_Plugins.Pricing_Master
         private IPluginExecutionContext context { get; set; }
         private ITracingService tracingService { get; set; }
         private IOrganizationServiceFactory factory { get; set; }
-        private Entity targetEntity { get; set; }
         #endregion
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
         {
@@ -34,7 +33,7 @@ namespace Falk_Plugins.Pricing_Master
             {
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
                 {
-                    targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
+                    Entity targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
                     if (targetEntity.LogicalName == "quotedetail")
                     {
                         if (context.MessageName == CONST_CREATE)
@@ -126,12 +125,7 @@ namespace Falk_Plugins.Pricing_Master
                                 throw new InvalidPluginExecutionException(ex.Message);
                             }
                         }
-                        if (context.MessageName == CONST_DELETE && context.Stage == PreOperation)
-                        {
-                            Guid quoteProductId = targetEntity.Id;
-                            tracingService.Trace("Quote ProductId = " + quoteProductId.ToString());
-                            DeleteQuoteAssociatedRecords(quoteProductId);
-                        }
+                        
                     }
 
                     else if (targetEntity.LogicalName == "tbs_quotepanelaccessory")
@@ -178,6 +172,19 @@ namespace Falk_Plugins.Pricing_Master
                             {
                                 throw new InvalidPluginExecutionException(ex.Message);
                             }
+                        }
+                    }
+                }
+                else if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
+                {
+                    EntityReference targetEntity = (EntityReference)context.InputParameters[CONST_TARGETENTITY];
+                    if (targetEntity.LogicalName == "quotedetail")
+                    {
+                        if (context.MessageName == CONST_DELETE && context.Stage == PreOperation)
+                        {
+                            Guid quoteProductId = targetEntity.Id;
+                            tracingService.Trace("Quote ProductId = " + quoteProductId.ToString());
+                            DeleteQuoteAssociatedRecords(quoteProductId);
                         }
                     }
                 }

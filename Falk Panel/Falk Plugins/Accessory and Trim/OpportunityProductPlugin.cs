@@ -20,7 +20,6 @@ namespace Falk_Plugins.Pricing_Master
         private IPluginExecutionContext context { get; set; }
         private ITracingService tracingService { get; set; }
         private IOrganizationServiceFactory factory { get; set; }
-        private Entity targetEntity { get; set; }
         #endregion
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
         {
@@ -35,7 +34,7 @@ namespace Falk_Plugins.Pricing_Master
             {
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
                 {
-                    targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
+                    Entity targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
                     if (targetEntity.LogicalName == "opportunityproduct")
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
@@ -117,14 +116,7 @@ namespace Falk_Plugins.Pricing_Master
                                 throw new InvalidPluginExecutionException(ex.Message);
                             }
                         }
-                        if (context.MessageName == CONST_DELETE && context.Stage == PreOperation)
-                        {
-                            Guid oppProductId = targetEntity.Id;
-                            tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
-                            DeleteOppAssociatedRecords(oppProductId);
-                        }
                     }
-
                     else if (targetEntity.LogicalName == "tbs_opppanelaccessory")
                     {
                         if (context.Depth > 1)
@@ -169,6 +161,19 @@ namespace Falk_Plugins.Pricing_Master
                             {
                                 throw new InvalidPluginExecutionException(ex.Message);
                             }
+                        }
+                    }
+                }
+                else if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is EntityReference)
+                {
+                    EntityReference targetEntity = (EntityReference)context.InputParameters[CONST_TARGETENTITY];
+                    if (targetEntity.LogicalName == "opportunityproduct")
+                    {
+                        if (context.MessageName == CONST_DELETE && context.Stage == PreOperation)
+                        {
+                            Guid oppProductId = targetEntity.Id;
+                            tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
+                            DeleteOppAssociatedRecords(oppProductId);
                         }
                     }
                 }

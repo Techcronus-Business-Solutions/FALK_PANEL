@@ -20,7 +20,6 @@ namespace Falk_Plugins.Accessory_and_Trim
         private IPluginExecutionContext context { get; set; }
         private ITracingService tracingService { get; set; }
         private IOrganizationServiceFactory factory { get; set; }
-        private Entity targetEntity { get; set; }
         #endregion
 
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
@@ -36,7 +35,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             {
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
                 {
-                    targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
+                    Entity targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
                     if (targetEntity.LogicalName == "salesorderdetail")
                     {
                         if (context.MessageName == CONST_CREATE)
@@ -131,12 +130,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                                 throw new InvalidPluginExecutionException(ex.Message);
                             }
                         }
-                        if (context.MessageName == CONST_DELETE && context.Stage == PreOperation)
-                        {
-                            Guid orderProductId = targetEntity.Id;
-                            tracingService.Trace("order ProductId = " + orderProductId.ToString());
-                            DeleteorderAssociatedRecords(orderProductId);
-                        }
+
                     }
                     else if (targetEntity.LogicalName == "tbs_orderpanelaccessory")
                     {
@@ -182,6 +176,19 @@ namespace Falk_Plugins.Accessory_and_Trim
                             {
                                 throw new InvalidPluginExecutionException(ex.Message);
                             }
+                        }
+                    }
+                }
+                else if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is EntityReference)
+                {
+                    EntityReference targetEntity = (EntityReference)context.InputParameters[CONST_TARGETENTITY];
+                    if (targetEntity.LogicalName == "salesorderdetail")
+                    {
+                        if (context.MessageName == CONST_DELETE && context.Stage == PreOperation)
+                        {
+                            Guid orderProductId = targetEntity.Id;
+                            tracingService.Trace("order ProductId = " + orderProductId.ToString());
+                            DeleteorderAssociatedRecords(orderProductId);
                         }
                     }
                 }

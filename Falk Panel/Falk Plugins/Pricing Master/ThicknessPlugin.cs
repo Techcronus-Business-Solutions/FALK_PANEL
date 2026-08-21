@@ -40,9 +40,11 @@ namespace Falk_Plugins.Pricing_Master
                             decimal thicknessNumber = targetEntity.Contains("tbs_thicknessnumber") ? targetEntity.GetAttributeValue<decimal>("tbs_thicknessnumber") : 0;
 
                             string thicknessName = panelThickness + " " + thicknessNumber.ToString();
+                            //string thicknessName = thicknessNumber.ToString();
 
                             tracingService.Trace(thicknessName);
-                            targetEntity["tbs_name"] = thicknessName;
+                            targetEntity["tbs_panelcombo"] = thicknessName;
+                            targetEntity["tbs_name"] = thicknessNumber.ToString();
                         }
                     }
                 }

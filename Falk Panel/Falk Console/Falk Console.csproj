@@ -162,6 +162,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ImportaccesoryData.cs" />
+    <Compile Include="ImportaccesorydiffData.cs" />
     <Compile Include="PricingMasterInterior.cs" />
     <Compile Include="TrimQtyConsole.cs" />
     <Compile Include="AccessoriesQtyConsole.cs" />

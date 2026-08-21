@@ -95,7 +95,28 @@ namespace Falk_Console
                     //AccessoriesQtyConsole.CalculateQty(organizationService);
                     //TrimQtyConsole.CalculateQty(organizationService);
 
-                    PricingMasterInterior.ImportPricingMasterInteriorData(organizationService);
+                    //PricingMasterInterior.ImportPricingMasterInteriorData(organizationService);
+
+                    QueryExpression query = new QueryExpression("tbs_thickness");
+                    query.ColumnSet = new ColumnSet(true);
+
+                    EntityCollection thicknessEntColl = organizationService.RetrieveMultiple(query);
+
+                    foreach(Entity thickness in thicknessEntColl.Entities)
+                    {
+                        string panelThickness = thickness.GetAttributeValue<EntityReference>("tbs_product").Name;
+                        decimal thicknessNumber = thickness.Contains("tbs_thicknessnumber") ? thickness.GetAttributeValue<decimal>("tbs_thicknessnumber") : 0;
+
+                        string thicknessName = panelThickness + " " + Math.Round(thicknessNumber, 2).ToString();
+                        //string thicknessName = thicknessNumber.ToString();
+
+                        thickness["tbs_panelcombo"] = thicknessName;
+                        thickness["tbs_name"] = Math.Round(thicknessNumber, 2).ToString();
+
+                        organizationService.Update(thickness);
+                    }
+
+                    //ImportaccesoryData.ImportData(organizationService);
                 }
             }
             catch (Exception ex)
