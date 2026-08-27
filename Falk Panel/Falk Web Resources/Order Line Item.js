@@ -14,8 +14,8 @@ Falk.OrderLineItem = {
         var formContext = executionContext.getFormContext();
 
         await Falk.OrderLineItem.SetWidth(formContext);
-        formContext.getAttribute("tbs_ft")
-            ?.addOnChange(Falk.OrderLineItem.OnChangeFeetInch);
+        formContext.getAttribute("tbs_ft")?.addOnChange(Falk.OrderLineItem.OnChangeFeetInch);
+        formContext.getAttribute("tbs_ft")?.addOnChange(Falk.OrderLineItem.ValidateMinimumLength);
 
         formContext.getAttribute("tbs_in")
             ?.addOnChange(Falk.OrderLineItem.OnChangeFeetInch);
@@ -124,5 +124,134 @@ Falk.OrderLineItem = {
         result += '"';
 
         return result;
+    },
+
+    ValidateMinimumLength: async function (executionContext) {
+
+        var formContext = executionContext.getFormContext();
+
+        try {
+
+            var lengthAttr = formContext.getAttribute("tbs_ft");
+
+            if (!lengthAttr) {
+                console.log("tbs_ft attribute not found.");
+                return;
+            }
+
+            var length = lengthAttr.getValue();
+
+            console.log("Entered Length: " + length);
+
+            if (length === null || length === undefined) {
+                return;
+            }
+
+            var orderProductAttr =
+                formContext.getAttribute("tbs_orderproduct");
+
+            if (!orderProductAttr) {
+                console.log("Order Product attribute not found.");
+                return;
+            }
+
+            var orderProductValue = orderProductAttr.getValue();
+
+            if (!orderProductValue || orderProductValue.length === 0) {
+
+                console.log("Order Product not selected.");
+                return;
+            }
+
+            var orderProductId = orderProductValue[0].id.replace(/[{}]/g, "");
+
+            console.log("Order Product ID: " + orderProductId);
+
+            // Get Thickness lookup from Opportunity Product
+            var orderProduct = await Xrm.WebApi.retrieveRecord(
+                "salesorderdetail",
+                orderProductId,
+                "?$select=_tbs_panelthickness_value"
+            );
+
+            var thicknessId =
+                orderProduct["_tbs_panelthickness_value"];
+
+            console.log("Thickness ID: " + thicknessId);
+
+            if (!thicknessId) {
+                console.log("Thickness not selected.");
+                return;
+            }
+
+            // Get Minimum Length from Thickness
+            var thickness = await Xrm.WebApi.retrieveRecord(
+                "tbs_thickness",
+                thicknessId,
+                "?$select=tbs_minimumlength"
+            );
+
+            var minimumLength =
+                thickness["tbs_minimumlength"];
+
+            console.log("Minimum Length: " + minimumLength);
+
+            if (minimumLength === null ||
+                minimumLength === undefined) {
+
+                console.log("Minimum Length is empty.");
+                return;
+            }
+
+            // Validate
+            if (length < minimumLength) {
+
+                await Xrm.Navigation.openAlertDialog(
+                    {
+                        title: "Minimum Length Required",
+                        text:
+                            "The minimum length for the selected thickness is "
+                            + minimumLength
+                            + " ft.\n\nPlease enter a length of at least "
+                            + minimumLength
+                            + " ft."
+                    },
+                    {
+                        height: 220,
+                        width: 450
+                    }
+                );
+
+                // Clear invalid value
+                lengthAttr.setValue(null);
+
+                // Recalculate dependent fields
+                var linearFtAttr =
+                    formContext.getAttribute("tbs_linearftinch");
+
+                if (linearFtAttr) {
+                    linearFtAttr.setValue(null);
+                }
+
+                return;
+            }
+
+            console.log("Minimum length validation passed.");
+
+        }
+        catch (error) {
+
+            console.error(
+                "ValidateMinimumLength Error: ",
+                error
+            );
+
+            await Xrm.Navigation.openAlertDialog({
+                title: "Validation Error",
+                text:
+                    "Unable to validate minimum length.\n\n"
+                    + error.message
+            });
+        }
     }
 };
