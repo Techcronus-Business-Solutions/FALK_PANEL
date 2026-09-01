@@ -40,6 +40,11 @@ namespace Falk_Plugins.Pricing_Master
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
                         {
+                            if(GetOptionSetAttributeValue(targetEntity, "skippricecalculation") == 1)
+                            {
+                                tracingService.Trace("Skipping price calculation for Quote Product.");
+                                return;
+                            }
                             CalculatePricing(targetEntity, new Entity("quotedetail"));
                         }
 

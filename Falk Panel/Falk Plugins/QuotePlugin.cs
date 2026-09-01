@@ -69,8 +69,10 @@ namespace Falk_Plugins
 
             tracingService.Trace($"line items Found : {lineitems.Entities.Count}");
 
-            foreach (Entity oppLineItems in lineitems.Entities)
+            for (int i = 0; i < lineitems.Entities.Count; i++)
             {
+                Entity oppLineItems = lineitems.Entities[i];
+
                 Entity quoteLineItems = new Entity("tbs_quotelineitem");
 
                 foreach (var attribute in oppLineItems.Attributes)
