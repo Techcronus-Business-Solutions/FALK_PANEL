@@ -35,12 +35,17 @@ namespace Falk.CustomAPI
                 var interiorFinish = GetInputRef("InteriorFinish");
                 var exteriorGauge = GetInputRef("ExteriorGauge");
                 var interiorGauge = GetInputRef("InteriorGauge");
+                int? exteriorColorCategory = GetInputChoice("OrderExteriorColorCategory", false);
                 var exteriorColor = GetInputRef("ExteriorColor", false);
+                int? interiorColorCategory = GetInputChoice("OrderInteriorColorCategory", false);
                 var interiorColor = GetInputRef("InteriorColor", false);
                 int? interiorEmboss = GetInputChoice("InteriorEmboss");
                 int? exteriorEmboss = GetInputChoice("ExteriorEmboss");
 
                 var orderProduct = GetInputRef("Target");
+
+                string interiorCategoryText = GetColorCategoryText(interiorColorCategory);
+                string exteriorCategoryText = GetColorCategoryText(exteriorColorCategory);
 
                 //throw new InvalidPluginExecutionException(exteriorFinish.Name + " " + exteriorColor.Name + " " + exteriorGauge.Name + " Color Category: " + interiorColor.Name + " tier: " + tier.Name + " exterior EMboss: " + exteriorEmboss + " Interior Emboss: " + interiorEmboss);
 
@@ -53,16 +58,30 @@ namespace Falk.CustomAPI
                     { "tbs_interiorgauge", interiorGauge.Id }
                 };
 
+                decimal interiorPrice = 0;
+                bool interiorFound = false;
+
                 if (interiorColor != null)
                 {
                     interiorConditions.Add("tbs_interiorcolorcategory", interiorColor.Id);
+
+                    interiorPrice = GetPrice(
+                        "tbs_pricingmasterinterior",
+                        "tbs_interiorprice",
+                        interiorConditions,
+                        out interiorFound);
                 }
 
-                decimal interiorPrice = GetPrice(
-                    "tbs_pricingmasterinterior",
-                    "tbs_interiorprice",
-                    interiorConditions,
-                    out bool interiorFound);
+                if (!interiorFound && interiorColorCategory != null)
+                {
+                    interiorPrice = GetPriceByCategory(
+                        "tbs_pricingmasterinterior",
+                        "tbs_interiorprice",
+                        interiorConditions,
+                        "tbs_interiorcolorcategory",
+                        interiorColorCategory.Value,
+                        out interiorFound);
+                }
 
                 var exteriorConditions = new Dictionary<string, object>
                 {
@@ -72,16 +91,30 @@ namespace Falk.CustomAPI
                     { "tbs_exteriorgauge", exteriorGauge.Id }
                 };
 
+                decimal exteriorPrice = 0;
+                bool exteriorFound = false;
+
                 if (exteriorColor != null)
                 {
                     exteriorConditions.Add("tbs_exteriorcolorcategory", exteriorColor.Id);
+
+                    exteriorPrice = GetPrice(
+                        "tbs_pricingmasterexterior",
+                        "tbs_exteriorprice",
+                        exteriorConditions,
+                        out exteriorFound);
                 }
 
-                decimal exteriorPrice = GetPrice(
-                    "tbs_pricingmasterexterior",
-                    "tbs_exteriorprice",
-                    exteriorConditions,
-                    out bool exteriorFound);
+                if (!exteriorFound && !string.IsNullOrEmpty(exteriorCategoryText))
+                {
+                    exteriorPrice = GetPriceByCategory(
+                        "tbs_pricingmasterexterior",
+                        "tbs_exteriorprice",
+                        exteriorConditions,
+                        "tbs_exteriorcolorcategory",
+                        exteriorColorCategory.Value,
+                        out exteriorFound);
+                }
 
                 context.OutputParameters["InteriorPrice"] = new Money(interiorPrice);
                 context.OutputParameters["ExteriorPrice"] = new Money(exteriorPrice);
@@ -166,21 +199,43 @@ namespace Falk.CustomAPI
                 }
                 tracingService.Trace(upcharge.ToString());
 
-                salesorderdetail["tbs_smallorderupcharge"] = new Money(upcharge);
+                salesorderdetail["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
 
                 decimal usdAdjustment = order.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value ?? 0;
-                decimal pricePerUnit = usPrice + usdAdjustment + upcharge;
+                decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
 
-                decimal lineTotal = sqft * pricePerUnit;
+                decimal lineTotal = sqft * roundValues(pricePerUnit);
 
-                tracingService.Trace(pricePerUnit.ToString());
+                tracingService.Trace(roundValues(pricePerUnit).ToString());
 
-                tracingService.Trace(lineTotal.ToString());
+                tracingService.Trace(roundValues(lineTotal).ToString());
 
-                salesorderdetail["ispriceoverridden"] = true;
-                salesorderdetail["priceperunit"] = new Money(pricePerUnit);
-                salesorderdetail["baseamount"] = new Money(lineTotal);
+                Entity existingLine = service.Retrieve(
+                    "salesorderdetail",
+                    orderProduct.Id,
+                    new ColumnSet("ispriceoverridden"));
 
+                bool currentOverride = existingLine.GetAttributeValue<bool?>("ispriceoverridden") ?? false;
+
+                if (!currentOverride)
+                {
+                    salesorderdetail["ispriceoverridden"] = true;
+                }
+
+                decimal currentPrice = existingLine.GetAttributeValue<Money>("priceperunit")?.Value ?? 0;
+
+                if (currentPrice != roundValues(pricePerUnit))
+                {
+                    salesorderdetail["priceperunit"] = new Money(roundValues(pricePerUnit));
+                }
+
+                    //salesorderdetail["ispriceoverridden"] = true;
+                    //salesorderdetail["priceperunit"] = new Money(roundValues(pricePerUnit));
+                    salesorderdetail["baseamount"] = new Money(roundValues(lineTotal));
+                //foreach (var attr in salesorderdetail.Attributes)
+                //{
+                //    tracingService.Trace("Updating Field = " + attr.Key);
+                //}
                 service.Update(salesorderdetail);
                 #endregion
             }
@@ -296,6 +351,72 @@ namespace Falk.CustomAPI
             {
                 throw new InvalidPluginExecutionException("Failed to retrieve Tracing Service !");
             }
+        }
+        private string GetColorCategoryText(int? category)
+        {
+            if (!category.HasValue)
+                return null;
+
+            switch (category.Value)
+            {
+                case 0:
+                    return "CAT 1";
+
+                case 1:
+                    return "CAT 2";
+
+                case 2:
+                    return "CAT 3";
+
+                case 3:
+                    return "CAT 4";
+
+                case 4:
+                    return "CAT 5";
+
+                case 5:
+                    return "CAT 6";
+
+                case 6:
+                    return "Stainless Steel";
+
+                default:
+                    return null;
+            }
+        }
+        private decimal GetPriceByCategory(string entityName, string priceField, Dictionary<string, object> conditions, string colorLookupField, int categoryValue, out bool found)
+        {
+            QueryExpression query = new QueryExpression(entityName)
+            {
+                ColumnSet = new ColumnSet(priceField, colorLookupField)
+            };
+
+            foreach (var item in conditions)
+            {
+                query.Criteria.AddCondition(item.Key, ConditionOperator.Equal, item.Value);
+            }
+
+            EntityCollection records = service.RetrieveMultiple(query);
+
+            foreach (Entity record in records.Entities)
+            {
+                EntityReference colorRef = record.GetAttributeValue<EntityReference>(colorLookupField);
+
+                if (colorRef == null)
+                    continue;
+
+                Entity color = service.Retrieve(colorRef.LogicalName, colorRef.Id, new ColumnSet("tbs_colorcategory"));
+
+                int colorCategory = color.GetAttributeValue<OptionSetValue>("tbs_colorcategory")?.Value ?? -1;
+
+                if (colorCategory == categoryValue)
+                {
+                    found = true;
+                    return record.GetAttributeValue<Money>(priceField)?.Value ?? 0;
+                }
+            }
+            found = false;
+            return 0;
         }
     }
 }

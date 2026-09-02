@@ -24,6 +24,9 @@ Falk.OrderProductRibbon = {
         let productId = Falk.OrderProductRibbon.getLookup(formContext, "productid", "product");
         let priceLevelTier = Falk.OrderProductRibbon.getLookup(formContext, "tbs_priceleveltier", "tbs_tier");
 
+        let exteriorColorCategory = formContext.getAttribute("tbs_orderexteriorcolorcategory")?.getValue();
+        let interiorColorCategory = formContext.getAttribute("tbs_orderinteriorcolorcategory")?.getValue();
+
         let exteriorEmboss = formContext.getAttribute("tbs_exterioremboss").getValue();
         let interiorEmboss = formContext.getAttribute("tbs_interioremboss").getValue();
 
@@ -42,6 +45,8 @@ Falk.OrderProductRibbon = {
             InteriorGauge: { "@odata.type": "Microsoft.Dynamics.CRM.tbs_gauge", tbs_gaugeid: interiorGauge.id },
             ExteriorColor: exteriorColor ? { "@odata.type": "Microsoft.Dynamics.CRM.tbs_color", tbs_colorid: exteriorColor.id } : null,
             InteriorColor: interiorColor ? { "@odata.type": "Microsoft.Dynamics.CRM.tbs_color", tbs_colorid: interiorColor.id } : null,
+            OrderExteriorColorCategory: exteriorColorCategory,
+            OrderInteriorColorCategory: interiorColorCategory,
             InteriorEmboss: interiorEmboss,
             ExteriorEmboss: exteriorEmboss,
 
@@ -58,7 +63,9 @@ Falk.OrderProductRibbon = {
                         ExteriorGauge: { typeName: "mscrm.tbs_gauge", structuralProperty: 5 },
                         InteriorGauge: { typeName: "mscrm.tbs_gauge", structuralProperty: 5 },
                         ExteriorColor: { typeName: "mscrm.tbs_color", structuralProperty: 5 },
+                        OrderExteriorColorCategory: { typeName: "Edm.Int32", structuralProperty: 1 },
                         InteriorColor: { typeName: "mscrm.tbs_color", structuralProperty: 5 },
+                        OrderInteriorColorCategory: { typeName: "Edm.Int32", structuralProperty: 1 },
                         InteriorEmboss: { typeName: "Edm.Int32", structuralProperty: 1 },
                         ExteriorEmboss: { typeName: "Edm.Int32", structuralProperty: 1 }
                     },
