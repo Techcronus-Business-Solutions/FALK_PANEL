@@ -280,9 +280,9 @@ namespace Falk_Plugins
             return entity != null ? entity.Id : new Guid();
         }
 
-        public int GetOptionSetAttributeValue(Entity entity, string attributeName)
+        public int? GetOptionSetAttributeValue(Entity entity, string attributeName)
         {
-            var attributeValue = 0;
+            int? attributeValue = null;
             if (!entity.Contains(attributeName) || (!(entity[attributeName] is OptionSetValue))) return attributeValue;
             var optionSetValue = entity[attributeName] as OptionSetValue;
             attributeValue = optionSetValue.Value;

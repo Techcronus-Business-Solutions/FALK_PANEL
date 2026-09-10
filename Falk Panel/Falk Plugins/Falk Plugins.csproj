@@ -167,6 +167,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Pricing Master\OrderExtraPricing.cs" />
+    <Compile Include="Pricing Master\QuoteExtraPricing.cs" />
+    <Compile Include="Pricing Master\OpportunityExtraPricing.cs" />
     <Compile Include="Accessory and Trim\OpportunityProductPlugin.cs" />
     <Compile Include="Accessory and Trim\OrderProductPlugin.cs" />
     <Compile Include="Accessory and Trim\QuoteProductPlugin.cs" />
