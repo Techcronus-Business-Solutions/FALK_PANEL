@@ -35,6 +35,10 @@ namespace Falk_Plugins
                     targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
                     if (targetEntity.LogicalName == "salesorderdetail")
                     {
+                        if(context.MessageName == CONST_CREATE && context.Stage == PreOperation)
+                        {
+                            GenerateProductForOrderProduct();
+                        }
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
                             Entity orderProduct = service.Retrieve("salesorderdetail", targetEntity.Id,new ColumnSet("tbs_quoteproduct"));
@@ -57,6 +61,150 @@ namespace Falk_Plugins
             {
                 throw new InvalidPluginExecutionException(e.Message, e);
             }
+        }
+        private void GenerateProductForOrderProduct()
+        {
+            tracingService.Trace("GenerateProductForOrderProduct started.");
+
+            string productId = GenerateProductId();
+
+            if (string.IsNullOrWhiteSpace(productId))
+            {
+                throw new InvalidPluginExecutionException("Product ID could not be generated.");
+            }
+
+            tracingService.Trace("Generated Product ID: " + productId);
+
+            Entity existingProduct = GetProductByProductNumber(productId);
+
+            Guid productGuid;
+
+            if (existingProduct != null)
+            {
+                productGuid = existingProduct.Id;
+
+                tracingService.Trace("Existing Product found: " + productGuid);
+            }
+            else
+            {
+                Entity product = new Entity("product");
+
+                product["name"] = productId;
+                product["productnumber"] = productId;
+
+                productGuid = service.Create(product);
+
+                tracingService.Trace("New Product created: " + productGuid);
+            }
+
+            targetEntity["productid"] = new EntityReference("product", productGuid);
+
+            tracingService.Trace("Product lookup set on Order Product.");
+        }
+
+
+        private string GenerateProductId()
+        {
+            /*
+             * FALK Scheme A
+             *
+             * Position:
+             *
+             * 1      Scheme
+             * 2      Panel Family
+             * 3      Thickness
+             * 4      Core
+             * 5      Exterior Finish
+             * 6-9    Exterior Color
+             * 10     Exterior Gauge
+             * 11     Exterior Profile
+             * 12     Exterior Emboss
+             * 13     Interior Finish
+             * 14-17  Interior Color
+             * 18     Interior Gauge
+             * 19     Interior Profile
+             * 20     Interior Emboss
+             */
+
+            string scheme = "A";
+
+            string panelFamily = GetLookupCode("tbs_panelfamily");
+
+            string thickness = GetLookupCode("tbs_panelthickness");
+
+            string core = GetLookupCode("tbs_core");
+
+            string exteriorFinish = GetLookupCode("tbs_exteriorfinish");
+
+            string exteriorColor = GetLookupCode("tbs_exteriorcolor");
+
+            string exteriorGauge = GetLookupCode("tbs_exteriorgauge");
+
+            string exteriorProfile = GetLookupCode("tbs_exteriorprofile");
+
+            string exteriorEmboss = GetLookupCode("tbs_exterioremboss");
+
+            string interiorFinish = GetLookupCode("tbs_interiorfinish");
+
+            string interiorColor = GetLookupCode("tbs_interiorcolor");
+
+            string interiorGauge = GetLookupCode("tbs_interiorgauge");
+
+            string interiorProfile = GetLookupCode("tbs_interiorprofile");
+
+            string interiorEmboss = GetLookupCode("tbs_interioremboss");
+
+            string productId = scheme + panelFamily + thickness + core + exteriorFinish + exteriorColor + exteriorGauge + exteriorProfile + exteriorEmboss + interiorFinish + interiorColor + interiorGauge + interiorProfile + interiorEmboss;
+
+
+            tracingService.Trace("Final Product ID: " + productId);
+
+            if (productId.Length != 20)
+            {
+                throw new InvalidPluginExecutionException("Generated Product ID '" + productId + "' must contain exactly 20 characters. " + "Current length: " + productId.Length);
+            }
+
+            return productId;
+        }
+
+        private string GetLookupCode(string lookupField)
+        {
+            EntityReference lookup = targetEntity.GetAttributeValue<EntityReference>(lookupField);
+
+            if (lookup == null)
+            {
+                throw new InvalidPluginExecutionException("Required field '" + lookupField + "' is empty.");
+            }
+
+            Entity lookupRecord = service.Retrieve(lookup.LogicalName, lookup.Id, new ColumnSet("tbs_code"));
+
+            string code = lookupRecord.GetAttributeValue<string>("tbs_code");
+
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                throw new InvalidPluginExecutionException("Code is not configured for " + lookupField + ".");
+            }
+            return code.Trim().ToUpperInvariant();
+        }
+
+        private Entity GetProductByProductNumber(string productId)
+        {
+            QueryExpression query = new QueryExpression("product");
+
+            query.ColumnSet = new ColumnSet("productid","productnumber");
+
+            query.Criteria.AddCondition("productnumber",ConditionOperator.Equal,productId);
+
+            query.TopCount = 2;
+
+            EntityCollection products = service.RetrieveMultiple(query);
+
+            if (products.Entities.Count > 1)
+            {
+                throw new InvalidPluginExecutionException("Multiple Products found with Product ID: " + productId);
+            }
+
+            return products.Entities.FirstOrDefault();
         }
 
         private void CreateOrderLineItems(EntityReference orderProductRef, EntityReference quoteProductRef)
