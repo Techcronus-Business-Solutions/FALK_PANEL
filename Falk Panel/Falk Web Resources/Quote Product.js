@@ -93,6 +93,9 @@ Falk.QuoteProduct = {
 
                 formContext.getAttribute("tbs_exteriorcolor").setValue(null);
                 formContext.getAttribute("tbs_interiorcolor").setValue(null);
+
+                formContext.getAttribute("tbs_quoteexteriorcolorcategory").setValue(null);
+                formContext.getAttribute("tbs_quoteinteriorcolorcategory").setValue(null);
             });
 
         formContext.getAttribute("tbs_panelthickness")
@@ -130,6 +133,22 @@ Falk.QuoteProduct = {
 
             Falk.QuoteProduct.addExteriorColorView(formContext);
             Falk.QuoteProduct.FinishOnChange(executionContext);
+        });
+
+        formContext.getAttribute("tbs_quoteinteriorcolorcategory").addOnChange(function (executionContext) {
+            const formContext = executionContext.getFormContext();
+
+            formContext.getAttribute("tbs_interiorcolor").setValue(null);
+
+            Falk.QuoteProduct.addInteriorColorView(formContext);
+        });
+
+        formContext.getAttribute("tbs_quoteexteriorcolorcategory").addOnChange(function (executionContext) {
+            const formContext = executionContext.getFormContext();
+
+            formContext.getAttribute("tbs_exteriorcolor").setValue(null);
+
+            Falk.QuoteProduct.addExteriorColorView(formContext);
         });
     },
 
@@ -376,6 +395,7 @@ Falk.QuoteProduct = {
     addExteriorColorView: function (formContext) {
         const product = formContext.getAttribute("productid").getValue();
         const finish = formContext.getAttribute("tbs_exteriorfinish").getValue();
+        const exteriorcolorcategory = formContext.getAttribute("tbs_quoteexteriorcolorcategory")?.getValue();
 
         if (!product || !finish)
             return;
@@ -386,6 +406,11 @@ Falk.QuoteProduct = {
         const FRW42PanelId = Falk.QuoteProduct.FRW42PanelId;
 
         let fetchXml = "";
+        let exteriorcolorCategoryCondition = "";
+
+        if (exteriorcolorcategory !== null && exteriorcolorcategory !== undefined) {
+            exteriorcolorCategoryCondition = "<condition attribute='tbs_colorcategory' " + "operator='eq' value='" + exteriorcolorcategory + "' />";
+        }
 
         if (FRW42PanelId && FRW42PanelId.replace(/[{}]/g, "").toLowerCase() === productId.toLowerCase()) {
             fetchXml =
@@ -393,8 +418,9 @@ Falk.QuoteProduct = {
                 " <entity name='tbs_color'>" +
                 "   <attribute name='tbs_name' />" +
                 "   <order attribute='tbs_name' />" +
-                "   <filter>" +
+                "   <filter type='and'>" +
                 "      <condition attribute='tbs_paneltype' operator='eq' value='" + productId + "' />" +
+                            exteriorcolorCategoryCondition +
                 "   </filter>" +
                 " </entity>" +
                 "</fetch>";
@@ -405,6 +431,10 @@ Falk.QuoteProduct = {
                 " <entity name='tbs_color'>" +
                 "   <attribute name='tbs_name' />" +
                 "   <order attribute='tbs_name' />" +
+                "   <filter type='and'>" +
+                "       <condition attribute='statecode' operator='eq' value='0' />" +
+                            exteriorcolorCategoryCondition +
+                "   </filter>" +
                 "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
                 "       <filter>" +
                 "           <condition attribute='tbs_finishid' operator='eq' value='" + finishId + "' />" +
@@ -434,6 +464,7 @@ Falk.QuoteProduct = {
     addInteriorColorView: async function (formContext) {
         const product = formContext.getAttribute("productid").getValue();
         const finish = formContext.getAttribute("tbs_interiorfinish").getValue();
+        const interiorcolorcategory = formContext.getAttribute("tbs_quoteinteriorcolorcategory")?.getValue();
 
         if (!product || !finish)
             return;
@@ -444,6 +475,11 @@ Falk.QuoteProduct = {
         const FRW42PanelId = Falk.QuoteProduct.FRW42PanelId;
 
         let fetchXml = "";
+        let interiorcolorCategoryCondition = "";
+
+        if (interiorcolorcategory !== null && interiorcolorcategory !== undefined) {
+            interiorcolorCategoryCondition = "<condition attribute='tbs_colorcategory' " + "operator='eq' value='" + interiorcolorcategory + "' />";
+        }
 
         if (FRW42PanelId && FRW42PanelId.replace(/[{}]/g, "").toLowerCase() === productId.toLowerCase()) {
             fetchXml =
@@ -451,8 +487,9 @@ Falk.QuoteProduct = {
                 " <entity name='tbs_color'>" +
                 "   <attribute name='tbs_name' />" +
                 "   <order attribute='tbs_name' />" +
-                "   <filter>" +
+                "   <filter type='and'>" +
                 "      <condition attribute='tbs_paneltype' operator='eq' value='" + productId + "' />" +
+                        interiorcolorCategoryCondition +
                 "   </filter>" +
                 " </entity>" +
                 "</fetch>";
@@ -463,6 +500,10 @@ Falk.QuoteProduct = {
                 " <entity name='tbs_color'>" +
                 "   <attribute name='tbs_name' />" +
                 "   <order attribute='tbs_name' />" +
+                "   <filter type='and'>" +
+                "       <condition attribute='statecode' operator='eq' value='0' />" +
+                            interiorcolorCategoryCondition +
+                "   </filter>" +
                 "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
                 "       <filter>" +
                 "           <condition attribute='tbs_finishid' operator='eq' value='" + finishId + "' />" +
