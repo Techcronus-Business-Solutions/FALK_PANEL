@@ -18,6 +18,8 @@ namespace Falk_Plugins
         private ITracingService tracingService { get; set; }
         private IOrganizationServiceFactory factory { get; set; }
         private Entity targetEntity { get; set; }
+
+        private Entity PreImage { get; set; }
         #endregion
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
         {
@@ -33,15 +35,49 @@ namespace Falk_Plugins
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
                 {
                     targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
+                    if(targetEntity.LogicalName == "salesorder")
+                    {
+                        EntityReference customer = targetEntity.GetAttributeValue<EntityReference>("customerid");
+                        if (customer != null && customer.LogicalName == "account")
+                        {
+                            Entity account = service.Retrieve("account", customer.Id, new ColumnSet("customertypecode"));
+                            if (account != null)
+                            {
+                                OptionSetValue relationshipType = account.GetAttributeValue<OptionSetValue>("customertypecode");
+                                if (relationshipType != null && relationshipType.Value == 3)
+                                {
+                                    
+                                }
+                                else
+                                {
+                                    throw new InvalidPluginExecutionException("Potential customer relationship type is not customer please select valid customer.");
+                                }
+                            }
+                            else
+                            {
+                                throw new InvalidPluginExecutionException("Potential customer is not slected.");
+                            }
+                        }
+                    }
                     if (targetEntity.LogicalName == "salesorderdetail")
                     {
-                        if(context.MessageName == CONST_CREATE && context.Stage == PreOperation)
+                        if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
                         {
+                            GenerateProductForOrderProduct();
+                        }
+                        if (context.MessageName == CONST_UPDATE && context.Stage == PreOperation)
+                        {
+                            tracingService.Trace("Update - PreOperation");
+                            if (context.PreEntityImages.Contains("PreImage"))
+                            {
+                                tracingService.Trace("Pre-Image exist");
+                                PreImage = context.PreEntityImages["PreImage"];
+                            }
                             GenerateProductForOrderProduct();
                         }
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
-                            Entity orderProduct = service.Retrieve("salesorderdetail", targetEntity.Id,new ColumnSet("tbs_quoteproduct"));
+                            Entity orderProduct = service.Retrieve("salesorderdetail", targetEntity.Id, new ColumnSet("tbs_quoteproduct"));
 
                             EntityReference quoteProductRef = orderProduct.GetAttributeValue<EntityReference>("tbs_quoteproduct");
 
@@ -91,13 +127,16 @@ namespace Falk_Plugins
 
                 product["name"] = productId;
                 product["productnumber"] = productId;
+                product["defaultuomscheduleid"] = new EntityReference("uomschedule", new Guid("e92c2142-e0fc-4690-9e21-f127883628e3"));
+                product["defaultuomid"] = new EntityReference("uom", new Guid("86f26153-1710-48d4-b2f3-36e4b128422e"));
+                product["quantitydecimal"] = 0;
 
                 productGuid = service.Create(product);
 
                 tracingService.Trace("New Product created: " + productGuid);
             }
 
-            targetEntity["productid"] = new EntityReference("product", productGuid);
+            targetEntity["tbs_bcitemid"] = productId;
 
             tracingService.Trace("Product lookup set on Order Product.");
         }
@@ -128,34 +167,108 @@ namespace Falk_Plugins
 
             string scheme = "A";
 
-            string panelFamily = GetLookupCode("tbs_panelfamily");
+            string panelFamily = GetLookupCode("productid");
 
             string thickness = GetLookupCode("tbs_panelthickness");
 
-            string core = GetLookupCode("tbs_core");
+            //get from product
+            string core = GetCore("productid");
+            tracingService.Trace(core);
 
             string exteriorFinish = GetLookupCode("tbs_exteriorfinish");
+            tracingService.Trace(exteriorFinish);
 
             string exteriorColor = GetLookupCode("tbs_exteriorcolor");
+            tracingService.Trace(exteriorColor);
 
             string exteriorGauge = GetLookupCode("tbs_exteriorgauge");
+            tracingService.Trace(exteriorGauge);
 
             string exteriorProfile = GetLookupCode("tbs_exteriorprofile");
+            tracingService.Trace(exteriorProfile);
 
-            string exteriorEmboss = GetLookupCode("tbs_exterioremboss");
+            //Yes/No
+
+
+            int exteriorEmbossint;
+            OptionSetValue exteriorEmbossOption = null;
+
+            if (targetEntity.Contains("tbs_exterioremboss"))
+            {
+                exteriorEmbossOption = targetEntity.GetAttributeValue<OptionSetValue>("tbs_exterioremboss");
+            }
+            else if (PreImage != null && PreImage.Contains("tbs_exterioremboss"))
+            {
+                exteriorEmbossOption = PreImage.GetAttributeValue<OptionSetValue>("tbs_exterioremboss");
+            }
+
+            if (exteriorEmbossOption == null)
+            {
+                throw new InvalidPluginExecutionException("Required field 'tbs_exterioremboss' is empty.");
+            }
+
+            exteriorEmbossint = exteriorEmbossOption.Value;
+
+            string exteriorEmboss;
+
+            if (exteriorEmbossint == 1)
+            {
+                exteriorEmboss = "N";
+            }
+            else
+            {
+                exteriorEmboss = "Y";
+            }
+
+            tracingService.Trace("Exterior Emboss: " + exteriorEmboss);
 
             string interiorFinish = GetLookupCode("tbs_interiorfinish");
+            tracingService.Trace(interiorFinish);
 
             string interiorColor = GetLookupCode("tbs_interiorcolor");
+            tracingService.Trace(interiorColor);
 
             string interiorGauge = GetLookupCode("tbs_interiorgauge");
+            tracingService.Trace(interiorGauge);
 
             string interiorProfile = GetLookupCode("tbs_interiorprofile");
+            tracingService.Trace(interiorProfile);
 
-            string interiorEmboss = GetLookupCode("tbs_interioremboss");
+            //Yes/No
+            int interiorEmbossint;
+            OptionSetValue interiorEmbossOption = null;
+
+            if (targetEntity.Contains("tbs_interioremboss"))
+            {
+                interiorEmbossOption = targetEntity.GetAttributeValue<OptionSetValue>("tbs_interioremboss");
+            }
+            else if (PreImage != null && PreImage.Contains("tbs_interioremboss"))
+            {
+                interiorEmbossOption = PreImage.GetAttributeValue<OptionSetValue>("tbs_interioremboss");
+            }
+
+            if (interiorEmbossOption == null)
+            {
+                throw new InvalidPluginExecutionException("Required field 'tbs_interioremboss' is empty.");
+            }
+
+            interiorEmbossint = interiorEmbossOption.Value;
+
+            string interiorEmboss;
+
+            if (interiorEmbossint == 1)
+            {
+                interiorEmboss = "N";
+            }
+            else
+            {
+                interiorEmboss = "Y";
+            }
+
+            tracingService.Trace("Interior Emboss: " + interiorEmboss);
 
             string productId = scheme + panelFamily + thickness + core + exteriorFinish + exteriorColor + exteriorGauge + exteriorProfile + exteriorEmboss + interiorFinish + interiorColor + interiorGauge + interiorProfile + interiorEmboss;
-
+            tracingService.Trace(productId);
 
             tracingService.Trace("Final Product ID: " + productId);
 
@@ -169,8 +282,19 @@ namespace Falk_Plugins
 
         private string GetLookupCode(string lookupField)
         {
-            EntityReference lookup = targetEntity.GetAttributeValue<EntityReference>(lookupField);
-
+            EntityReference lookup;
+            if (PreImage != null)
+            {
+                tracingService.Trace("PreImage not null");
+                lookup = targetEntity.Contains(lookupField) ? targetEntity.GetAttributeValue<EntityReference>(lookupField) : PreImage.GetAttributeValue<EntityReference>(lookupField);
+                tracingService.Trace(lookup.Id.ToString());
+            }
+            else
+            {
+                tracingService.Trace("PreImage null");
+                lookup = targetEntity.Contains(lookupField) ? targetEntity.GetAttributeValue<EntityReference>(lookupField) : null;
+                tracingService.Trace(lookup.Id.ToString());
+            }
             if (lookup == null)
             {
                 throw new InvalidPluginExecutionException("Required field '" + lookupField + "' is empty.");
@@ -178,7 +302,50 @@ namespace Falk_Plugins
 
             Entity lookupRecord = service.Retrieve(lookup.LogicalName, lookup.Id, new ColumnSet("tbs_code"));
 
-            string code = lookupRecord.GetAttributeValue<string>("tbs_code");
+            string code = lookupRecord.Contains("tbs_code") ? lookupRecord.GetAttributeValue<string>("tbs_code") : null;
+
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                throw new InvalidPluginExecutionException("Code is not configured for " + lookupField + ".");
+            }
+            return code.Trim().ToUpperInvariant();
+        }
+        private string GetCore(string lookupField)
+        {
+            EntityReference lookup;
+            if (PreImage != null)
+            {
+                tracingService.Trace("PreImage not null");
+                lookup = targetEntity.Contains(lookupField) ? targetEntity.GetAttributeValue<EntityReference>(lookupField) : PreImage.GetAttributeValue<EntityReference>(lookupField);
+                tracingService.Trace(lookup.Id.ToString());
+            }
+            else
+            {
+                tracingService.Trace("PreImage null");
+                lookup = targetEntity.Contains(lookupField) ? targetEntity.GetAttributeValue<EntityReference>(lookupField) : null;
+                tracingService.Trace(lookup.Id.ToString());
+            }
+
+            if (lookup == null)
+            {
+                throw new InvalidPluginExecutionException("Required field '" + lookupField + "' is empty.");
+            }
+
+            QueryExpression query = new QueryExpression("product");
+
+            LinkEntity core = query.AddLink("tbs_core", "tbs_core", "tbs_coreid");
+            core.EntityAlias = "core";
+            core.Columns.AddColumn("tbs_code");
+
+            query.ColumnSet = new ColumnSet(true);
+            query.Criteria.AddCondition("productid", ConditionOperator.Equal, lookup.Id);
+            EntityCollection lookupRecord = service.RetrieveMultiple(query);
+
+            if (lookupRecord.Entities.FirstOrDefault() == null)
+            {
+                throw new InvalidPluginExecutionException("Required field '" + core + "' is empty.");
+            }
+            string code = lookupRecord.Entities.FirstOrDefault().GetAttributeValue<AliasedValue>("core.tbs_code").Value.ToString();
 
             if (string.IsNullOrWhiteSpace(code))
             {
@@ -191,9 +358,9 @@ namespace Falk_Plugins
         {
             QueryExpression query = new QueryExpression("product");
 
-            query.ColumnSet = new ColumnSet("productid","productnumber");
+            query.ColumnSet = new ColumnSet("productid", "productnumber");
 
-            query.Criteria.AddCondition("productnumber",ConditionOperator.Equal,productId);
+            query.Criteria.AddCondition("productnumber", ConditionOperator.Equal, productId);
 
             query.TopCount = 2;
 
@@ -251,7 +418,7 @@ namespace Falk_Plugins
 
                 foreach (var attribute in quoteAccessory.Attributes)
                 {
-                    if (attribute.Key == "tbs_quotepanelaccessoryid" ||attribute.Key == "tbs_quoteproduct")
+                    if (attribute.Key == "tbs_quotepanelaccessoryid" || attribute.Key == "tbs_quoteproduct")
                         continue;
 
                     orderAccessory[attribute.Key] = attribute.Value;

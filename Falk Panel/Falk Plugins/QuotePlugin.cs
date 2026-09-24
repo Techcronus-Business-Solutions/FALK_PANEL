@@ -62,7 +62,7 @@ namespace Falk_Plugins
         private void CreatequoteLineItems(EntityReference quoteProductRef, EntityReference oppProductRef)
         {
             QueryExpression query = new QueryExpression("tbs_lineitem");
-            query.ColumnSet = new ColumnSet(true);
+            query.ColumnSet = new ColumnSet("tbs_numberofpanels", "tbs_ft", "tbs_in", "tbs_cbmode", "tbs_cblengthinch", "tbs_linearftinch", "tbs_totalsqft", "tbs_widthpanel");
             query.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, oppProductRef.Id);
 
             EntityCollection lineitems = service.RetrieveMultiple(query);
@@ -77,15 +77,22 @@ namespace Falk_Plugins
 
                 foreach (var attribute in oppLineItems.Attributes)
                 {
+                    tracingService.Trace("attribute = " + attribute);
                     if (attribute.Key == "tbs_lineitemid" || attribute.Key == "tbs_opportunityproduct")
                         continue;
+                    tracingService.Trace("Before assigning: " + attribute.Key);
 
                     quoteLineItems[attribute.Key] = attribute.Value;
+
+                    tracingService.Trace("After assigning: " + attribute.Key);
                 }
 
+                tracingService.Trace("Finished copying all attributes.");
                 quoteLineItems["tbs_quoteproduct"] = quoteProductRef;
 
-                service.Create(quoteLineItems);
+                tracingService.Trace("Before service.Create(quoteLineItems)");
+                Guid createdId = service.Create(quoteLineItems);
+                tracingService.Trace("After service.Create(quoteLineItems): " + createdId);
             }
         }
 
