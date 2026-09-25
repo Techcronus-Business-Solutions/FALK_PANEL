@@ -1,6 +1,7 @@
 ﻿using Falk_Plugins.Pricing_Master;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -123,12 +124,22 @@ namespace Falk_Plugins
             }
             else
             {
+                JObject defaultUnitSetup = JObject.Parse(GetEnvironmentVariable(service, "tbs_DefaultUnitSetup"));
+
+                Guid uomScheduleId = Guid.Parse(
+                    defaultUnitSetup["uomschedule"].ToString()
+                );
+
+                Guid uomId = Guid.Parse(
+                    defaultUnitSetup["uom"].ToString()
+                );
+
                 Entity product = new Entity("product");
 
                 product["name"] = productId;
                 product["productnumber"] = productId;
-                product["defaultuomscheduleid"] = new EntityReference("uomschedule", new Guid("e92c2142-e0fc-4690-9e21-f127883628e3"));
-                product["defaultuomid"] = new EntityReference("uom", new Guid("86f26153-1710-48d4-b2f3-36e4b128422e"));
+                product["defaultuomscheduleid"] = new EntityReference("uomschedule", uomScheduleId);
+                product["defaultuomid"] = new EntityReference("uom", uomId);
                 product["quantitydecimal"] = 0;
 
                 productGuid = service.Create(product);

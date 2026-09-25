@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Globalization;
 using System.ServiceModel;
@@ -302,6 +303,44 @@ namespace Falk_Plugins
             };
 
             return multipleExecuteRequest;
+        }
+
+        public static string GetEnvironmentVariable(IOrganizationService service, string schemaName)
+        {
+            // Query to get the environment variable definition
+            QueryExpression query = new QueryExpression("environmentvariabledefinition")
+            {
+                ColumnSet = new ColumnSet("environmentvariabledefinitionid", "defaultvalue"),
+                Criteria = new FilterExpression
+                {
+                    Conditions =
+                    {
+                        new ConditionExpression("schemaname", ConditionOperator.Equal, schemaName)
+                    }
+                },
+                LinkEntities =
+                {
+                    new LinkEntity
+                    {
+                        LinkFromEntityName = "environmentvariabledefinition",
+                        LinkFromAttributeName = "environmentvariabledefinitionid",
+                        LinkToEntityName = "environmentvariablevalue",
+                        LinkToAttributeName = "environmentvariabledefinitionid",
+                        Columns = new ColumnSet("value"),
+                        EntityAlias = "env",
+                        JoinOperator = JoinOperator.LeftOuter
+                    }
+                }
+            };
+
+            var result = service.RetrieveMultiple(query).Entities.FirstOrDefault();
+
+            if (result != null)
+            {
+                return result.Contains("env.value") ? (string)result.GetAttributeValue<AliasedValue>("env.value").Value : result.GetAttributeValue<string>("defaultvalue");
+            }
+
+            return null;
         }
     }
 }
