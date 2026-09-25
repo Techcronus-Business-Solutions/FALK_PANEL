@@ -118,9 +118,9 @@ namespace Falk_Console
                     //    organizationService.Update(thickness);
                     //}
 
-                    //ImportaccesoryData.ImportData(organizationService);
+                    ImportaccesoryData.ImportData(organizationService);
                     //ImportTrim.importTrim(organizationService);
-                    DeleteAllChoiceOptions(organizationService, "quote", "")
+                    //DeleteAllChoiceOptions(organizationService, "quote", "")
                 }
             }
             catch (Exception ex)

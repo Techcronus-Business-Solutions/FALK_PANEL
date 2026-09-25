@@ -7,6 +7,7 @@ using System.Activities.Statements;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using static Falk_Console.ImportAccessory;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 
 namespace Falk_Console
@@ -67,7 +68,7 @@ namespace Falk_Console
 
                                 AccessoryRecord["tbs_salesid"] = SalesID;
 
-                                AccessoryRecord["tbs_description"] = Description;
+                                AccessoryRecord["tbs_name"] = Description;
 
                                 if (!string.IsNullOrEmpty(LegacyDescription))
                                 {
@@ -76,14 +77,52 @@ namespace Falk_Console
 
                                 if (CategoryEntity != null)
                                 {
-                                    AccessoryRecord["tbs_itemcategory"] = new EntityReference("tbs_itemcategory",CategoryEntity.Id);
+                                    AccessoryRecord["tbs_itemcategory"] = new EntityReference("tbs_itemcategory", CategoryEntity.Id);
                                 }
 
-                                AccessoryRecord["tbs_accessorypricing"] = new EntityReference("tbs_accessorypricing",AccessoryPricing.Id);
+                                AccessoryRecord["tbs_accessorypricing"] = new EntityReference("tbs_accessorypricing", AccessoryPricing.Id);
+                                Guid AccessoryId = Guid.Empty;
 
-                                Guid AccessoryId = service.Create(AccessoryRecord);
+                                try
+                                {
+                                    AccessoryId = service.Create(AccessoryRecord);
 
-                                Console.WriteLine("Accessory Created Successfully. ID: " + AccessoryId);
+                                    Console.WriteLine("Accessory Created Successfully. ID: " + AccessoryId);
+                                }
+                                catch (Exception ex)
+                                {
+                                    if (ex.Message.Contains("Entity Key Legacy Description and Description violated"))
+                                    {
+                                        Console.WriteLine("Duplicate Accessory found. Finding existing record...");
+                                        QueryExpression ExistingAccessoryQuery = new QueryExpression("tbs_accessory");
+
+                                        ExistingAccessoryQuery.ColumnSet = new ColumnSet(false);
+
+                                        ExistingAccessoryQuery.Criteria.AddCondition("tbs_legacydescription",ConditionOperator.Equal,LegacyDescription);
+
+                                        ExistingAccessoryQuery.Criteria.AddCondition("tbs_name",ConditionOperator.Equal,Description);
+
+                                        EntityCollection ExistingAccessoryCollection = service.RetrieveMultiple(ExistingAccessoryQuery);
+
+                                        if (ExistingAccessoryCollection.Entities.Count > 0)
+                                        {
+                                            AccessoryId = ExistingAccessoryCollection.Entities[0].Id;
+
+                                            Console.WriteLine("Existing Accessory found. ID: "+ AccessoryId);
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine("Duplicate exception occurred, but existing Accessory could not be found.");
+                                            continue;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Some other exception
+                                        Console.WriteLine("Error creating Accessory: "+ ex.Message);
+                                        continue;
+                                    }
+                                }
                                 if (!string.IsNullOrEmpty(Panel))
                                 {
                                     string[] PanelParts = Panel.Trim().Split(' ');
@@ -91,22 +130,22 @@ namespace Falk_Console
                                     if (PanelParts.Length >= 2)
                                     {
                                         string ThicknessNumberText = PanelParts[PanelParts.Length - 1];
-                                        string PanelTypeName = string.Join(" ",PanelParts.Take(PanelParts.Length - 1));
+                                        string PanelTypeName = string.Join(" ", PanelParts.Take(PanelParts.Length - 1));
 
-                                        Console.WriteLine("Panel Type: "+ PanelTypeName);
+                                        Console.WriteLine("Panel Type: " + PanelTypeName);
 
-                                        Console.WriteLine("Thickness Number: "+ ThicknessNumberText);
+                                        Console.WriteLine("Thickness Number: " + ThicknessNumberText);
 
                                         // 5. Convert Thickness Number
                                         decimal ThicknessNumber;
-                                        if (decimal.TryParse(ThicknessNumberText,out ThicknessNumber))
+                                        if (decimal.TryParse(ThicknessNumberText, out ThicknessNumber))
                                         {
                                             // 6. Find Panel Type
-                                            QueryExpression PanelTypeQuery = new QueryExpression("tbs_paneltype");
+                                            QueryExpression PanelTypeQuery = new QueryExpression("product");
 
                                             PanelTypeQuery.ColumnSet = new ColumnSet(false);
 
-                                            PanelTypeQuery.Criteria.AddCondition("tbs_name",ConditionOperator.Equal,PanelTypeName);
+                                            PanelTypeQuery.Criteria.AddCondition("name", ConditionOperator.Equal, PanelTypeName);
 
                                             EntityCollection PanelTypeCollection = service.RetrieveMultiple(PanelTypeQuery);
 
@@ -114,17 +153,17 @@ namespace Falk_Console
                                             {
                                                 Entity PanelTypeEntity = PanelTypeCollection.Entities[0];
 
-                                                Console.WriteLine("Panel Type Found: "+ PanelTypeName);
+                                                Console.WriteLine("Panel Type Found: " + PanelTypeName);
                                                 // 7. Find Thickness
 
                                                 QueryExpression ThicknessQuery = new QueryExpression("tbs_thickness");
 
                                                 ThicknessQuery.ColumnSet = new ColumnSet(false);
                                                 // Thickness Number
-                                                ThicknessQuery.Criteria.AddCondition("tbs_thicknessnumber",ConditionOperator.Equal,ThicknessNumber);
+                                                ThicknessQuery.Criteria.AddCondition("tbs_thicknessnumber", ConditionOperator.Equal, ThicknessNumber);
 
                                                 // Panel Type Lookup
-                                                ThicknessQuery.Criteria.AddCondition("tbs_paneltype",ConditionOperator.Equal,PanelTypeEntity.Id);
+                                                ThicknessQuery.Criteria.AddCondition("tbs_product", ConditionOperator.Equal, PanelTypeEntity.Id);
 
                                                 EntityCollection ThicknessCollection = service.RetrieveMultiple(ThicknessQuery);
 
@@ -132,7 +171,7 @@ namespace Falk_Console
                                                 {
                                                     Entity ThicknessEntity = ThicknessCollection.Entities[0];
 
-                                                    Console.WriteLine("Thickness Found: "+ Panel);
+                                                    Console.WriteLine("Thickness Found: " + Panel);
 
                                                     // 8. Establish N:N Relationship
 
@@ -140,14 +179,14 @@ namespace Falk_Console
                                                         "tbs_accessory",
                                                         AccessoryId,
                                                         new Relationship("tbs_accessory_tbs_thickness_tbs_thickness"),
-                                                        new EntityReferenceCollection{new EntityReference("tbs_thickness",ThicknessEntity.Id)}
+                                                        new EntityReferenceCollection { new EntityReference("tbs_thickness", ThicknessEntity.Id) }
                                                     );
 
-                                                    Console.WriteLine("Thickness associated successfully: "+ Panel + Accessory.Description);
+                                                    Console.WriteLine("Thickness associated successfully: " + Panel + Accessory.Description);
                                                 }
                                                 else
                                                 {
-                                                    Console.WriteLine("Thickness not found. " +"Panel Type: "+ PanelTypeName +", Thickness Number: "+ ThicknessNumber);
+                                                    Console.WriteLine("Thickness not found. " + "Panel Type: " + PanelTypeName + ", Thickness Number: " + ThicknessNumber);
                                                 }
                                             }
                                             else
@@ -157,12 +196,12 @@ namespace Falk_Console
                                         }
                                         else
                                         {
-                                            Console.WriteLine("Invalid Thickness Number: "+ ThicknessNumberText);
+                                            Console.WriteLine("Invalid Thickness Number: " + ThicknessNumberText);
                                         }
                                     }
                                     else
                                     {
-                                        Console.WriteLine("Invalid Panel format: "+ Panel);
+                                        Console.WriteLine("Invalid Panel format: " + Panel);
                                     }
                                 }
                             }
@@ -170,11 +209,15 @@ namespace Falk_Console
                             {
                                 Console.WriteLine("Item Id not found " + ItemId);
                             }
-                        }                      
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.Message);
+                        if (ex.Message == "Entity Key Legacy Description and Description violated. A record with the same value for Legacy Description, Description already exists. A duplicate record cannot be created. Select one or more unique values and try again.")
+                        {
+                            Console.WriteLine(ex.Message);
+                            continue;
+                        }
                     }
                 }
                 Console.WriteLine("Complete");
