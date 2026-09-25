@@ -1,6 +1,8 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Drawing.Diagrams;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using Microsoft.Xrm.Tooling.Connector;
 using System;
@@ -116,8 +118,9 @@ namespace Falk_Console
                     //    organizationService.Update(thickness);
                     //}
 
-                    //ImportAccessory.importAccessory(organizationService);
-                    ImportTrim.importTrim(organizationService);
+                    //ImportaccesoryData.ImportData(organizationService);
+                    //ImportTrim.importTrim(organizationService);
+                    DeleteAllChoiceOptions(organizationService, "quote", "")
                 }
             }
             catch (Exception ex)
@@ -126,6 +129,46 @@ namespace Falk_Console
             }
         }
 
+        public static void DeleteAllChoiceOptions(IOrganizationService service,string entityLogicalName,string attributeLogicalName)
+        {
+            // Retrieve attribute metadata
+            var request = new RetrieveAttributeRequest
+            {
+                EntityLogicalName = entityLogicalName,
+                LogicalName = attributeLogicalName,
+                RetrieveAsIfPublished = true
+            };
+
+            var response = (RetrieveAttributeResponse)service.Execute(request);
+
+            var optionSetMetadata =
+                response.AttributeMetadata as PicklistAttributeMetadata;
+
+            if (optionSetMetadata == null)
+                throw new Exception("The specified field is not a Choice field.");
+
+            // Get all options
+            var options = optionSetMetadata.OptionSet.Options;
+
+            foreach (var option in options)
+            {
+                if (option.Value.HasValue)
+                {
+                    Console.WriteLine($"({option.Value.Value})");
+
+                    var deleteRequest = new DeleteOptionValueRequest
+                    {
+                        EntityLogicalName = entityLogicalName,
+                        AttributeLogicalName = attributeLogicalName,
+                        Value = option.Value.Value
+                    };
+
+                    service.Execute(deleteRequest);
+                }
+            }
+
+            Console.WriteLine("All options deleted.");
+        }
         static Guid GetAccessory(IOrganizationService service, string description, string legacyDescription)
         {
             QueryExpression qe = new QueryExpression("tbs_trim");
@@ -180,15 +223,15 @@ namespace Falk_Console
                     new Relationship("tbs_trim_tbs_thickness_tbs_thickness"),
                     related);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                
-                if(ex.Message != "Cannot insert duplicate key.")
+
+                if (ex.Message != "Cannot insert duplicate key.")
                 {
                     Console.WriteLine(ex.Message);
                 }
             }
-            
+
         }
     }
 }

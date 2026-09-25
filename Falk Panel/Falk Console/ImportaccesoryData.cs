@@ -17,59 +17,160 @@ namespace Falk_Console
         {
             try
             {
-
                 var ExcelData = ReadExcelData();
 
-                foreach (var Trim in ExcelData)
+                foreach (var Accessory in ExcelData)
                 {
                     try
                     {
-                        string ItemID = Trim.ItemID;
-                        string Description = Trim.Description;
-                        string SalesID = Trim.SalesId;
+                        string Panel = Accessory.Panel;
+                        string LegacyDescription = Accessory.LegacyDescription;
+                        string Description = Accessory.Description;
+                        string Category = Accessory.Category;
+                        string SalesID = Accessory.SalesId;
+                        string ItemId = Accessory.ItemId;
 
-                        QueryExpression queryExpression = new QueryExpression("tbs_accessorypricing");
-                        queryExpression.ColumnSet = new ColumnSet(false);
-                        queryExpression.Criteria.AddCondition("tbs_itemid", ConditionOperator.Equal, ItemID);
-                        EntityCollection ItemId = service.RetrieveMultiple(queryExpression);
-
-                        if (ItemId.Entities.Count > 0)
+                        if (!string.IsNullOrEmpty(ItemId))
                         {
-                            QueryExpression query = new QueryExpression("tbs_accessory");
-                            query.ColumnSet = new ColumnSet(true);
-                            query.Criteria.AddCondition("tbs_salesid", ConditionOperator.Equal, SalesID);
-                            query.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, Description);
+                            QueryExpression queryExpressionPricing = new QueryExpression("tbs_accessorypricing");
+                            queryExpressionPricing.ColumnSet = new ColumnSet(false);
+                            queryExpressionPricing.Criteria.AddCondition("tbs_itemid", ConditionOperator.Equal, ItemId);
+                            EntityCollection ItemIdEntColl = service.RetrieveMultiple(queryExpressionPricing);
 
-                            query.Criteria.AddCondition("tbs_accessorypricing", ConditionOperator.Equal, ItemId.Entities.FirstOrDefault().Id);
-
-                            EntityCollection acc = service.RetrieveMultiple(query);
-
-                            if (acc.Entities.Count > 1)
+                            if (ItemIdEntColl.Entities.Count > 0)
                             {
-                                Console.WriteLine(ItemID);
-                                Console.WriteLine("Multiple Records found");
-                                foreach (var entity in acc.Entities)
+                                Console.WriteLine("Item Id Found " + ItemId);
+
+                                Entity AccessoryPricing = ItemIdEntColl.Entities[0];
+
+                                Entity CategoryEntity = null;
+
+                                if (!string.IsNullOrEmpty(Category))
                                 {
-                                    Console.WriteLine(entity.Id);
+                                    QueryExpression queryExpressionCategory = new QueryExpression("tbs_itemcategory");
+                                    queryExpressionCategory.ColumnSet = new ColumnSet(false);
+                                    queryExpressionCategory.Criteria.AddCondition("tbs_categoryname", ConditionOperator.Equal, Category);
+                                    EntityCollection CategoryEntColl = service.RetrieveMultiple(queryExpressionCategory);
+
+                                    if (CategoryEntColl.Entities.Count > 0)
+                                    {
+                                        CategoryEntity = CategoryEntColl.Entities[0];
+
+                                        Console.WriteLine("Category Found: " + Category);
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("Category not found: " + Category);
+                                    }
                                 }
-                                continue;
-                            }
+                                Entity AccessoryRecord = new Entity("tbs_accessory");
 
-                            Entity accEnt = acc.Entities.FirstOrDefault();
+                                AccessoryRecord["tbs_salesid"] = SalesID;
 
-                            if (accEnt != null)
-                            {
-                                Console.WriteLine("Match Found for - " + Description);
+                                AccessoryRecord["tbs_description"] = Description;
+
+                                if (!string.IsNullOrEmpty(LegacyDescription))
+                                {
+                                    AccessoryRecord["tbs_legacydescription"] = LegacyDescription;
+                                }
+
+                                if (CategoryEntity != null)
+                                {
+                                    AccessoryRecord["tbs_itemcategory"] = new EntityReference("tbs_itemcategory",CategoryEntity.Id);
+                                }
+
+                                AccessoryRecord["tbs_accessorypricing"] = new EntityReference("tbs_accessorypricing",AccessoryPricing.Id);
+
+                                Guid AccessoryId = service.Create(AccessoryRecord);
+
+                                Console.WriteLine("Accessory Created Successfully. ID: " + AccessoryId);
+                                if (!string.IsNullOrEmpty(Panel))
+                                {
+                                    string[] PanelParts = Panel.Trim().Split(' ');
+
+                                    if (PanelParts.Length >= 2)
+                                    {
+                                        string ThicknessNumberText = PanelParts[PanelParts.Length - 1];
+                                        string PanelTypeName = string.Join(" ",PanelParts.Take(PanelParts.Length - 1));
+
+                                        Console.WriteLine("Panel Type: "+ PanelTypeName);
+
+                                        Console.WriteLine("Thickness Number: "+ ThicknessNumberText);
+
+                                        // 5. Convert Thickness Number
+                                        decimal ThicknessNumber;
+                                        if (decimal.TryParse(ThicknessNumberText,out ThicknessNumber))
+                                        {
+                                            // 6. Find Panel Type
+                                            QueryExpression PanelTypeQuery = new QueryExpression("tbs_paneltype");
+
+                                            PanelTypeQuery.ColumnSet = new ColumnSet(false);
+
+                                            PanelTypeQuery.Criteria.AddCondition("tbs_name",ConditionOperator.Equal,PanelTypeName);
+
+                                            EntityCollection PanelTypeCollection = service.RetrieveMultiple(PanelTypeQuery);
+
+                                            if (PanelTypeCollection.Entities.Count > 0)
+                                            {
+                                                Entity PanelTypeEntity = PanelTypeCollection.Entities[0];
+
+                                                Console.WriteLine("Panel Type Found: "+ PanelTypeName);
+                                                // 7. Find Thickness
+
+                                                QueryExpression ThicknessQuery = new QueryExpression("tbs_thickness");
+
+                                                ThicknessQuery.ColumnSet = new ColumnSet(false);
+                                                // Thickness Number
+                                                ThicknessQuery.Criteria.AddCondition("tbs_thicknessnumber",ConditionOperator.Equal,ThicknessNumber);
+
+                                                // Panel Type Lookup
+                                                ThicknessQuery.Criteria.AddCondition("tbs_paneltype",ConditionOperator.Equal,PanelTypeEntity.Id);
+
+                                                EntityCollection ThicknessCollection = service.RetrieveMultiple(ThicknessQuery);
+
+                                                if (ThicknessCollection.Entities.Count > 0)
+                                                {
+                                                    Entity ThicknessEntity = ThicknessCollection.Entities[0];
+
+                                                    Console.WriteLine("Thickness Found: "+ Panel);
+
+                                                    // 8. Establish N:N Relationship
+
+                                                    service.Associate(
+                                                        "tbs_accessory",
+                                                        AccessoryId,
+                                                        new Relationship("tbs_accessory_tbs_thickness_tbs_thickness"),
+                                                        new EntityReferenceCollection{new EntityReference("tbs_thickness",ThicknessEntity.Id)}
+                                                    );
+
+                                                    Console.WriteLine("Thickness associated successfully: "+ Panel + Accessory.Description);
+                                                }
+                                                else
+                                                {
+                                                    Console.WriteLine("Thickness not found. " +"Panel Type: "+ PanelTypeName +", Thickness Number: "+ ThicknessNumber);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine("Panel Type not found: " + PanelTypeName);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine("Invalid Thickness Number: "+ ThicknessNumberText);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("Invalid Panel format: "+ Panel);
+                                    }
+                                }
                             }
                             else
                             {
-                                Console.WriteLine("Match Not Found for - " + Description);
+                                Console.WriteLine("Item Id not found " + ItemId);
                             }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Item Id not found " + ItemID);
-                        }
+                        }                      
                     }
                     catch (Exception ex)
                     {
@@ -84,27 +185,30 @@ namespace Falk_Console
             }
         }
 
-        public static List<AccessoryPricingModel> ReadExcelData()
+        public static List<AccessoryModel> ReadExcelData()
         {
             try
             {
-                List<AccessoryPricingModel> TrimList = new List<AccessoryPricingModel>();
+                List<AccessoryModel> TrimList = new List<AccessoryModel>();
                 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-                string FilePath = @"C:\Users\admin\Downloads\Old vs new accessories.xlsx";
+                string FilePath = @"C:\Users\admin\Downloads\Final accessories.xlsx";
                 using (var Package = new ExcelPackage(new FileInfo(FilePath)))
                 {
-                    var Worksheet = Package.Workbook.Worksheets.FirstOrDefault();
+                    var Worksheet = Package.Workbook.Worksheets["Accessories"];
                     if (Worksheet != null)
                     {
                         int RowCount = Worksheet.Dimension.Rows;
                         for (int Row = 2; Row <= RowCount; Row++) // First row is header
                         {
                             Console.WriteLine("Row: " + Row);
-                            var accessory = new AccessoryPricingModel
+                            var accessory = new AccessoryModel
                             {
-                                Description = Worksheet.Cells[Row, 1].Text,
-                                SalesId = Worksheet.Cells[Row, 2].Text,
-                                ItemID = Worksheet.Cells[Row, 3].Text
+                                Panel = Worksheet.Cells[Row, 1].Text,
+                                LegacyDescription = Worksheet.Cells[Row, 2].Text,
+                                Description = Worksheet.Cells[Row, 3].Text,
+                                Category = Worksheet.Cells[Row, 4].Text,
+                                SalesId = Worksheet.Cells[Row, 5].Text,
+                                ItemId = Worksheet.Cells[Row, 6].Text
                             };
                             TrimList.Add(accessory);
                         }
@@ -119,11 +223,14 @@ namespace Falk_Console
             }
         }
 
-        public class AccessoryPricingModel
+        public class AccessoryModel
         {
-            public string ItemID { get; set; }
+            public string Panel { get; set; }
+            public string LegacyDescription { get; set; }
             public string Description { get; set; }
+            public string Category { get; set; }
             public string SalesId { get; set; }
+            public string ItemId { get; set; }
         }
     }
 }
