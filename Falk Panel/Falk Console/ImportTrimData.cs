@@ -1,7 +1,9 @@
-﻿using Microsoft.Xrm.Sdk;
+﻿using DocumentFormat.OpenXml.Math;
+using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using OfficeOpenXml;
 using System;
+using System.Activities.Statements;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,36 +11,219 @@ using LicenseContext = OfficeOpenXml.LicenseContext;
 
 namespace Falk_Console
 {
-    public class ImportTrimData
+    public class ImporttrimData
     {
         public static void ImportData(IOrganizationService service)
         {
-            var ExcelData = ReadExcelData();
-
-            foreach(var Trim in ExcelData)
+            try
             {
-                string trimName = Trim.Description;
-                string trimDescription = Trim.LegacyDescription;
-                string thicknessName = Trim.Panel;
+                var ExcelData = ReadExcelData();
 
-                Guid trimId = GetTrim(service, trimName, trimDescription);
-                Guid thicknessId = GetThickness(service, thicknessName);
-
-                if (trimId == Guid.Empty)
+                foreach (var Trim in ExcelData)
                 {
-                    Console.WriteLine($"Trim not found : {trimName}");
-                    continue;
+                    try
+                    {
+                        string Panel = Trim.Panel;
+                        string LegacyDescription = Trim.LegacyDescription;
+                        string Description = Trim.Description;
+                        string Category = Trim.Category;
+                        string SalesID = Trim.SalesId;
+                        string ItemId = Trim.ItemId;
+
+                        if (!string.IsNullOrEmpty(ItemId))
+                        {
+                            QueryExpression queryExpressionPricing = new QueryExpression("tbs_trimpricing");
+                            queryExpressionPricing.ColumnSet = new ColumnSet(false);
+                            queryExpressionPricing.Criteria.AddCondition("tbs_itemid", ConditionOperator.Equal, ItemId);
+                            EntityCollection ItemIdEntColl = service.RetrieveMultiple(queryExpressionPricing);
+
+                            if (ItemIdEntColl.Entities.Count > 0)
+                            {
+                                Console.WriteLine("Item Id Found " + ItemId);
+
+                                Entity TrimPricing = ItemIdEntColl.Entities[0];
+
+                                Entity CategoryEntity = null;
+
+                                if (!string.IsNullOrEmpty(Category))
+                                {
+                                    QueryExpression queryExpressionCategory = new QueryExpression("tbs_itemcategory");
+                                    queryExpressionCategory.ColumnSet = new ColumnSet(false);
+                                    queryExpressionCategory.Criteria.AddCondition("tbs_categoryname", ConditionOperator.Equal, Category);
+                                    EntityCollection CategoryEntColl = service.RetrieveMultiple(queryExpressionCategory);
+
+                                    if (CategoryEntColl.Entities.Count > 0)
+                                    {
+                                        CategoryEntity = CategoryEntColl.Entities[0];
+
+                                        Console.WriteLine("Category Found: " + Category);
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("Category not found: " + Category);
+                                    }
+                                }
+                                Entity TrimRecord = new Entity("tbs_trim");
+
+                                TrimRecord["tbs_salesid"] = SalesID;
+
+                                TrimRecord["tbs_name"] = Description;
+
+                                if (!string.IsNullOrEmpty(LegacyDescription))
+                                {
+                                    TrimRecord["tbs_description"] = LegacyDescription;
+                                }
+
+                                if (CategoryEntity != null)
+                                {
+                                    TrimRecord["tbs_itemcategory"] = new EntityReference("tbs_itemcategory", CategoryEntity.Id);
+                                }
+
+                                TrimRecord["tbs_trimpricing"] = new EntityReference("tbs_trimpricing", TrimPricing.Id);
+                                Guid TrimId = Guid.Empty;
+
+                                try
+                                {
+                                    TrimId = service.Create(TrimRecord);
+
+                                    Console.WriteLine("Trim Created Successfully. ID: " + TrimId);
+                                }
+                                catch (Exception ex)
+                                {
+                                    if (ex.Message.Contains("Entity Key Legacy Description and Description violated"))
+                                    {
+                                        Console.WriteLine("Duplicate trim found. Finding existing record...");
+                                        QueryExpression ExistingTrimQuery = new QueryExpression("tbs_trim");
+
+                                        ExistingTrimQuery.ColumnSet = new ColumnSet(false);
+
+                                        ExistingTrimQuery.Criteria.AddCondition("tbs_description", ConditionOperator.Equal, LegacyDescription);
+
+                                        ExistingTrimQuery.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, Description);
+
+                                        EntityCollection ExistingTrimCollection = service.RetrieveMultiple(ExistingTrimQuery);
+
+                                        if (ExistingTrimCollection.Entities.Count > 0)
+                                        {
+                                            TrimId = ExistingTrimCollection.Entities[0].Id;
+
+                                            Console.WriteLine("Existing Trim found. ID: " + TrimId);
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine("Duplicate exception occurred, but existing Trim could not be found.");
+                                            continue;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Some other exception
+                                        Console.WriteLine("Error creating Trim: " + ex.Message);
+                                        continue;
+                                    }
+                                }
+                                if (!string.IsNullOrEmpty(Panel))
+                                {
+                                    string[] PanelParts = Panel.Trim().Split(' ');
+
+                                    if (PanelParts.Length >= 2)
+                                    {
+                                        string ThicknessNumberText = PanelParts[PanelParts.Length - 1];
+                                        string PanelTypeName = string.Join(" ", PanelParts.Take(PanelParts.Length - 1));
+
+                                        Console.WriteLine("Panel Type: " + PanelTypeName);
+
+                                        Console.WriteLine("Thickness Number: " + ThicknessNumberText);
+
+                                        // 5. Convert Thickness Number
+                                        decimal ThicknessNumber;
+                                        if (decimal.TryParse(ThicknessNumberText, out ThicknessNumber))
+                                        {
+                                            // 6. Find Panel Type
+                                            QueryExpression PanelTypeQuery = new QueryExpression("product");
+
+                                            PanelTypeQuery.ColumnSet = new ColumnSet(false);
+
+                                            PanelTypeQuery.Criteria.AddCondition("name", ConditionOperator.Equal, PanelTypeName);
+
+                                            EntityCollection PanelTypeCollection = service.RetrieveMultiple(PanelTypeQuery);
+
+                                            if (PanelTypeCollection.Entities.Count > 0)
+                                            {
+                                                Entity PanelTypeEntity = PanelTypeCollection.Entities[0];
+
+                                                Console.WriteLine("Panel Type Found: " + PanelTypeName);
+                                                // 7. Find Thickness
+
+                                                QueryExpression ThicknessQuery = new QueryExpression("tbs_thickness");
+
+                                                ThicknessQuery.ColumnSet = new ColumnSet(false);
+                                                // Thickness Number
+                                                ThicknessQuery.Criteria.AddCondition("tbs_thicknessnumber", ConditionOperator.Equal, ThicknessNumber);
+
+                                                // Panel Type Lookup
+                                                ThicknessQuery.Criteria.AddCondition("tbs_product", ConditionOperator.Equal, PanelTypeEntity.Id);
+
+                                                EntityCollection ThicknessCollection = service.RetrieveMultiple(ThicknessQuery);
+
+                                                if (ThicknessCollection.Entities.Count > 0)
+                                                {
+                                                    Entity ThicknessEntity = ThicknessCollection.Entities[0];
+
+                                                    Console.WriteLine("Thickness Found: " + Panel);
+
+                                                    // 8. Establish N:N Relationship
+
+                                                    service.Associate(
+                                                        "tbs_trim",
+                                                        TrimId,
+                                                        new Relationship("tbs_trim_tbs_thickness_tbs_thickness"),
+                                                        new EntityReferenceCollection { new EntityReference("tbs_thickness", ThicknessEntity.Id) }
+                                                    );
+
+                                                    Console.WriteLine("Thickness associated successfully: " + Panel + Trim.Description);
+                                                }
+                                                else
+                                                {
+                                                    Console.WriteLine("Thickness not found. " + "Panel Type: " + PanelTypeName + ", Thickness Number: " + ThicknessNumber);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine("Panel Type not found: " + PanelTypeName);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine("Invalid Thickness Number: " + ThicknessNumberText);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("Invalid Panel format: " + Panel);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Item Id not found " + ItemId);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.Message == "Entity Key Legacy Description and Description violated. A record with the same value for Legacy Description, Description already exists. A duplicate record cannot be created. Select one or more unique values and try again.")
+                        {
+                            Console.WriteLine(ex.Message);
+                            continue;
+                        }
+                    }
                 }
-
-                if (thicknessId == Guid.Empty)
-                {
-                    Console.WriteLine($"Thickness not found : {thicknessName}");
-                    continue;
-                }
-
-                Associate(service, trimId, thicknessId);
-
-                Console.WriteLine($"Associated {trimName} -> {thicknessName}");
+                Console.WriteLine("Complete");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
         }
 
@@ -48,24 +233,26 @@ namespace Falk_Console
             {
                 List<TrimModel> TrimList = new List<TrimModel>();
                 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-                string FilePath = @"C:\Users\Niki Patel\Desktop\TrimData.xlsx";
+                string FilePath = @"C:\Users\admin\Downloads\Final accessories.xlsx";
                 using (var Package = new ExcelPackage(new FileInfo(FilePath)))
                 {
-                    var Worksheet = Package.Workbook.Worksheets.FirstOrDefault();
+                    var Worksheet = Package.Workbook.Worksheets["Trims"];
                     if (Worksheet != null)
                     {
                         int RowCount = Worksheet.Dimension.Rows;
                         for (int Row = 2; Row <= RowCount; Row++) // First row is header
                         {
                             Console.WriteLine("Row: " + Row);
-                            var Trim = new TrimModel
+                            var trim = new TrimModel
                             {
                                 Panel = Worksheet.Cells[Row, 1].Text,
                                 LegacyDescription = Worksheet.Cells[Row, 2].Text,
                                 Description = Worksheet.Cells[Row, 3].Text,
-                                ItemCat = Worksheet.Cells[Row, 4].Text
+                                Category = Worksheet.Cells[Row, 4].Text,
+                                SalesId = Worksheet.Cells[Row, 5].Text,
+                                ItemId = Worksheet.Cells[Row, 6].Text
                             };
-                            TrimList.Add(Trim);
+                            TrimList.Add(trim);
                         }
                     }
                 }
@@ -78,56 +265,14 @@ namespace Falk_Console
             }
         }
 
-        static Guid GetTrim(IOrganizationService service, string description, string legacyDescription)
-        {
-            QueryExpression qe = new QueryExpression("tbs_trim");
-            qe.ColumnSet = new ColumnSet("tbs_trimid");
-
-            qe.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, description);
-            qe.Criteria.AddCondition("tbs_description", ConditionOperator.Equal, legacyDescription);
-
-            var result = service.RetrieveMultiple(qe);
-
-            if (result.Entities.Count > 1)
-            {
-                Console.WriteLine("skipped");
-                Console.WriteLine("description - " + description);
-                Console.WriteLine("legacyDescription - " + legacyDescription);
-            }
-            return result.Entities.Count > 0 ? result.Entities[0].Id : Guid.Empty;
-        }
-
-        static Guid GetThickness(IOrganizationService service, string thickness)
-        {
-            QueryExpression qe = new QueryExpression("tbs_thickness");
-            qe.ColumnSet = new ColumnSet(false);
-
-            qe.Criteria.AddCondition("tbs_name", ConditionOperator.Equal, thickness);
-
-            EntityCollection result = service.RetrieveMultiple(qe);
-
-            return result.Entities.Count > 0 ? result.Entities[0].Id : Guid.Empty;
-        }
-
-        static void Associate(IOrganizationService service, Guid trimId, Guid thicknessId)
-        {
-            EntityReferenceCollection related = new EntityReferenceCollection();
-
-            related.Add(new EntityReference("tbs_thickness", thicknessId));
-
-            service.Associate(
-                "tbs_trim",
-                trimId,
-                new Relationship("tbs_trim_tbs_thickness_tbs_thickness"),
-                related);
-        }
-
         public class TrimModel
         {
             public string Panel { get; set; }
             public string LegacyDescription { get; set; }
             public string Description { get; set; }
-            public string ItemCat { get; set; }
+            public string Category { get; set; }
+            public string SalesId { get; set; }
+            public string ItemId { get; set; }
         }
     }
 }

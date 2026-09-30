@@ -118,7 +118,9 @@ namespace Falk_Console
                     //    organizationService.Update(thickness);
                     //}
 
-                    ImportaccesoryData.ImportData(organizationService);
+                    //ImportaccesoryData.ImportData(organizationService);
+                    //Console.WriteLine("Accessories completed\n ======= \n =========\n =========== \n \n \n \n \n" );
+                    ImporttrimData.ImportData(organizationService);
                     //ImportTrim.importTrim(organizationService);
                     //DeleteAllChoiceOptions(organizationService, "quote", "")
                 }
