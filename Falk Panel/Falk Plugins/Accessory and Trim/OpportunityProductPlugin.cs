@@ -344,11 +344,13 @@ namespace Falk_Plugins.Pricing_Master
 
                 foreach (Entity trim in trims.Entities)
                 {
+                    tracingService.Trace($"Trim Exists? : {trim.Contains("tbs_unit").ToString()}");
+
                     Entity panelTrim = new Entity("tbs_opppaneltrim");
                     panelTrim["tbs_opportunityproduct"] = new EntityReference("opportunityproduct", opportunityProductId);
                     panelTrim["tbs_paneltype"] = panelType;
                     panelTrim["tbs_panelthickness"] = panelThickness;
-                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();
+                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
                     panelTrim["tbs_isquantitycalculated"] = trim.Contains("rule.tbs_ruleclass") && trim.GetAttributeValue<AliasedValue>("rule.tbs_ruleclass").Value != null ? true : false;

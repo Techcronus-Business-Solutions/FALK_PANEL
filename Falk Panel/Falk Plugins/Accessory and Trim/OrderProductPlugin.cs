@@ -366,7 +366,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                     panelTrim["tbs_orderproduct"] = new EntityReference("salesorderdetail", orderProductId);
                     panelTrim["tbs_paneltype"] = panelType;
                     panelTrim["tbs_panelthickness"] = panelThickness;
-                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();
+                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
                     panelTrim["tbs_isquantitycalculated"] = trim.Contains("rule.tbs_ruleclass") && trim.GetAttributeValue<AliasedValue>("rule.tbs_ruleclass").Value != null ? true : false;

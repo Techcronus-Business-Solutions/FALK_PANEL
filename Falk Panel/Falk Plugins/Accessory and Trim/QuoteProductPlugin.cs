@@ -360,7 +360,7 @@ namespace Falk_Plugins.Pricing_Master
                     panelTrim["tbs_quoteproduct"] = new EntityReference("quotedetail", quoteProductId);
                     panelTrim["tbs_paneltype"] = panelType;
                     panelTrim["tbs_panelthickness"] = panelThickness;
-                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();
+                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
                     panelTrim["tbs_isquantitycalculated"] = trim.Contains("rule.tbs_ruleclass") && trim.GetAttributeValue<AliasedValue>("rule.tbs_ruleclass").Value != null ? true : false;
