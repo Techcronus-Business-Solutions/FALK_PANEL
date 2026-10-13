@@ -82,7 +82,7 @@ namespace Falk_Plugins.Pricing_Master
 
                                 EntityReference panelThickness = targetEntity.Contains("tbs_panelthickness") ? targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness") : null;
                                 EntityReference prePanelThickness = PreImage.Contains("tbs_panelthickness") ? PreImage.GetAttributeValue<EntityReference>("tbs_panelthickness") : null;
-                                EntityReference panelType = PreImage.Contains("productid") ? PreImage.GetAttributeValue<EntityReference>("productid") : null;
+                                EntityReference panelType = targetEntity.Contains("productid") ? targetEntity.GetAttributeValue<EntityReference>("productid") : PreImage.GetAttributeValue<EntityReference>("productid");
 
                                 bool thicknessChanged = (panelThickness == null && prePanelThickness != null) || (panelThickness != null && prePanelThickness == null) || (panelThickness != null && prePanelThickness != null && panelThickness.Id != prePanelThickness.Id);
 
