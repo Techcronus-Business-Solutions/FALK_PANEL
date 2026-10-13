@@ -146,20 +146,20 @@ namespace Falk_Plugins.Pricing_Master
                         {
                             try
                             {
-                                if (targetEntity.Contains("quantity"))
-                                {
-                                    Entity PreImage = context.PreEntityImages["PreImage"];
-                                    Guid oppId = PreImage.GetAttributeValue<EntityReference>("opportunityid").Id;
+                                //if (targetEntity.Contains("quantity"))
+                                //{
+                                Entity PreImage = context.PreEntityImages["PreImage"];
+                                Guid oppId = PreImage.GetAttributeValue<EntityReference>("opportunityid").Id;
 
-                                    int totalSQFT = GetTotalSQFTFromOppProducts(oppId);
-                                    int totalFilteredSQFT = GetFilteredSQFTFromOppProducts(oppId);
+                                int totalSQFT = GetTotalSQFTFromOppProducts(oppId);
+                                int totalFilteredSQFT = GetFilteredSQFTFromOppProducts(oppId);
 
-                                    Entity updateOpp = new Entity("opportunity");
-                                    updateOpp.Id = oppId;
-                                    updateOpp["tbs_totalsqft"] = totalSQFT;
-                                    updateOpp["tbs_totalfilteredsqft"] = totalFilteredSQFT;
-                                    service.Update(updateOpp);
-                                }
+                                Entity updateOpp = new Entity("opportunity");
+                                updateOpp.Id = oppId;
+                                updateOpp["tbs_totalsqft"] = totalSQFT;
+                                updateOpp["tbs_totalfilteredsqft"] = totalFilteredSQFT;
+                                service.Update(updateOpp);
+                                // }
                             }
                             catch (Exception ex)
                             {
