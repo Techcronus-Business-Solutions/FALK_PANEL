@@ -169,13 +169,18 @@ namespace Falk_Plugins
                         if (context.MessageName == CONST_DELETE && context.Stage == PostOperation)
                         {
                             Entity PreImage = context.PreEntityImages["PreImage"];
+                            Guid orderProd = PreImage.Contains("tbs_orderproduct") ? PreImage.GetAttributeValue<EntityReference>("tbs_orderproduct").Id : Guid.Empty;
+
+                            if (orderProd == Guid.Empty)
+                            {
+                                return;
+                            }
 
                             #region Calculate Opportunity Product Rollups
                             // Calculate total SQFT & Linear Ft of all line items on the opportunity product
                             try
                             {
                                 decimal width = PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
-                                Guid orderProd = targetEntity.Contains("tbs_orderproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_orderproduct").Id : Guid.Empty;
 
                                 string fetchXml = $@"
                                             <fetch aggregate='true'>
@@ -215,7 +220,7 @@ namespace Falk_Plugins
                             {
                                 CalculateRollupFieldRequest calcularRollup = new CalculateRollupFieldRequest
                                 {
-                                    Target = new EntityReference("salesorderdetail", PreImage.GetAttributeValue<EntityReference>("tbs_orderproduct").Id),
+                                    Target = new EntityReference("salesorderdetail", orderProd),
                                     FieldName = "tbs_totalamountofpanels"
                                 };
                                 CalculateRollupFieldResponse calcularRollupResult = (CalculateRollupFieldResponse)service.Execute(calcularRollup);

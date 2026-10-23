@@ -455,6 +455,10 @@ namespace Falk.CustomAPI
                         UpdateAccessoryQuantity(config.Accessory, qty.Value);
                     }
                 }
+                else
+                {
+                    context.Values[BuildKey(config.CurrentTable, config.ItemCategory)] = 0;
+                }
             }
             catch (Exception e)
             {

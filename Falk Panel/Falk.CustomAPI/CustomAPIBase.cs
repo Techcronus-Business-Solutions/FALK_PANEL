@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -44,6 +45,14 @@ namespace Falk.CustomAPI
         public const int PreValidation = 10;
         public const int PreOperation = 20;
         public const int PostOperation = 40;
+
+        public class Currency
+        {
+            public string name { get; set; }
+            public decimal exchangeRate { get; set; }
+            public string isoCode { get; set; }
+            public Guid id { get; set; }
+        }
 
         /// <summary>
         /// Plug-in context object. 
@@ -306,6 +315,26 @@ namespace Falk.CustomAPI
             };
 
             return multipleExecuteRequest;
+        }
+
+        public static Currency GetCurrencyExchangeRate(IOrganizationService service, EntityReference currencyRef)
+        {
+            if (currencyRef == null)
+            {
+                throw new ArgumentNullException(nameof(currencyRef), "Currency reference cannot be null.");
+            }
+            Entity currencyEntity = service.Retrieve("transactioncurrency", currencyRef.Id, new ColumnSet("exchangerate", "currencyname", "isocurrencycode"));
+            if (currencyEntity == null)
+            {
+                throw new InvalidPluginExecutionException($"Currency with ID {currencyRef.Id} not found.");
+            }
+            return new Currency
+            {
+                name = currencyEntity.GetAttributeValue<string>("currencyname"),
+                exchangeRate = currencyEntity.GetAttributeValue<decimal>("exchangerate"),
+                isoCode = currencyEntity.GetAttributeValue<string>("isocurrencycode"),
+                id = currencyEntity.Id
+            };
         }
     }
 }

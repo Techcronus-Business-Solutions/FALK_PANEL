@@ -137,19 +137,45 @@ namespace Falk_Plugins
                         if (context.MessageName == CONST_DELETE && context.Stage == PostOperation)
                         {
                             Entity PreImage = context.PreEntityImages["PreImage"];
+                            Guid opportunityProd = PreImage.Contains("tbs_opportunityproduct") ? PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id : Guid.Empty;
+
+                            if (opportunityProd == Guid.Empty)
+                            {
+                                return;
+                            }
 
                             #region Calculate Opportunity Product Rollups
                             // Calculate total SQFT & Linear Ft of all line items on the opportunity product
                             try
                             {
                                 decimal width = PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
-                                Entity OpportunityProduct = service.Retrieve("opportunityproduct", PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id, new ColumnSet("quantity"));
+                                string fetchXml = $@"
+                                            <fetch aggregate='true'>
+                                              <entity name='tbs_lineitem'>
+                                                <attribute name='tbs_totalsqft' alias='sqft' aggregate='sum' />
+                                                <filter>
+                                                  <condition attribute='tbs_opportunityproduct' operator='eq' value='{opportunityProd}' />
+                                                </filter>
+                                              </entity>
+                                            </fetch>";
 
-                                decimal totalSqFtSum = GetDecimalAttributeValue(OpportunityProduct, "quantity") - GetDecimalAttributeValue(PreImage, "tbs_totalsqft");
-                                decimal linearFt = width > 0 ? (totalSqFtSum * 12) / width : 0;
+                                Entity SQFT = service.RetrieveMultiple(new FetchExpression(fetchXml)).Entities.FirstOrDefault();
+                                tracingService.Trace($"SQFT Entity: {SQFT}");
+                                decimal totalSQFT = 0;
 
-                                Entity OpportunityProductToUpdate = new Entity("opportunityproduct", OpportunityProduct.Id);
-                                OpportunityProductToUpdate["quantity"] = totalSqFtSum;
+                                if (SQFT != null)
+                                {
+                                    tracingService.Trace("X: " + (SQFT.GetAttributeValue<AliasedValue>("sqft") == null).ToString());
+                                    totalSQFT = SQFT.Contains("sqft") ? (decimal)SQFT.GetAttributeValue<AliasedValue>("sqft")?.Value : 0;
+
+                                }
+                                //tracingService.Trace($"Total SQFT: {totalSQFT}");
+
+                                decimal linearFt = width > 0 ? (totalSQFT * 12) / width : 0;
+
+
+                                Entity OpportunityProductToUpdate = new Entity("opportunityproduct", opportunityProd);
+                                OpportunityProductToUpdate["quantity"] = totalSQFT;
                                 OpportunityProductToUpdate["tbs_linearfeet"] = linearFt;
                                 service.Update(OpportunityProductToUpdate);
 
@@ -166,7 +192,7 @@ namespace Falk_Plugins
                             {
                                 CalculateRollupFieldRequest calcularRollup = new CalculateRollupFieldRequest
                                 {
-                                    Target = new EntityReference("opportunityproduct", PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id),
+                                    Target = new EntityReference("opportunityproduct", opportunityProd),
                                     FieldName = "tbs_totalamountofpanels"
                                 };
                                 CalculateRollupFieldResponse calcularRollupResult = (CalculateRollupFieldResponse)service.Execute(calcularRollup);

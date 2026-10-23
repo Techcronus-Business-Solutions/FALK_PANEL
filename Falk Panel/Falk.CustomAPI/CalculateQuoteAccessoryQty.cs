@@ -349,9 +349,37 @@ namespace Falk.CustomAPI
             }
             return null;
         }
+        //private decimal GetDependencyValue(CalculationContext context, OptionSetValue table, EntityReference category)
+        //{
+        //    return context.Values[BuildKey(table, category)];
+        //}
+
         private decimal GetDependencyValue(CalculationContext context, OptionSetValue table, EntityReference category)
         {
-            return context.Values[BuildKey(table, category)];
+            string key = BuildKey(table, category);
+
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new InvalidPluginExecutionException(
+                    $"Invalid dependency configuration. " +
+                    $"Table is null: {table == null}; " +
+                    $"Category is null: {category == null}.");
+            }
+
+            if (!context.Values.TryGetValue(key, out decimal value))
+            {
+                string availableKeys = string.Join(
+                    ", ",
+                    context.Values.Keys);
+
+                throw new InvalidPluginExecutionException(
+                    $"Dependency key not found: {key}. " +
+                    $"Table: {table.Value}; " +
+                    $"Category ID: {category.Id}; " +
+                    $"Available keys: [{availableKeys}]");
+            }
+
+            return value;
         }
         private void UpdateAccessoryQuantity(Entity quotePanelAcc, int qty)
         {
@@ -454,6 +482,10 @@ namespace Falk.CustomAPI
 
                         UpdateAccessoryQuantity(config.Accessory, qty.Value);
                     }
+                }
+                else
+                {
+                    context.Values[BuildKey(config.CurrentTable, config.ItemCategory)] = 0;
                 }
             }
             catch (Exception e)

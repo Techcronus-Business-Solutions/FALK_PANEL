@@ -51,7 +51,10 @@ namespace Falk_Plugins.Pricing_Master
 
                             tracingService.Trace("Panel id " + panelType.Id.ToString());
 
-                            CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness);
+                            EntityReference currencyref = targetEntity.GetAttributeValue<EntityReference>("transactioncurrencyid");
+                            Currency currency = GetCurrencyExchangeRate(service, currencyref);
+
+                            CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness, currency);
                             tracingService.Trace("Panel Accessories created");
 
                             CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness);
@@ -82,7 +85,7 @@ namespace Falk_Plugins.Pricing_Master
 
                                 EntityReference panelThickness = targetEntity.Contains("tbs_panelthickness") ? targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness") : null;
                                 EntityReference prePanelThickness = PreImage.Contains("tbs_panelthickness") ? PreImage.GetAttributeValue<EntityReference>("tbs_panelthickness") : null;
-                                EntityReference panelType = PreImage.Contains("productid") ? PreImage.GetAttributeValue<EntityReference>("productid") : null;
+                                EntityReference panelType = targetEntity.Contains("productid") ? targetEntity.GetAttributeValue<EntityReference>("productid") : PreImage.GetAttributeValue<EntityReference>("productid");
 
                                 bool thicknessChanged = (panelThickness == null && prePanelThickness != null) || (panelThickness != null && prePanelThickness == null) || (panelThickness != null && prePanelThickness != null && panelThickness.Id != prePanelThickness.Id);
 
@@ -97,11 +100,17 @@ namespace Falk_Plugins.Pricing_Master
                                 Guid oppProductId = targetEntity.Id;
                                 tracingService.Trace("Opportunity ProductId = " + oppProductId.ToString());
 
+                                EntityReference currencyref = targetEntity.Contains("transactioncurrencyid") ? targetEntity.GetAttributeValue<EntityReference>("transactioncurrencyid") : (PreImage.Contains("transactioncurrencyid") ? PreImage.GetAttributeValue<EntityReference>("transactioncurrencyid") : null);
+                                tracingService.Trace("Currency ref = " + (currencyref != null ? currencyref.Id.ToString() : "null"));
+                                Currency currency = GetCurrencyExchangeRate(service, currencyref);
+                                tracingService.Trace("delete");
+
                                 DeleteOppAssociatedRecords(oppProductId);
+                                tracingService.Trace("delete");
 
                                 if (panelType != null)
                                 {
-                                    CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness);
+                                    CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness, currency);
                                     tracingService.Trace("Panel Accessories created");
 
                                     CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness);
@@ -219,7 +228,7 @@ namespace Falk_Plugins.Pricing_Master
                 service.Delete("tbs_opppaneltrim", trim.Id);
             }
         }
-        private void CreatePanelAccessories(IOrganizationService service, Guid opportunityProductId, EntityReference panelType, EntityReference panelThickness)
+        private void CreatePanelAccessories(IOrganizationService service, Guid opportunityProductId, EntityReference panelType, EntityReference panelThickness, Currency currencyIsoCode)
         {
             try
             {
@@ -228,7 +237,7 @@ namespace Falk_Plugins.Pricing_Master
                 query.ColumnSet.AddColumns("tbs_accessoryid");
                 LinkEntity pricing = query.AddLink("tbs_accessorypricing", "tbs_accessorypricing", "tbs_accessorypricingid");
                 pricing.EntityAlias = "pricing";
-                pricing.Columns.AddColumns("tbs_price", "tbs_unit");
+                pricing.Columns.AddColumns("tbs_price", "tbs_unit", "tbs_canadacustomermargin");
                 LinkEntity thickness = query.AddLink("tbs_accessory_tbs_thickness", "tbs_accessoryid", "tbs_accessoryid");
                 thickness.EntityAlias = "thickness";
                 thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
@@ -300,15 +309,23 @@ namespace Falk_Plugins.Pricing_Master
                     panelAccessory["tbs_accessory"] = accessory.ToEntityReference();
                     panelAccessory["tbs_category"] = tierEnt.ToEntityReference();
                     panelAccessory["tbs_isquantitycalculated"] = accessory.Contains("rule.tbs_ruleclass") && accessory.GetAttributeValue<AliasedValue>("rule.tbs_ruleclass").Value != null ? true : false;
-
+                    panelAccessory["transactioncurrencyid"] = currencyIsoCode != null ? new EntityReference("transactioncurrency", currencyIsoCode.id) : null;
                     var unit = accessory.GetAttributeValue<AliasedValue>("pricing.tbs_unit")?.Value as EntityReference;
                     var price = accessory.GetAttributeValue<AliasedValue>("pricing.tbs_price")?.Value as Money;
+
+
+                    decimal currencyMultiplier = 1;
+
+                    if (currencyIsoCode != null && currencyIsoCode.isoCode == "CAD" && accessory.Contains("pricing.tbs_canadacustomermargin"))
+                    {
+                        currencyMultiplier = accessory.GetAttributeValue<AliasedValue>("pricing.tbs_canadacustomermargin")?.Value as decimal? ?? 1;
+                    }
 
                     panelAccessory["tbs_unit"] = unit;
 
                     if (price != null)
                     {
-                        panelAccessory["tbs_unitprice"] = new Money(price.Value * multiplier / 100m);
+                        panelAccessory["tbs_unitprice"] = new Money(currencyIsoCode.exchangeRate * price.Value * currencyMultiplier * multiplier / 100m);
                     }
 
                     Guid panelAccesId = service.Create(panelAccessory);
@@ -344,11 +361,13 @@ namespace Falk_Plugins.Pricing_Master
 
                 foreach (Entity trim in trims.Entities)
                 {
+                    tracingService.Trace($"Trim Exists? : {trim.Contains("tbs_unit").ToString()}");
+
                     Entity panelTrim = new Entity("tbs_opppaneltrim");
                     panelTrim["tbs_opportunityproduct"] = new EntityReference("opportunityproduct", opportunityProductId);
                     panelTrim["tbs_paneltype"] = panelType;
                     panelTrim["tbs_panelthickness"] = panelThickness;
-                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : new EntityReference();
+                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
                     panelTrim["tbs_isquantitycalculated"] = trim.Contains("rule.tbs_ruleclass") && trim.GetAttributeValue<AliasedValue>("rule.tbs_ruleclass").Value != null ? true : false;
@@ -407,5 +426,6 @@ namespace Falk_Plugins.Pricing_Master
                 throw new InvalidPluginExecutionException("Failed to retrieve Tracing Service !");
             }
         }
+
     }
 }

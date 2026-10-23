@@ -43,7 +43,7 @@ namespace Falk_Plugins
                             {
                                 decimal width = targetEntity.Contains("tbs_widthpanel") ? targetEntity.GetAttributeValue<decimal>("tbs_widthpanel") : 0;
                                 tracingService.Trace("quoteProduct exists: " + targetEntity.Contains("tbs_quoteproduct"));
-                                Guid quoteProd  = targetEntity.Contains("tbs_quoteproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id : Guid.Empty;
+                                Guid quoteProd = targetEntity.Contains("tbs_quoteproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id : Guid.Empty;
 
                                 string fetchXml = $@"
                                             <fetch aggregate='true'>
@@ -243,13 +243,18 @@ namespace Falk_Plugins
                         if (context.MessageName == CONST_DELETE && context.Stage == PostOperation)
                         {
                             Entity PreImage = context.PreEntityImages["PreImage"];
+                            Guid quoteProd = PreImage.Contains("tbs_quoteproduct") ? PreImage.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id : Guid.Empty;
+
+                            if (quoteProd == Guid.Empty)
+                            {
+                                return;
+                            }
 
                             #region Calculate Opportunity Product Rollups
                             // Calculate total SQFT & Linear Ft of all line items on the opportunity product
                             try
                             {
                                 decimal width = PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
-                                Guid quoteProd = targetEntity.Contains("tbs_quoteproduct") ? targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id : Guid.Empty;
 
                                 string fetchXml = $@"
                                             <fetch aggregate='true'>
@@ -282,6 +287,7 @@ namespace Falk_Plugins
                                 QuoteProductToUpdate["quantity"] = totalSQFT;
                                 QuoteProductToUpdate["tbs_linearfeet"] = linearFt;
                                 service.Update(QuoteProductToUpdate);
+
                             }
                             catch (Exception e)
                             {
@@ -294,7 +300,7 @@ namespace Falk_Plugins
                             {
                                 CalculateRollupFieldRequest calcularRollup = new CalculateRollupFieldRequest
                                 {
-                                    Target = new EntityReference("quotedetail", PreImage.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id),
+                                    Target = new EntityReference("quotedetail", quoteProd),
                                     FieldName = "tbs_totalamountofpanels"
                                 };
                                 CalculateRollupFieldResponse calcularRollupResult = (CalculateRollupFieldResponse)service.Execute(calcularRollup);
