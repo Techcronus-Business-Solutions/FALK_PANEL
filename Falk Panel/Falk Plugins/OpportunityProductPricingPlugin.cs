@@ -91,22 +91,26 @@ namespace Falk_Plugins.Pricing_Master
             decimal basePrice = target.GetAttributeValue<Money>("tbs_baseprice")?.Value
                 ?? preImage.GetAttributeValue<Money>("tbs_baseprice")?.Value
                 ?? 0;
+            tracingService.Trace($"Base Price: {basePrice}");
 
             decimal totalPropertyPrice = target.GetAttributeValue<Money>("tbs_totalpropertiesprice")?.Value
                 ?? preImage.GetAttributeValue<Money>("tbs_totalpropertiesprice")?.Value
                 ?? 0;
+            tracingService.Trace($"Total Property Price: {totalPropertyPrice}");
 
             decimal usPrice = roundValues(basePrice) + roundValues(totalPropertyPrice);
             target["tbs_usprice"] = new Money(roundValues(usPrice));
+            tracingService.Trace($"US Price: {usPrice}");
 
             decimal sqft = target.Contains("quantity")
                 ? target.GetAttributeValue<decimal>("quantity")
                 : preImage.GetAttributeValue<decimal>("quantity");
+            tracingService.Trace($"Square Footage: {sqft}");
 
             decimal usdAdjustment = target.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value
                 ?? preImage.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value
                 ?? 0;
-
+            tracingService.Trace($"USD Adjustment: {usdAdjustment}");
             decimal upcharge = 0;
 
             if (sqft > 0)
@@ -122,12 +126,16 @@ namespace Falk_Plugins.Pricing_Master
             }
 
             target["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
+            tracingService.Trace($"Upcharge: {upcharge}");  
 
             decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
-
+            tracingService.Trace($"Price Per Unit: {pricePerUnit}");
             target["ispriceoverridden"] = true;
+            tracingService.Trace($"Is Price Overridden: {target["ispriceoverridden"]}");
             target["priceperunit"] = new Money(roundValues(pricePerUnit));
+            tracingService.Trace($"Price Per Unit: {target["priceperunit"]}");
             target["extendedamount"] = new Money(roundValues(pricePerUnit) * roundValues(sqft));
+            tracingService.Trace($"Extended Amount: {target["extendedamount"]}");
         }
     }
 }

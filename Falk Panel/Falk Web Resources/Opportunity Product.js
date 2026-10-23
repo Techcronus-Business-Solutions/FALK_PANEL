@@ -627,15 +627,20 @@ Falk.OpportunityProduct = {
 
     SetBasePrice: async function (formContext, basePrice) {
         const tier = formContext.getAttribute("tbs_priceleveltier")?.getValue();
+        const Currency = formContext.getAttribute("transactioncurrencyid")?.getValue();
+        const retrievedCurrency = await Xrm.WebApi.retrieveRecord("transactioncurrency", Currency[0].id.replace(/[{}]/g, ""), "?$select=exchangerate");
 
-        if (!tier) {
-            formContext.getAttribute("tbs_baseprice").setValue(basePrice);
-            return;
+        if (retrievedCurrency && retrievedCurrency.exchangerate) {
+
+            if (!tier) {
+                formContext.getAttribute("tbs_baseprice").setValue(basePrice * retrievedCurrency.exchangerate);
+                return;
+            }
+            const tierId = tier[0].id.replace(/[{}]/g, "");
+            const tierRecord = await Xrm.WebApi.retrieveRecord("tbs_tier", tierId, "?$select=tbs_multiplier");
+            const multiplier = tierRecord.tbs_multiplier;
+            const calculatedPrice = Number((basePrice * multiplier / 100 * retrievedCurrency.exchangerate).toFixed(2));
+            formContext.getAttribute("tbs_baseprice").setValue(calculatedPrice);
         }
-        const tierId = tier[0].id.replace(/[{}]/g, "");
-        const tierRecord = await Xrm.WebApi.retrieveRecord("tbs_tier", tierId, "?$select=tbs_multiplier");
-        const multiplier = tierRecord.tbs_multiplier;
-        const calculatedPrice = Number((basePrice * multiplier / 100).toFixed(2));
-        formContext.getAttribute("tbs_baseprice").setValue(calculatedPrice);
     }
 }

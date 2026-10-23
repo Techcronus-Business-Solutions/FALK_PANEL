@@ -149,7 +149,6 @@ namespace Falk_Plugins
                             try
                             {
                                 decimal width = PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
-
                                 string fetchXml = $@"
                                             <fetch aggregate='true'>
                                               <entity name='tbs_lineitem'>
@@ -161,12 +160,16 @@ namespace Falk_Plugins
                                             </fetch>";
 
                                 Entity SQFT = service.RetrieveMultiple(new FetchExpression(fetchXml)).Entities.FirstOrDefault();
+                                tracingService.Trace($"SQFT Entity: {SQFT}");
                                 decimal totalSQFT = 0;
+
                                 if (SQFT != null)
                                 {
-                                    totalSQFT = (decimal)SQFT.GetAttributeValue<AliasedValue>("sqft").Value;
+                                    tracingService.Trace("X: " + (SQFT.GetAttributeValue<AliasedValue>("sqft") == null).ToString());
+                                    totalSQFT = SQFT.Contains("sqft") ? (decimal)SQFT.GetAttributeValue<AliasedValue>("sqft")?.Value : 0;
+
                                 }
-                                tracingService.Trace("SQFT");
+                                //tracingService.Trace($"Total SQFT: {totalSQFT}");
 
                                 decimal linearFt = width > 0 ? (totalSQFT * 12) / width : 0;
 

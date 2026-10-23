@@ -5,6 +5,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.ServiceModel;
+using System.Web.Services.Description;
 
 namespace Falk_Plugins
 {
@@ -42,6 +43,14 @@ namespace Falk_Plugins
         public const int PreValidation = 10;
         public const int PreOperation = 20;
         public const int PostOperation = 40;
+
+        public class Currency
+        {
+            public string name { get; set; }
+            public decimal exchangeRate { get; set; }
+            public string isoCode { get; set; }
+            public Guid id { get; set; }
+        }
 
         /// <summary>
         /// Plug-in context object. 
@@ -342,6 +351,26 @@ namespace Falk_Plugins
             }
 
             return null;
+        }
+
+        public static Currency GetCurrencyExchangeRate(IOrganizationService service, EntityReference currencyRef)
+        {
+            if (currencyRef == null)
+            {
+                throw new ArgumentNullException(nameof(currencyRef), "Currency reference cannot be null.");
+            }
+            Entity currencyEntity = service.Retrieve("transactioncurrency", currencyRef.Id, new ColumnSet("exchangerate", "currencyname", "isocurrencycode"));
+            if (currencyEntity == null)
+            {
+                throw new InvalidPluginExecutionException($"Currency with ID {currencyRef.Id} not found.");
+            }
+            return new Currency
+            {
+                name = currencyEntity.GetAttributeValue<string>("currencyname"),
+                exchangeRate = currencyEntity.GetAttributeValue<decimal>("exchangerate"),
+                isoCode = currencyEntity.GetAttributeValue<string>("isocurrencycode"),
+                id = currencyEntity.Id
+            };
         }
     }
 }

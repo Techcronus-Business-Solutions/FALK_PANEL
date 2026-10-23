@@ -74,13 +74,15 @@ namespace Falk_Plugins.Pricing_Master
 
                             int totalSQFT = targetEntity.Contains("tbs_totalsqft") ? GetIntAttributeValue(targetEntity, "tbs_totalsqft") : GetIntAttributeValue(PreImage, "tbs_totalsqft");
                             int totalFilteredSQFT = targetEntity.Contains("tbs_totalfilteredsqft") ? GetIntAttributeValue(targetEntity, "tbs_totalfilteredsqft") : GetIntAttributeValue(PreImage, "tbs_totalfilteredsqft");
+                            Currency currencyCode = GetOpportunityCurrencyIsoCode(targetEntity, PreImage);
+                            decimal baseAmount = (currencyCode.isoCode == "CAD") ? 3000m : 5000m;
 
                             if (targetEntity.Contains("tbs_totalsqft") || targetEntity.Contains("tbs_shopdrawings"))
                             {
                                 bool shopDrawings = targetEntity.Contains("tbs_shopdrawings") ? GetBoolAttributeValue(targetEntity, "tbs_shopdrawings") : GetBoolAttributeValue(PreImage, "tbs_shopdrawings");
                                 if (shopDrawings)
                                 {
-                                    targetEntity["tbs_shopdrawingsprice"] = new Money(RoundUpToNearest50((totalSQFT * 0.06m + 5000m)));
+                                    targetEntity["tbs_shopdrawingsprice"] = new Money(RoundUpToNearest50((totalSQFT * 0.06m + baseAmount)) * currencyCode.exchangeRate);
                                 }
                                 else
                                 {
@@ -92,13 +94,14 @@ namespace Falk_Plugins.Pricing_Master
                                 bool stampedSealedDrawings = targetEntity.Contains("tbs_stampedandsealeddrawings") ? GetBoolAttributeValue(targetEntity, "tbs_stampedandsealeddrawings") : GetBoolAttributeValue(PreImage, "tbs_stampedandsealeddrawings");
                                 if (stampedSealedDrawings)
                                 {
-                                    targetEntity["tbs_stampedandsealedshopdrawingsprice"] = new Money(RoundUpToNearest50((totalSQFT * 0.06m + 5000m) * 1.75m));
+                                    targetEntity["tbs_stampedandsealedshopdrawingsprice"] = new Money(RoundUpToNearest50((totalSQFT * 0.06m + baseAmount) * 1.75m) * currencyCode.exchangeRate);
                                 }
                                 else
                                 {
                                     targetEntity["tbs_stampedandsealedshopdrawingsprice"] = null;
                                 }
                             }
+
                             if (targetEntity.Contains("tbs_totalfilteredsqft") || targetEntity.Contains("tbs_weathertightwarranty"))
                             {
                                 bool warranty = targetEntity.Contains("tbs_weathertightwarranty") ? GetBoolAttributeValue(targetEntity, "tbs_weathertightwarranty") : GetBoolAttributeValue(PreImage, "tbs_weathertightwarranty");
@@ -106,7 +109,7 @@ namespace Falk_Plugins.Pricing_Master
                                 {
                                     if (totalFilteredSQFT != null && totalFilteredSQFT > 0)
                                     {
-                                        targetEntity["tbs_roofwarrantyprice"] = new Money((totalFilteredSQFT * 0.3m + 10000) * 1.4m);
+                                        targetEntity["tbs_roofwarrantyprice"] = new Money(totalFilteredSQFT * 0.3m + 10000);
                                     }
                                     else
                                     {
@@ -270,6 +273,23 @@ namespace Falk_Plugins.Pricing_Master
             {
                 throw new InvalidPluginExecutionException("Failed to retrieve Tracing Service !");
             }
+        }
+        private Currency GetOpportunityCurrencyIsoCode(Entity target, Entity preImage)
+        {
+            EntityReference currencyRef = null;
+
+            if (target.Contains("transactioncurrencyid"))
+            {
+                currencyRef = target.GetAttributeValue<EntityReference>("transactioncurrencyid");
+            }
+            else if (preImage.Contains("transactioncurrencyid"))
+            {
+                currencyRef = preImage.GetAttributeValue<EntityReference>("transactioncurrencyid");
+            }
+
+            Currency currencyEntity = PluginBase.GetCurrencyExchangeRate(service, currencyRef);
+            return currencyEntity;
+
         }
     }
 }
