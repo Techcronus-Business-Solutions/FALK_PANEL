@@ -41,7 +41,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                             if (oppProductRef == null)
                                 return;
 
-                            Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("opportunityid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge", "tbs_interiorfinish", "tbs_exteriorfinish"));
+                            Entity opportunityProduct = service.Retrieve("opportunityproduct", oppProductRef.Id, new ColumnSet("opportunityid", "transactioncurrencyid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge", "tbs_interiorfinish", "tbs_exteriorfinish"));
 
                             bool isCustomTrim = targetEntity.GetAttributeValue<bool>("tbs_iscustomtrim");
 
@@ -88,7 +88,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                             if (quoteProductRef == null)
                                 return;
 
-                            Entity quoteProduct = service.Retrieve("quotedetail", quoteProductRef.Id, new ColumnSet("quotedetailid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge", "tbs_interiorfinish", "tbs_exteriorfinish"));
+                            Entity quoteProduct = service.Retrieve("quotedetail", quoteProductRef.Id, new ColumnSet("quotedetailid", "transactioncurrencyid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge", "tbs_interiorfinish", "tbs_exteriorfinish"));
 
                             bool isCustomTrim = targetEntity.GetAttributeValue<bool>("tbs_iscustomtrim");
 
@@ -135,7 +135,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                             if (orderProductRef == null)
                                 return;
 
-                            Entity orderProduct = service.Retrieve("salesorderdetail", orderProductRef.Id, new ColumnSet("salesorderdetailid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge", "tbs_interiorfinish", "tbs_exteriorfinish"));
+                            Entity orderProduct = service.Retrieve("salesorderdetail", orderProductRef.Id, new ColumnSet("salesorderdetailid", "transactioncurrencyid", "tbs_priceleveltier", "tbs_exteriorcolor", "tbs_interiorcolor", "tbs_exteriorgauge", "tbs_interiorgauge", "tbs_interiorfinish", "tbs_exteriorfinish"));
 
                             bool isCustomTrim = targetEntity.GetAttributeValue<bool>("tbs_iscustomtrim");
 
@@ -212,8 +212,36 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             int quantity = panelTrim.Contains("tbs_quantity") ? panelTrim.GetAttributeValue<int>("tbs_quantity") : 1;
 
-            Money basePriceMoney = trimPricing.GetAttributeValue<Money>("tbs_price") ?? new Money(0);
-            Money embossPriceMoney = trimPricing.GetAttributeValue<Money>("tbs_usdembossedprice") ?? new Money(0);
+            bool isCAD = false;
+            if (parentProduct.Contains("transactioncurrencyid"))
+            {
+                EntityReference currencyRef = parentProduct.GetAttributeValue<EntityReference>("transactioncurrencyid");
+
+                if (currencyRef != null)
+                {
+                    Entity currency = service.Retrieve("transactioncurrency", currencyRef.Id, new ColumnSet("isocurrencycode"));
+
+                    string isoCode = currency.GetAttributeValue<string>("isocurrencycode");
+
+                    isCAD = isoCode != null && isoCode.Equals("CAD", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            Money basePriceMoney;
+            Money embossPriceMoney;
+
+            if (isCAD)
+            {
+                basePriceMoney = trimPricing.GetAttributeValue<Money>("tbs_canadacustomerprice") ?? new Money(0);
+
+                embossPriceMoney = trimPricing.GetAttributeValue<Money>("tbs_cadembossedprice") ?? new Money(0);
+            }
+            else
+            {
+                basePriceMoney = trimPricing.GetAttributeValue<Money>("tbs_price") ?? new Money(0);
+
+                embossPriceMoney = trimPricing.GetAttributeValue<Money>("tbs_usdembossedprice") ?? new Money(0);
+            }
 
             decimal basePrice = basePriceMoney.Value;
             decimal embossPrice = embossPriceMoney.Value;
@@ -254,19 +282,23 @@ namespace Falk_Plugins.Accessory_and_Trim
             }
 
             // Static Comparison for Setting Tier In Opp Panel Trim based on Finish
-            if (finishValue == 0 || finishValue == 1)
+            if (finishName.Equals("304 Stainless", StringComparison.OrdinalIgnoreCase))
+            {
+                categoryName = "SS";
+            }
+            else if (trimDescription.IndexOf("FM", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                categoryName = "FM";
+            }
+            else if (isCAD)
             {
                 categoryName = "Tier1";
             }
-            else if (finishValue == 2 || finishValue == 3)
+            else
             {
-                if (finishName.Equals("304 Stainless", StringComparison.OrdinalIgnoreCase))
+                if (finishValue == 0 || finishValue == 1)
                 {
-                    categoryName = "SS";
-                }
-                else if (trimDescription.IndexOf("FM", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    categoryName = "FM";
+                    categoryName = "Tier1";
                 }
                 else
                 {
