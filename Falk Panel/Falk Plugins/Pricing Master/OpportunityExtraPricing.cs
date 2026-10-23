@@ -75,7 +75,9 @@ namespace Falk_Plugins.Pricing_Master
                             int totalSQFT = targetEntity.Contains("tbs_totalsqft") ? GetIntAttributeValue(targetEntity, "tbs_totalsqft") : GetIntAttributeValue(PreImage, "tbs_totalsqft");
                             int totalFilteredSQFT = targetEntity.Contains("tbs_totalfilteredsqft") ? GetIntAttributeValue(targetEntity, "tbs_totalfilteredsqft") : GetIntAttributeValue(PreImage, "tbs_totalfilteredsqft");
                             Currency currencyCode = GetOpportunityCurrencyIsoCode(targetEntity, PreImage);
+                            tracingService.Trace(string.Format("Currency Code: {0}, Exchange Rate: {1}", currencyCode.isoCode, currencyCode.exchangeRate));
                             decimal baseAmount = (currencyCode.isoCode == "CAD") ? 3000m : 5000m;
+                            tracingService.Trace(string.Format("Base Amount: {0}", baseAmount));
 
                             if (targetEntity.Contains("tbs_totalsqft") || targetEntity.Contains("tbs_shopdrawings"))
                             {
@@ -91,10 +93,12 @@ namespace Falk_Plugins.Pricing_Master
                             }
                             if (targetEntity.Contains("tbs_totalsqft") || targetEntity.Contains("tbs_stampedandsealeddrawings"))
                             {
+                                tracingService.Trace(string.Format("Total SQFT: {0}", totalSQFT));
                                 bool stampedSealedDrawings = targetEntity.Contains("tbs_stampedandsealeddrawings") ? GetBoolAttributeValue(targetEntity, "tbs_stampedandsealeddrawings") : GetBoolAttributeValue(PreImage, "tbs_stampedandsealeddrawings");
+
                                 if (stampedSealedDrawings)
                                 {
-                                    targetEntity["tbs_stampedandsealedshopdrawingsprice"] = new Money(RoundUpToNearest50((totalSQFT * 0.06m + baseAmount) * 1.75m) * currencyCode.exchangeRate);
+                                    targetEntity["tbs_stampedandsealedshopdrawingsprice"] = new Money(RoundUpToNearest50((totalSQFT * 0.06m + baseAmount)) * 1.75m * currencyCode.exchangeRate);
                                 }
                                 else
                                 {
