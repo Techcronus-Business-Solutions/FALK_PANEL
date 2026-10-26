@@ -166,7 +166,7 @@ namespace Falk_Plugins
                                 if (SQFT != null)
                                 {
                                     tracingService.Trace("X: " + (SQFT.GetAttributeValue<AliasedValue>("sqft") == null).ToString());
-                                    totalSQFT = SQFT.Contains("sqft") ? (decimal)SQFT.GetAttributeValue<AliasedValue>("sqft")?.Value : 0;
+                                    totalSQFT = SQFT.Contains("sqft") ? (decimal)(SQFT.GetAttributeValue<AliasedValue>("sqft")?.Value ?? 0) : 0;
 
                                 }
                                 //tracingService.Trace($"Total SQFT: {totalSQFT}");
