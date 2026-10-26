@@ -1,4 +1,5 @@
 ﻿using Falk_Plugins.Pricing_Master;
+using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
@@ -49,6 +50,20 @@ namespace Falk_Plugins
                             CreatequoteLineItems(targetEntity.ToEntityReference(), oppProductRef);
                             CreateQuotePanelAccessories(targetEntity.ToEntityReference(), oppProductRef);
                             CreateQuotePanelTrims(targetEntity.ToEntityReference(), oppProductRef);
+
+                            CalculateRollupFieldRequest calcularRollupAcces = new CalculateRollupFieldRequest
+                            {
+                                Target = new EntityReference("quotedetail", targetEntity.Id),
+                                FieldName = "tbs_accessoriespricetotal"
+                            };
+                            CalculateRollupFieldResponse calcularRollupAccesResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupAcces);
+
+                            CalculateRollupFieldRequest calcularRollupTrim = new CalculateRollupFieldRequest
+                            {
+                                Target = new EntityReference("quotedetail", targetEntity.Id),
+                                FieldName = "tbs_trimspricetotal"
+                            };
+                            CalculateRollupFieldResponse calcularRollupTrimResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupTrim);
                         }
                     }
                 }
