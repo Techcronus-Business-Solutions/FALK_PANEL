@@ -1,4 +1,5 @@
 ﻿using Falk_Plugins.Pricing_Master;
+using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Newtonsoft.Json.Linq;
@@ -90,6 +91,20 @@ namespace Falk_Plugins
                             CreateOrderLineItems(targetEntity.ToEntityReference(), quoteProductRef);
                             CreateOrderPanelAccessories(targetEntity.ToEntityReference(), quoteProductRef);
                             CreateOrderPanelTrims(targetEntity.ToEntityReference(), quoteProductRef);
+
+                            CalculateRollupFieldRequest calcularRollupAcces = new CalculateRollupFieldRequest
+                            {
+                                Target = new EntityReference("salesorderdetail", targetEntity.Id),
+                                FieldName = "tbs_accessoriespricetotal"
+                            };
+                            CalculateRollupFieldResponse calcularRollupAccesResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupAcces);
+
+                            CalculateRollupFieldRequest calcularRollupTrim = new CalculateRollupFieldRequest
+                            {
+                                Target = new EntityReference("salesorderdetail", targetEntity.Id),
+                                FieldName = "tbs_trimspricetotal"
+                            };
+                            CalculateRollupFieldResponse calcularRollupTrimResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupTrim);
                         }
                     }
                 }

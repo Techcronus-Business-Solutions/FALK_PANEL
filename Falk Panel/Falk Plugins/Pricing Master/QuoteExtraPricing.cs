@@ -309,22 +309,5 @@ namespace Falk_Plugins.Pricing_Master
             return currencyEntity;
 
         }
-        private Currency GetOpportunityCurrencyIsoCode(Entity target, Entity preImage)
-        {
-            EntityReference currencyRef = null;
-
-            if (target.Contains("transactioncurrencyid"))
-            {
-                currencyRef = target.GetAttributeValue<EntityReference>("transactioncurrencyid");
-            }
-            else if (preImage.Contains("transactioncurrencyid"))
-            {
-                currencyRef = preImage.GetAttributeValue<EntityReference>("transactioncurrencyid");
-            }
-
-            Currency currencyEntity = PluginBase.GetCurrencyExchangeRate(service, currencyRef);
-            return currencyEntity;
-
-        }
     }
 }

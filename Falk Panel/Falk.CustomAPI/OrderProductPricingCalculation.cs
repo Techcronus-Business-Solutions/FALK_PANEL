@@ -44,6 +44,10 @@ namespace Falk.CustomAPI
 
                 var orderProduct = GetInputRef("Target");
 
+                // get tracsaction currency from opportunity product
+                Entity quoteProductEntity = service.Retrieve("quotedetail", orderProduct.Id, new ColumnSet("transactioncurrencyid"));
+                var transactionCurrency = GetCurrencyExchangeRate(service, quoteProductEntity.GetAttributeValue<EntityReference>("transactioncurrencyid"));
+
                 string interiorCategoryText = GetColorCategoryText(interiorColorCategory);
                 string exteriorCategoryText = GetColorCategoryText(exteriorColorCategory);
 
@@ -116,6 +120,9 @@ namespace Falk.CustomAPI
                         out exteriorFound);
                 }
 
+                interiorPrice *= transactionCurrency.exchangeRate;
+                exteriorPrice *= transactionCurrency.exchangeRate;
+
                 context.OutputParameters["InteriorPrice"] = new Money(interiorPrice);
                 context.OutputParameters["ExteriorPrice"] = new Money(exteriorPrice);
                 #endregion
@@ -133,6 +140,9 @@ namespace Falk.CustomAPI
                 {
                     exteriorEmbossPrice = GetEmbossPrice(panelThickness.Id);
                 }
+
+                interiorEmbossPrice *= transactionCurrency.exchangeRate;
+                exteriorEmbossPrice *= transactionCurrency.exchangeRate;
 
                 context.OutputParameters["InteriorEmbossPrice"] = new Money(interiorEmbossPrice);
                 context.OutputParameters["ExteriorEmbossPrice"] = new Money(exteriorEmbossPrice);

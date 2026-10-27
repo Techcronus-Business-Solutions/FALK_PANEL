@@ -246,7 +246,7 @@ namespace Falk_Plugins.Pricing_Master
                 query.ColumnSet.AddColumns("tbs_accessoryid");
                 LinkEntity pricing = query.AddLink("tbs_accessorypricing", "tbs_accessorypricing", "tbs_accessorypricingid");
                 pricing.EntityAlias = "pricing";
-                pricing.Columns.AddColumns("tbs_price", "tbs_unit");
+                pricing.Columns.AddColumns("tbs_price", "tbs_unit", "tbs_canadacustomermargin");
                 LinkEntity thickness = query.AddLink("tbs_accessory_tbs_thickness", "tbs_accessoryid", "tbs_accessoryid");
                 thickness.EntityAlias = "thickness";
                 thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
