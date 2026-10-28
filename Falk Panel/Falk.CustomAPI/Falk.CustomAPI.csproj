@@ -132,6 +132,7 @@
     <Compile Include="CalculateOrderTrimQty.cs" />
     <Compile Include="CalculateQuoteTrimQty.cs" />
     <Compile Include="CalculateTrimQty.cs" />
+    <Compile Include="CloneOpportunityProduct.cs" />
     <Compile Include="OpportunityProductPricingCalculation.cs" />
     <Compile Include="CustomAPIBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
