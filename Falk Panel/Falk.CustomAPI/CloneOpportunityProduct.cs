@@ -54,6 +54,11 @@ namespace Falk.CustomAPI
                     };
                     CalculateRollupFieldResponse calcularRollupTrimResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupTrim);
 
+                    Entity OppProduct = new Entity("opportunityproduct", ClonedOppProduct);
+
+                    OppProduct["skippricecalculation"] = new OptionSetValue(0);
+                    service.Update(OppProduct);
+
                     context.OutputParameters["ClonedOpportunityProductId"] = ClonedOppProduct;
                 }
                 catch (Exception e)

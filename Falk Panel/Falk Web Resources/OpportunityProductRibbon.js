@@ -103,13 +103,15 @@ Falk.OpportunityProductRibbon = {
         return { id: val[0].id.replace(/[{}]/g, ""), entityType: entityType };
     },
 
-    CloneProductForm: function (primaryId) {
+    CloneProductForm: function (primaryControl) {
+        const opportunityProductId = primaryControl.data.entity.getId().replace(/[{}]/g, "");
+
         Xrm.Utility.showProgressIndicator("Cloning products...");
 
         // Get ID from function and call the API to clone the product form
         const execute_tbs_CloneOpportunityProduct_Request = {
             // Parameters
-            entity: { entityType: "opportunityproduct", id: primaryId }, 
+            entity: { entityType: "opportunityproduct", id: opportunityProductId }, 
 
             getMetadata: function () {
                 return {
@@ -125,7 +127,7 @@ Falk.OpportunityProductRibbon = {
         Xrm.WebApi.execute(execute_tbs_CloneOpportunityProduct_Request).then(
             function success(response) {
                 if (response.ok) { console.log("Success"); }
-                Xrm.Utility.closeProgressIndicator();
+                return response.json();
             }
         ).then(function (responseBody) {
             var result = responseBody;
@@ -136,10 +138,13 @@ Falk.OpportunityProductRibbon = {
                 entityName: "opportunityproduct",
                 entityId: clonedopportunityproductid
             };
+            Xrm.Utility.closeProgressIndicator();
+
             Xrm.Navigation.openForm(entityFormOptions).then(function () {
                 console.log("Cloned product form opened successfully.");
             }).catch(function (error) {
                 console.error("Error opening cloned product form: " + error.message);
+                Xrm.Utility.closeProgressIndicator();
             });
         }).catch(function (error) {
             console.error(error.message);
@@ -147,14 +152,16 @@ Falk.OpportunityProductRibbon = {
         });
     },
 
-    CloneProductGrid: function (selectedIds) {
-        Xrm.Utility.showProgressIndicator("Cloning products...");
+    CloneProductGrid: async function (selectedIds) {
+        const total = selectedIds.length;
 
-        for (var id of selectedIds) {
-            // Call the API to clone the product form for the current ID
-            const execute_tbs_CloneOpportunityProduct_Request = {
-                // Parameters
-                entity: { entityType: "opportunityproduct", id: primaryId },
+        for (var i = 0; i < total; i++) {
+            Xrm.Utility.showProgressIndicator(
+                "Processing " + (i + 1) + " of " + total + "..."
+            );
+            let selectedId = selectedIds[i];
+            let execute_tbs_CloneOpportunityProduct_Request = {
+                entity: { entityType: "opportunityproduct", id: selectedId },
 
                 getMetadata: function () {
                     return {
@@ -167,15 +174,23 @@ Falk.OpportunityProductRibbon = {
                 }
             };
 
-            Xrm.WebApi.execute(execute_tbs_CloneOpportunityProduct_Request).then(
-                function success(response) {
-                    if (response.ok) { console.log("Success"); }
-                    Xrm.Utility.closeProgressIndicator();
+            try {
+                const response = await Xrm.WebApi.execute(execute_tbs_CloneOpportunityProduct_Request);
+
+                if (response.ok) {
+                    console.log("Success");
                 }
-            ).catch(function (error) {
+            } catch (error) {
                 console.error(error.message);
+            } finally {
                 Xrm.Utility.closeProgressIndicator();
-            });
+            }
+        }
+
+        const gridControl = Xrm.Page.getControl("opportunityproductsGrid");
+
+        if (gridControl !== null && gridControl !== undefined) {
+            gridControl.refresh(); 
         }
     }
 };
