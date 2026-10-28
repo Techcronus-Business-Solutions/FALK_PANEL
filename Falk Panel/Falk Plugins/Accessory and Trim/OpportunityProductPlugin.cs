@@ -57,7 +57,7 @@ namespace Falk_Plugins.Pricing_Master
                             CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness, currency);
                             tracingService.Trace("Panel Accessories created");
 
-                            CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness);
+                            CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness, currency);
                             tracingService.Trace("Panel Trims created");
 
                             UpdatePanelTrimQty(service, targetEntity.Id);
@@ -113,7 +113,7 @@ namespace Falk_Plugins.Pricing_Master
                                     CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness, currency);
                                     tracingService.Trace("Panel Accessories created");
 
-                                    CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness);
+                                    CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness, currency);
                                     tracingService.Trace("Panel Trims created");
 
                                     UpdatePanelTrimQty(service, targetEntity.Id);
@@ -340,7 +340,7 @@ namespace Falk_Plugins.Pricing_Master
                 throw new InvalidPluginExecutionException("Error occurred while creating Panel Accessory and Panel Trim records.", ex);
             }
         }
-        private void CreatePanelTrims(IOrganizationService service, Guid opportunityProductId, EntityReference panelType, EntityReference panelThickness)
+        private void CreatePanelTrims(IOrganizationService service, Guid opportunityProductId, EntityReference panelType, EntityReference panelThickness, Currency currencyIsoCode)
         {
             try
             {
@@ -370,6 +370,7 @@ namespace Falk_Plugins.Pricing_Master
                     panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
+                    panelTrim["transactioncurrencyid"] = currencyIsoCode != null ? new EntityReference("transactioncurrency", currencyIsoCode.id) : null;
                     panelTrim["tbs_isquantitycalculated"] = trim.Contains("rule.tbs_ruleclass") && trim.GetAttributeValue<AliasedValue>("rule.tbs_ruleclass").Value != null ? true : false;
 
                     Guid trimId = service.Create(panelTrim);

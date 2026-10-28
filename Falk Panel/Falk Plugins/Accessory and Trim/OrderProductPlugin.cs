@@ -68,7 +68,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                                     CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness, currency);
                                     tracingService.Trace("Panel Accessories created");
 
-                                    CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness);
+                                    CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness, currency);
                                     tracingService.Trace("Panel Trims created");
 
                                     UpdatePanelTrimQty(service, targetEntity.Id);
@@ -126,7 +126,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                                     CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness, currency);
                                     tracingService.Trace("Panel Accessories created");
 
-                                    CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness);
+                                    CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness, currency);
                                     tracingService.Trace("Panel Trims created");
 
                                     UpdatePanelTrimQty(service, targetEntity.Id);
@@ -358,7 +358,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             }
         }
 
-        private void CreatePanelTrims(IOrganizationService service, Guid orderProductId, EntityReference panelType, EntityReference panelThickness)
+        private void CreatePanelTrims(IOrganizationService service, Guid orderProductId, EntityReference panelType, EntityReference panelThickness, Currency currencyIsoCode)
         {
             try
             {

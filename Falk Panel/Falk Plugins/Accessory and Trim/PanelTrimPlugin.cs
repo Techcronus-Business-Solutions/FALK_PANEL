@@ -212,39 +212,35 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             int quantity = panelTrim.Contains("tbs_quantity") ? panelTrim.GetAttributeValue<int>("tbs_quantity") : 1;
 
+            decimal exchangeRate = 1;
             bool isCAD = false;
+            bool isUSD = false;
+
             if (parentProduct.Contains("transactioncurrencyid"))
             {
                 EntityReference currencyRef = parentProduct.GetAttributeValue<EntityReference>("transactioncurrencyid");
 
                 if (currencyRef != null)
                 {
-                    Entity currency = service.Retrieve("transactioncurrency", currencyRef.Id, new ColumnSet("isocurrencycode"));
+                    Entity currency = service.Retrieve("transactioncurrency", currencyRef.Id, new ColumnSet("exchangerate", "isocurrencycode"));
 
                     string isoCode = currency.GetAttributeValue<string>("isocurrencycode");
 
                     isCAD = isoCode != null && isoCode.Equals("CAD", StringComparison.OrdinalIgnoreCase);
+                   
+                    isUSD = string.Equals(isoCode, "USD", StringComparison.OrdinalIgnoreCase);
+
+                    exchangeRate = currency.GetAttributeValue<decimal>("exchangerate");
                 }
             }
 
-            Money basePriceMoney;
-            Money embossPriceMoney;
+            Money basePriceMoney = trimPricing.GetAttributeValue<Money>("tbs_price") ?? new Money(0);
 
-            if (isCAD)
-            {
-                basePriceMoney = trimPricing.GetAttributeValue<Money>("tbs_canadacustomerprice") ?? new Money(0);
+            Money embossPriceMoney = trimPricing.GetAttributeValue<Money>("tbs_usdembossedprice") ?? new Money(0);
 
-                embossPriceMoney = trimPricing.GetAttributeValue<Money>("tbs_cadembossedprice") ?? new Money(0);
-            }
-            else
-            {
-                basePriceMoney = trimPricing.GetAttributeValue<Money>("tbs_price") ?? new Money(0);
+            decimal basePrice = basePriceMoney.Value * exchangeRate;
 
-                embossPriceMoney = trimPricing.GetAttributeValue<Money>("tbs_usdembossedprice") ?? new Money(0);
-            }
-
-            decimal basePrice = basePriceMoney.Value;
-            decimal embossPrice = embossPriceMoney.Value;
+            decimal embossPrice = embossPriceMoney.Value * exchangeRate;
 
             string trimDescription = trimPricing.GetAttributeValue<string>("tbs_description") ?? string.Empty;
 
@@ -294,7 +290,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             {
                 categoryName = "Tier1";
             }
-            else
+            else if (isUSD)
             {
                 if (finishValue == 0 || finishValue == 1)
                 {
