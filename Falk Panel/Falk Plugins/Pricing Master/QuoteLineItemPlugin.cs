@@ -38,6 +38,12 @@ namespace Falk_Plugins
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
+                            Entity quoteProduct = service.Retrieve("quotedetail", targetEntity.GetAttributeValue<EntityReference>("tbs_quoteproduct").Id, new ColumnSet("skippricecalculation"));
+                            if (GetOptionSetAttributeValue(quoteProduct, "skippricecalculation") == 1)
+                            {
+                                return;
+                            }
+
                             #region Calculate Opportunity Product Rollups
                             try
                             {

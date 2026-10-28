@@ -38,6 +38,11 @@ namespace Falk_Plugins
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
+                            Entity OrderProduct = service.Retrieve("salesorderdetail", targetEntity.GetAttributeValue<EntityReference>("tbs_orderproduct").Id, new ColumnSet("skippricecalculation"));
+                            if (GetOptionSetAttributeValue(OrderProduct, "skippricecalculation") == 1)
+                            {
+                                return;
+                            }
                             #region Calculate Prder Product Rollups
                             try
                             {

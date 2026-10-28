@@ -44,9 +44,9 @@ namespace Falk.CustomAPI
 
                 var orderProduct = GetInputRef("Target");
 
-                // get tracsaction currency from opportunity product
-                Entity quoteProductEntity = service.Retrieve("quotedetail", orderProduct.Id, new ColumnSet("transactioncurrencyid"));
-                var transactionCurrency = GetCurrencyExchangeRate(service, quoteProductEntity.GetAttributeValue<EntityReference>("transactioncurrencyid"));
+                // get tracsaction currency from order product
+                Entity orderProductEntity = service.Retrieve("salesorderdetail", orderProduct.Id, new ColumnSet("transactioncurrencyid"));
+                var transactionCurrency = GetCurrencyExchangeRate(service, orderProductEntity.GetAttributeValue<EntityReference>("transactioncurrencyid"));
 
                 string interiorCategoryText = GetColorCategoryText(interiorColorCategory);
                 string exteriorCategoryText = GetColorCategoryText(exteriorColorCategory);
@@ -175,6 +175,9 @@ namespace Falk.CustomAPI
                 #region Save Record In Order Product
                 Entity salesorderdetail = new Entity("salesorderdetail", orderProduct.Id);
 
+                salesorderdetail.Attributes.Clear();
+                salesorderdetail.Id = orderProduct.Id;
+
                 salesorderdetail["tbs_interiorprice"] = new Money(roundValues(interiorPrice));
                 salesorderdetail["tbs_exteriorprice"] = new Money(roundValues(exteriorPrice));
                 salesorderdetail["tbs_ribbingmodelsweatherprice"] = new Money(0);
@@ -188,6 +191,58 @@ namespace Falk.CustomAPI
 
                 decimal usPrice = roundValues(calculatedPrice) + roundValues(totalPropertyPrice);
                 tracingService.Trace(usPrice.ToString());
+                // --- Territory & Product Markup Calculation ---
+                try
+                {
+                    EntityReference orderRef = salesorderdetail.GetAttributeValue<EntityReference>("salesorderid");
+                    if (orderRef != null && product != null)
+                    {
+                        string region = GetTerritoryRegion(orderRef.Id);
+                        tracingService.Trace($"Resolved Region: {region}");
+
+                        if (!string.IsNullOrEmpty(region))
+                        {
+                            Entity productEntity = service.Retrieve(product.LogicalName, product.Id, new ColumnSet("name"));
+                            string productName = productEntity.GetAttributeValue<string>("name") ?? string.Empty;
+                            tracingService.Trace($"Product Name: {productName}");
+
+                            decimal markupMultiplier = 1.0m;
+
+                            if (region.Equals("Canada East", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (productName.IndexOf("SSR", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    productName.IndexOf("RRP", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    markupMultiplier = 1.05m;
+                                }
+                                else if (productName.IndexOf("CSW", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    markupMultiplier = 1.03m;
+                                }
+                            }
+                            else if (region.Equals("Canada West", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (productName.IndexOf("SSR", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    productName.IndexOf("RRP", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    markupMultiplier = 1.05m;
+                                }
+                                else if (productName.IndexOf("CSW", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    productName.IndexOf("HFW", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    markupMultiplier = 1.03m;
+                                }
+                            }
+
+                            usPrice *= markupMultiplier;
+                            tracingService.Trace($"US Price after Markup ({markupMultiplier}): {usPrice}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    tracingService.Trace($"Error applying markup: {ex.Message}");
+                }
                 salesorderdetail["tbs_usprice"] = new Money(roundValues(usPrice));
 
                 Entity order = service.Retrieve("salesorderdetail", orderProduct.Id, new ColumnSet("quantity", "tbs_usdpriceadjustment"));
@@ -283,6 +338,49 @@ namespace Falk.CustomAPI
                 throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is invalid.");
 
             return entityReference;
+        }
+
+        private string GetTerritoryRegion(Guid opportunityId)
+        {
+            try
+            {
+                //Fetch Order Territory
+                Entity order = service.Retrieve("salesorder", opportunityId, new ColumnSet("tbs_territory"));
+
+
+                EntityReference territoryRef = order.GetAttributeValue<EntityReference>("tbs_territory")
+                                            ?? order.GetAttributeValue<EntityReference>("tbs_territory");
+
+                if (territoryRef == null) return string.Empty;
+
+                //Fetch Territory record and its parent
+                Entity territory = service.Retrieve(territoryRef.LogicalName, territoryRef.Id, new ColumnSet("name", "parentterritoryid"));
+                string territoryName = territory.GetAttributeValue<string>("name");
+
+                if (!string.IsNullOrEmpty(territoryName) && (territoryName.Equals("Canada East", StringComparison.OrdinalIgnoreCase) || territoryName.Equals("Canada West", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return territoryName;
+                }
+
+                // If not Canada East/West directly, check Parent Territory
+                EntityReference parentRef = territory.GetAttributeValue<EntityReference>("parentterritoryid");
+                if (parentRef != null)
+                {
+                    Entity parentTerritory = service.Retrieve(parentRef.LogicalName, parentRef.Id, new ColumnSet("name"));
+                    string parentName = parentTerritory.GetAttributeValue<string>("name");
+
+                    if (!string.IsNullOrEmpty(parentName) && (parentName.Equals("Canada East", StringComparison.OrdinalIgnoreCase) || parentName.Equals("Canada West", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return parentName;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                tracingService.Trace($"Error resolving territory region: {ex.Message}");
+            }
+
+            return string.Empty;
         }
 
         private int? GetInputChoice(string parameterName, bool required = true)

@@ -40,7 +40,10 @@ namespace Falk_Plugins.Pricing_Master
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
                         {
-                            CalculatePricing(targetEntity, new Entity("opportunityproduct"));
+                            if (targetEntity.Contains("skippricecalculation") && targetEntity.GetAttributeValue<OptionSetValue>("skippricecalculation").Value != 1)
+                            {
+                                CalculatePricing(targetEntity, new Entity("opportunityproduct"));
+                            }
                         }
 
                         if (context.MessageName == CONST_UPDATE && context.Stage == PreOperation)
@@ -86,6 +89,50 @@ namespace Falk_Plugins.Pricing_Master
         {
             return Math.Round(value, 2, MidpointRounding.AwayFromZero);
         }
+
+        private string GetTerritoryRegion(Guid opportunityId)
+        {
+            try
+            {
+                //Fetch Opportunity's Territory
+                Entity opp = service.Retrieve("opportunity", opportunityId, new ColumnSet("tbs_territory"));
+
+
+                EntityReference territoryRef = opp.GetAttributeValue<EntityReference>("tbs_territory")
+                                            ?? opp.GetAttributeValue<EntityReference>("tbs_territory");
+
+                if (territoryRef == null) return string.Empty;
+
+                //Fetch Territory record and its parent
+                Entity territory = service.Retrieve(territoryRef.LogicalName, territoryRef.Id, new ColumnSet("name", "parentterritoryid"));
+                string territoryName = territory.GetAttributeValue<string>("name");
+
+                if (!string.IsNullOrEmpty(territoryName) && (territoryName.Equals("Canada East", StringComparison.OrdinalIgnoreCase) || territoryName.Equals("Canada West", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return territoryName;
+                }
+
+                // If not Canada East/West directly, check Parent Territory
+                EntityReference parentRef = territory.GetAttributeValue<EntityReference>("parentterritoryid");
+                if (parentRef != null)
+                {
+                    Entity parentTerritory = service.Retrieve(parentRef.LogicalName, parentRef.Id, new ColumnSet("name"));
+                    string parentName = parentTerritory.GetAttributeValue<string>("name");
+
+                    if (!string.IsNullOrEmpty(parentName) && (parentName.Equals("Canada East", StringComparison.OrdinalIgnoreCase) || parentName.Equals("Canada West", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return parentName;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                tracingService.Trace($"Error resolving territory region: {ex.Message}");
+            }
+
+            return string.Empty;
+        }
+
         private void CalculatePricing(Entity target, Entity preImage)
         {
             decimal basePrice = target.GetAttributeValue<Money>("tbs_baseprice")?.Value
@@ -99,6 +146,66 @@ namespace Falk_Plugins.Pricing_Master
             tracingService.Trace($"Total Property Price: {totalPropertyPrice}");
 
             decimal usPrice = roundValues(basePrice) + roundValues(totalPropertyPrice);
+
+            // Territory & Product Markup Calculation
+            try
+            {
+                EntityReference opportunityRef = target.GetAttributeValue<EntityReference>("opportunityid")
+                                              ?? preImage.GetAttributeValue<EntityReference>("opportunityid");
+
+                EntityReference productRef = target.GetAttributeValue<EntityReference>("productid")
+                                          ?? preImage.GetAttributeValue<EntityReference>("productid");
+
+                if (opportunityRef != null)
+                {
+                    string region = GetTerritoryRegion(opportunityRef.Id);
+                    tracingService.Trace($"Resolved Region: {region}");
+
+                    if (!string.IsNullOrEmpty(region) && productRef != null)
+                    {
+                        // Fetch Panel Type
+                        Entity product = service.Retrieve(productRef.LogicalName, productRef.Id, new ColumnSet("name"));
+                        string productName = product.GetAttributeValue<string>("name") ?? string.Empty;
+                        tracingService.Trace($"Product Name: {productName}");
+
+                        decimal markupMultiplier = 1.0m;
+
+                        if (region.Equals("Canada East", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (productName.IndexOf("SSR", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                productName.IndexOf("RRP", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                markupMultiplier = 1.05m;
+                            }
+                            else if (productName.IndexOf("CSW", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                markupMultiplier = 1.03m;
+                            }
+                        }
+                        else if (region.Equals("Canada West", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (productName.IndexOf("SSR", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                productName.IndexOf("RRP", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                markupMultiplier = 1.05m;
+                            }
+                            else if (productName.IndexOf("CSW", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                productName.IndexOf("HFW", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                markupMultiplier = 1.03m;
+                            }
+                        }
+
+                        usPrice *= markupMultiplier;
+                        tracingService.Trace($"US Price after Markup ({markupMultiplier}): {usPrice}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                tracingService.Trace($"Error applying markup: {ex.Message}");
+            }
+
             target["tbs_usprice"] = new Money(roundValues(usPrice));
             tracingService.Trace($"US Price: {usPrice}");
 
@@ -126,7 +233,7 @@ namespace Falk_Plugins.Pricing_Master
             }
 
             target["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
-            tracingService.Trace($"Upcharge: {upcharge}");  
+            tracingService.Trace($"Upcharge: {upcharge}");
 
             decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
             tracingService.Trace($"Price Per Unit: {pricePerUnit}");

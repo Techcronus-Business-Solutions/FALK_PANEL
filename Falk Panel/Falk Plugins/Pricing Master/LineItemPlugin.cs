@@ -43,14 +43,38 @@ namespace Falk_Plugins
                             // Calculate total SQFT & Linear Ft of all line items on the opportunity product
                             try
                             {
+                                Entity OpportunityProduct = service.Retrieve("opportunityproduct", targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id, new ColumnSet("skippricecalculation"));
+                                if(GetOptionSetAttributeValue(OpportunityProduct, "skippricecalculation") == 1)
+                                {
+                                    return;
+                                }
                                 decimal width = targetEntity.Contains("tbs_widthpanel") ? targetEntity.GetAttributeValue<decimal>("tbs_widthpanel") : 0;
-                                Entity OpportunityProduct = service.Retrieve("opportunityproduct", targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id, new ColumnSet("quantity"));
+                                string fetchXml = $@"
+                                                    <fetch aggregate='true'>
+                                                    <entity name='tbs_lineitem'>
+                                                    <attribute name='tbs_totalsqft' alias='sqft' aggregate='sum' />
+                                                    <filter>
+                                                    <condition attribute='tbs_opportunityproduct' operator='eq' value='{targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id}' />
+                                                    </filter>
+                                                    </entity>
+                                                    </fetch>";
 
-                                decimal totalSqFtSum = GetDecimalAttributeValue(OpportunityProduct, "quantity") + GetDecimalAttributeValue(targetEntity, "tbs_totalsqft");
-                                decimal linearFt = width > 0 ? (totalSqFtSum * 12) / width : 0;
+                                Entity SQFT = service.RetrieveMultiple(new FetchExpression(fetchXml)).Entities.FirstOrDefault();
+                                tracingService.Trace($"SQFT Entity: {SQFT}");
+                                decimal totalSQFT = 0;
+
+                                if (SQFT != null)
+                                {
+                                    tracingService.Trace("X: " + (SQFT.GetAttributeValue<AliasedValue>("sqft") == null).ToString());
+                                    totalSQFT = SQFT.Contains("sqft") ? (decimal)(SQFT.GetAttributeValue<AliasedValue>("sqft")?.Value ?? 0) : 0;
+
+                                }
+                                //tracingService.Trace($"Total SQFT: {totalSQFT}");
+
+                                decimal linearFt = width > 0 ? (totalSQFT * 12) / width : 0;
 
                                 Entity OpportunityProductToUpdate = new Entity("opportunityproduct", targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id);
-                                OpportunityProductToUpdate["quantity"] = totalSqFtSum;
+                                OpportunityProductToUpdate["quantity"] = totalSQFT;
                                 OpportunityProductToUpdate["tbs_linearfeet"] = linearFt;
                                 service.Update(OpportunityProductToUpdate);
                             }
@@ -166,7 +190,16 @@ namespace Falk_Plugins
                                 if (SQFT != null)
                                 {
                                     tracingService.Trace("X: " + (SQFT.GetAttributeValue<AliasedValue>("sqft") == null).ToString());
-                                    totalSQFT = SQFT.Contains("sqft") ? (decimal)(SQFT.GetAttributeValue<AliasedValue>("sqft")?.Value ?? 0) : 0;
+                                    //totalSQFT = SQFT.Contains("sqft") ? (decimal)(SQFT.GetAttributeValue<AliasedValue>("sqft")?.Value ?? 0) : 0;
+                                    if (SQFT.Contains("sqft") && SQFT.GetAttributeValue<AliasedValue>("sqft") != null)
+                                    {
+                                        var rawValue = SQFT.GetAttributeValue<AliasedValue>("sqft").Value;
+                                        totalSQFT = Convert.ToDecimal(rawValue);
+                                    }
+                                    else
+                                    {
+                                        totalSQFT = 0;
+                                    }
 
                                 }
                                 //tracingService.Trace($"Total SQFT: {totalSQFT}");

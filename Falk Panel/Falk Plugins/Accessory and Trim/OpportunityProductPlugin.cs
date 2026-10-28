@@ -37,31 +37,37 @@ namespace Falk_Plugins.Pricing_Master
                     Entity targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
                     if (targetEntity.LogicalName == "opportunityproduct")
                     {
-                        if (context.MessageName == CONST_CREATE && context.Stage == PreOperation)
+                        if (context.MessageName == CONST_CREATE)
                         {
-                            targetEntity["quantity"] = (decimal)0;
-                        }
-                        if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
-                        {
-                            tracingService.Trace("create");
-                            EntityReference panelThickness = targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness");
-                            tracingService.Trace(panelThickness.Id.ToString());
+                            if (targetEntity.Contains("skippricecalculation") && targetEntity.GetAttributeValue<OptionSetValue>("skippricecalculation").Value != 1)
+                            {
+                                if (context.Stage == PreOperation)
+                                {
+                                    targetEntity["quantity"] = (decimal)0;
+                                }
+                                if (context.Stage == PostOperation)
+                                {
+                                    tracingService.Trace("create");
+                                    EntityReference panelThickness = targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness");
+                                    tracingService.Trace(panelThickness.Id.ToString());
 
-                            EntityReference panelType = targetEntity.GetAttributeValue<EntityReference>("productid");
+                                    EntityReference panelType = targetEntity.GetAttributeValue<EntityReference>("productid");
 
-                            tracingService.Trace("Panel id " + panelType.Id.ToString());
+                                    tracingService.Trace("Panel id " + panelType.Id.ToString());
 
-                            EntityReference currencyref = targetEntity.GetAttributeValue<EntityReference>("transactioncurrencyid");
-                            Currency currency = GetCurrencyExchangeRate(service, currencyref);
+                                    EntityReference currencyref = targetEntity.GetAttributeValue<EntityReference>("transactioncurrencyid");
+                                    Currency currency = GetCurrencyExchangeRate(service, currencyref);
 
-                            CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness, currency);
-                            tracingService.Trace("Panel Accessories created");
+                                    CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness, currency);
+                                    tracingService.Trace("Panel Accessories created");
 
-                            CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness, currency);
-                            tracingService.Trace("Panel Trims created");
+                                    CreatePanelTrims(service, targetEntity.Id, panelType, panelThickness, currency);
+                                    tracingService.Trace("Panel Trims created");
 
-                            UpdatePanelTrimQty(service, targetEntity.Id);
-                            UpdatePanelAccessQty(service, targetEntity.Id);
+                                    UpdatePanelTrimQty(service, targetEntity.Id);
+                                    UpdatePanelAccessQty(service, targetEntity.Id);
+                                }
+                            }
                         }
                         if (context.MessageName == CONST_UPDATE && context.Stage == PostOperation)
                         {
