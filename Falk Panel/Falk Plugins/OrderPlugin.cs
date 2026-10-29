@@ -48,7 +48,7 @@ namespace Falk_Plugins
                                 OptionSetValue relationshipType = account.GetAttributeValue<OptionSetValue>("customertypecode");
                                 if (relationshipType != null && relationshipType.Value == 3)
                                 {
-                                    
+                                    targetEntity["ispricelocked"] = false;
                                 }
                                 else
                                 {
@@ -105,6 +105,11 @@ namespace Falk_Plugins
                                 FieldName = "tbs_trimspricetotal"
                             };
                             CalculateRollupFieldResponse calcularRollupTrimResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupTrim);
+
+                            Entity OrderProductUpdate = new Entity("salesorderdetail", orderProduct.Id);
+
+                            OrderProductUpdate["skippricecalculation"] = new OptionSetValue(0);
+                            service.Update(OrderProductUpdate);
                         }
                     }
                 }

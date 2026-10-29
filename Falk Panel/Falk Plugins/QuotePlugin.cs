@@ -64,6 +64,11 @@ namespace Falk_Plugins
                                 FieldName = "tbs_trimspricetotal"
                             };
                             CalculateRollupFieldResponse calcularRollupTrimResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupTrim);
+
+                            Entity quoteProductUpdate = new Entity("quotedetail", quoteProduct.Id);
+
+                            quoteProductUpdate["skippricecalculation"] = new OptionSetValue(0);
+                            service.Update(quoteProductUpdate);
                         }
                     }
                 }

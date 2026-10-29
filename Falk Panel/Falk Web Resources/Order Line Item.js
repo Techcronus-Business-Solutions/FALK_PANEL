@@ -70,13 +70,13 @@ Falk.OrderLineItem = {
             var result = await Xrm.WebApi.retrieveRecord(
                 "salesorderdetail",
                 oppProductId,
-                "?$select=salesorderdetailid&$expand=tbs_panelthickness($select=tbs_visiblepanelwidth)"
+                "?$select=salesorderdetailid&$expand=tbs_PanelThickness($select=tbs_visiblepanelwidth)"
             );
 
-            if (result.tbs_panelthickness &&
-                result.tbs_panelthickness.tbs_visiblepanelwidth != null) {
+            if (result.tbs_PanelThickness &&
+                result.tbs_PanelThickness.tbs_visiblepanelwidth != null) {
                 formContext.getAttribute("tbs_widthpanel")
-                    .setValue(result.tbs_panelthickness.tbs_visiblepanelwidth);
+                    .setValue(result.tbs_PanelThickness.tbs_visiblepanelwidth);
             }
 
         } catch (e) {

@@ -407,7 +407,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             customApiRequest["tbs_orderProduct"] = orderProductId;
 
-            //OrganizationResponse customApiResponse = service.Execute(customApiRequest);
+            OrganizationResponse customApiResponse = service.Execute(customApiRequest);
         }
 
         private void UpdatePanelTrimQty(IOrganizationService service, Guid orderProductId)
@@ -419,7 +419,7 @@ namespace Falk_Plugins.Accessory_and_Trim
 
             customApiRequest["tbs_orderProduct"] = orderProductId;
 
-            //OrganizationResponse customApiResponse = service.Execute(customApiRequest);
+            OrganizationResponse customApiResponse = service.Execute(customApiRequest);
         }
 
         private void InitProperties(LocalPluginContext localcontext)
