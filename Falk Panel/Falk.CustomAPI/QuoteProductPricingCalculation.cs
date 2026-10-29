@@ -44,7 +44,7 @@ namespace Falk.CustomAPI
 
                 var quoteProduct = GetInputRef("Target");
 
-                // get tracsaction currency from opportunity product
+                // get tracsaction currency from Quote product
                 Entity quoteProductEntity = service.Retrieve("quotedetail", quoteProduct.Id, new ColumnSet("transactioncurrencyid"));
                 var transactionCurrency = GetCurrencyExchangeRate(service, quoteProductEntity.GetAttributeValue<EntityReference>("transactioncurrencyid"));
 
@@ -244,8 +244,8 @@ namespace Falk.CustomAPI
 
                 quoteDetail["tbs_usprice"] = new Money(roundValues(usPrice));
 
-                Entity opp = service.Retrieve("quotedetail", quoteProduct.Id, new ColumnSet("quantity", "tbs_usdpriceadjustment"));
-                decimal sqft = opp.GetAttributeValue<decimal>("quantity");
+                Entity quote = service.Retrieve("quotedetail", quoteProduct.Id, new ColumnSet("quantity", "tbs_usdpriceadjustment"));
+                decimal sqft = quote.GetAttributeValue<decimal>("quantity");
                 tracingService.Trace(sqft.ToString());
                 
                 decimal upcharge = 0;
@@ -265,7 +265,7 @@ namespace Falk.CustomAPI
 
                 quoteDetail["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
 
-                decimal usdAdjustment = opp.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value ?? 0;
+                decimal usdAdjustment = quote.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value ?? 0;
                 decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
 
                 decimal lineTotal = sqft * roundValues(pricePerUnit);
@@ -297,14 +297,27 @@ namespace Falk.CustomAPI
         {
             try
             {
-                //Fetch Opportunity's Territory
-                Entity opp = service.Retrieve("opportunity", quoteId, new ColumnSet("tbs_territory"));
+                //Fetch quote's Territory
+                Entity quote = service.Retrieve("quote", quoteId, new ColumnSet("tbs_territory"));
 
 
-                EntityReference territoryRef = opp.GetAttributeValue<EntityReference>("tbs_territory")
-                                            ?? opp.GetAttributeValue<EntityReference>("tbs_territory");
+                EntityReference territoryRef = quote.GetAttributeValue<EntityReference>("tbs_territory")
+                                            ?? quote.GetAttributeValue<EntityReference>("tbs_territory");
 
-                if (territoryRef == null) return string.Empty;
+                EntityReference currencyRef = quote.GetAttributeValue<EntityReference>("transactioncurrencyid")
+                                           ?? quote.GetAttributeValue<EntityReference>("transactioncurrencyid");
+
+                if (territoryRef == null || currencyRef == null)
+                    return string.Empty;
+
+                // Validate Currency Code is CAD
+                Entity fetchCurrency = service.Retrieve(currencyRef.LogicalName, currencyRef.Id, new ColumnSet("isocurrencycode"));
+                string currencyCode = fetchCurrency.GetAttributeValue<string>("isocurrencycode");
+
+                if (string.IsNullOrEmpty(currencyCode) || !currencyCode.Equals("CAD", StringComparison.OrdinalIgnoreCase))
+                {
+                    return string.Empty; // If not CAD, return
+                }
 
                 //Fetch Territory record and its parent
                 Entity territory = service.Retrieve(territoryRef.LogicalName, territoryRef.Id, new ColumnSet("name", "parentterritoryid"));

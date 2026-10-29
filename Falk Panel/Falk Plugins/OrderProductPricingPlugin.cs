@@ -42,7 +42,7 @@ namespace Falk_Plugins.Pricing_Master
                         {
                             if (GetOptionSetAttributeValue(targetEntity, "skippricecalculation") == 1)
                             {
-                                tracingService.Trace("Skipping price calculation for Quote Product.");
+                                tracingService.Trace("Skipping price calculation for order Product.");
                                 return;
                             }
                             CalculatePricing(targetEntity, new Entity("salesorderdetail"));
@@ -102,7 +102,20 @@ namespace Falk_Plugins.Pricing_Master
 
                 EntityReference territoryRef = Order.GetAttributeValue<EntityReference>("tbs_territory")
                                             ?? Order.GetAttributeValue<EntityReference>("tbs_territory");
-                if (territoryRef == null) return string.Empty;
+                EntityReference currencyRef = Order.GetAttributeValue<EntityReference>("transactioncurrencyid")
+                                            ?? Order.GetAttributeValue<EntityReference>("transactioncurrencyid");
+
+                if (territoryRef == null || currencyRef == null)
+                    return string.Empty;
+
+                // Validate Currency Code is CAD
+                Entity fetchCurrency = service.Retrieve(currencyRef.LogicalName, currencyRef.Id, new ColumnSet("isocurrencycode"));
+                string currencyCode = fetchCurrency.GetAttributeValue<string>("isocurrencycode");
+
+                if (string.IsNullOrEmpty(currencyCode) || !currencyCode.Equals("CAD", StringComparison.OrdinalIgnoreCase))
+                {
+                    return string.Empty; // If not CAD, return
+                }
 
                 //Fetch Territory record and its parent
                 Entity territory = service.Retrieve(territoryRef.LogicalName, territoryRef.Id, new ColumnSet("name", "parentterritoryid"));

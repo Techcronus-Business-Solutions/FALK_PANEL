@@ -95,13 +95,25 @@ namespace Falk_Plugins.Pricing_Master
             try
             {
                 //Fetch Opportunity's Territory
-                Entity opp = service.Retrieve("opportunity", opportunityId, new ColumnSet("tbs_territory"));
+                Entity opp = service.Retrieve("opportunity", opportunityId, new ColumnSet("tbs_territory", "transactioncurrencyid"));
 
 
                 EntityReference territoryRef = opp.GetAttributeValue<EntityReference>("tbs_territory")
                                             ?? opp.GetAttributeValue<EntityReference>("tbs_territory");
+                EntityReference currencyRef = opp.GetAttributeValue<EntityReference>("transactioncurrencyid")
+                                            ?? opp.GetAttributeValue<EntityReference>("transactioncurrencyid");
 
-                if (territoryRef == null) return string.Empty;
+                if (territoryRef == null || currencyRef == null)
+                    return string.Empty;
+
+                // Validate Currency Code is CAD
+                Entity fetchCurrency = service.Retrieve(currencyRef.LogicalName, currencyRef.Id, new ColumnSet("isocurrencycode"));
+                string currencyCode = fetchCurrency.GetAttributeValue<string>("isocurrencycode");
+
+                if (string.IsNullOrEmpty(currencyCode) || !currencyCode.Equals("CAD", StringComparison.OrdinalIgnoreCase))
+                {
+                    return string.Empty; // If not CAD, return
+                }
 
                 //Fetch Territory record and its parent
                 Entity territory = service.Retrieve(territoryRef.LogicalName, territoryRef.Id, new ColumnSet("name", "parentterritoryid"));
@@ -119,8 +131,8 @@ namespace Falk_Plugins.Pricing_Master
                     Entity parentTerritory = service.Retrieve(parentRef.LogicalName, parentRef.Id, new ColumnSet("name"));
                     string parentName = parentTerritory.GetAttributeValue<string>("name");
 
-                    if (!string.IsNullOrEmpty(parentName) && (parentName.Equals("Canada East", StringComparison.OrdinalIgnoreCase) || parentName.Equals("Canada West", StringComparison.OrdinalIgnoreCase)))
-                    {
+                    if (!string.IsNullOrEmpty(parentName) && (parentName.Equals("Canada East", StringComparison.OrdinalIgnoreCase) || parentName.Equals("Canada West", StringComparison.OrdinalIgnoreCase))) 
+                        {
                         return parentName;
                     }
                 }
@@ -155,6 +167,7 @@ namespace Falk_Plugins.Pricing_Master
 
                 EntityReference productRef = target.GetAttributeValue<EntityReference>("productid")
                                           ?? preImage.GetAttributeValue<EntityReference>("productid");
+
 
                 if (opportunityRef != null)
                 {

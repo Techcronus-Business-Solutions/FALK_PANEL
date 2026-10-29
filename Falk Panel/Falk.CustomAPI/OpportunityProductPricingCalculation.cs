@@ -302,8 +302,20 @@ namespace Falk.CustomAPI
 
                 EntityReference territoryRef = opp.GetAttributeValue<EntityReference>("tbs_territory")
                                             ?? opp.GetAttributeValue<EntityReference>("tbs_territory");
+                EntityReference currencyRef = opp.GetAttributeValue<EntityReference>("transactioncurrencyid")
+                                           ?? opp.GetAttributeValue<EntityReference>("transactioncurrencyid");
 
-                if (territoryRef == null) return string.Empty;
+                if (territoryRef == null || currencyRef == null)
+                    return string.Empty;
+
+                // Validate Currency Code is CAD
+                Entity fetchCurrency = service.Retrieve(currencyRef.LogicalName, currencyRef.Id, new ColumnSet("isocurrencycode"));
+                string currencyCode = fetchCurrency.GetAttributeValue<string>("isocurrencycode");
+
+                if (string.IsNullOrEmpty(currencyCode) || !currencyCode.Equals("CAD", StringComparison.OrdinalIgnoreCase))
+                {
+                    return string.Empty; // If not CAD, return
+                }
 
                 //Fetch Territory record and its parent
                 Entity territory = service.Retrieve(territoryRef.LogicalName, territoryRef.Id, new ColumnSet("name", "parentterritoryid"));
