@@ -27,7 +27,7 @@ namespace Falk_Plugins
         {
 
             if (localcontext == null)
-            {
+            { 
                 throw new ArgumentNullException(nameof(localcontext));
             }
             InitProperties(localcontext);
