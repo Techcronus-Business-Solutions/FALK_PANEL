@@ -10,7 +10,7 @@ using Microsoft.Crm.Sdk.Messages;
 
 namespace Falk.CustomAPI
 {
-    public class CloneOpportunity: CustomAPIBase
+    public class CloneOpportunity : CustomAPIBase
     {
         public CloneOpportunity() : base(typeof(CloneOpportunity)) { }
 
@@ -37,9 +37,11 @@ namespace Falk.CustomAPI
 
                 Guid newOpportunityId = CloneOpportunityRecord(oppRef.Id);
 
+                CloneOpportunityProducts(oppRef.Id, newOpportunityId);
+
                 tracingService.Trace("New Opportunity Id = " + newOpportunityId);
 
-                context.OutputParameters["NewOpportunityId"] = newOpportunityId;
+                context.OutputParameters["ClonedOpportunityId"] = newOpportunityId;
             }
             catch (Exception ex)
             {
@@ -58,7 +60,22 @@ namespace Falk.CustomAPI
             {
                 if (attribute.Key == "opportunityid")
                     continue;
-
+                switch (attribute.Key.ToLower())
+                {
+                    case "opportunityid":
+                    case "createdon":
+                    case "createdby":
+                    case "modifiedon":
+                    case "modifiedby":
+                    case "createdbyyominame":
+                    case "modifiedbyyominame":
+                    case "versionnumber":
+                    case "importsequencenumber":
+                    case "overriddencreatedon":
+                    case "timezoneruleversionnumber":
+                    case "utcconversiontimezonecode":
+                        continue;
+                }
                 newOpp[attribute.Key] = attribute.Value;
             }
 
@@ -70,6 +87,37 @@ namespace Falk.CustomAPI
             Guid newOpportunityId = service.Create(newOpp);
 
             return newOpportunityId;
+        }
+        private void CloneOpportunityProducts(Guid oldOpportunityId, Guid newOpportunityId)
+        {
+            QueryExpression qe = new QueryExpression("opportunityproduct");
+
+            qe.ColumnSet = new ColumnSet("opportunityproductid");
+
+            qe.Criteria.AddCondition("opportunityid", ConditionOperator.Equal, oldOpportunityId);
+
+            EntityCollection products = service.RetrieveMultiple(qe);
+
+            tracingService.Trace($"Products Found : {products.Entities.Count}");
+
+            foreach (Entity product in products.Entities)
+            {
+                OrganizationRequest request = new OrganizationRequest("tbs_CloneOpportunityProduct");
+
+                request["Target"] = new EntityReference("opportunityproduct", product.Id);
+
+                OrganizationResponse response = service.Execute(request);
+
+                Guid clonedProductId = (Guid)response.Results["ClonedOpportunityProductId"];
+
+                Entity updateProduct = new Entity("opportunityproduct", clonedProductId);
+
+                updateProduct["opportunityid"] = new EntityReference("opportunity", newOpportunityId);
+
+                service.Update(updateProduct);
+
+                tracingService.Trace($"Cloned Product : {clonedProductId}");
+            }
         }
         private EntityReference GetInputRef(string parameterName, bool required = true)
         {
@@ -117,5 +165,6 @@ namespace Falk.CustomAPI
                 throw new InvalidPluginExecutionException("Failed to retrieve Tracing Service !");
             }
         }
+        
     }
 }
