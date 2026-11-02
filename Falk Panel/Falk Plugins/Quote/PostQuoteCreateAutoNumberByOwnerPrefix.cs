@@ -110,11 +110,33 @@ namespace Falk_Plugins.Quote
                         "Auto Number was not generated.");
                 }
 
+
                 // Generate Final Quote Number
-                string finalQuoteNumber = $"{prefix}-{autoNumber}";
+
+                string finalQuoteNumber = autoNumber;
+
+                // Check whether the existing Quote Number already contains a prefix
+                if (autoNumber.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase))
+                {
+                    finalQuoteNumber = autoNumber;
+                }
+                else
+                {
+                    // Remove any existing prefix and retain the actual Quote Number
+                    int separatorIndex = autoNumber.IndexOf('-');
+
+                    if (separatorIndex >= 0)
+                    {
+                        finalQuoteNumber = autoNumber.Substring(separatorIndex + 1);
+                    }
+
+                    // Add the current user's prefix
+                    finalQuoteNumber = $"{prefix}-{finalQuoteNumber}";
+                }
 
                 tracingService.Trace(
                     "Final Quote Number: {0}", finalQuoteNumber);
+
 
                 // Update Quote
                 Entity updateQuote = new Entity("quote");
