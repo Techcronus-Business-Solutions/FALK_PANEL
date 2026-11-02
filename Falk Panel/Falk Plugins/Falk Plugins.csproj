@@ -188,6 +188,7 @@
     <Compile Include="QuotePlugin.cs" />
     <Compile Include="OrderProductPricingPlugin.cs" />
     <Compile Include="QuoteProductPricingPlugin.cs" />
+    <Compile Include="Quote\PostQuoteCreateAutoNumberByOwnerPrefix.cs" />
     <Compile Include="SalesLifecycle\SalesLifecycleProcessPlugin.cs" />
     <Compile Include="Accessory and Trim\PanelTrimPlugin.cs" />
   </ItemGroup>

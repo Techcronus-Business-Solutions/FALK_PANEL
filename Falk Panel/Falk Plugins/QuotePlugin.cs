@@ -38,7 +38,19 @@ namespace Falk_Plugins
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
-                            Entity quoteProduct = service.Retrieve("quotedetail",targetEntity.Id,new ColumnSet("tbs_opportunityproduct"));
+                            // Entity quoteProduct = service.Retrieve("quotedetail",targetEntity.Id,new ColumnSet("tbs_opportunityproduct"));
+                            Entity quoteProduct = service.Retrieve("quotedetail", targetEntity.Id, new ColumnSet("tbs_opportunityproduct", "skippricecalculation"));
+
+
+                            if (quoteProduct.Contains("skippricecalculation") && quoteProduct.GetAttributeValue<OptionSetValue>("skippricecalculation").Value == 1)
+
+                            {
+
+                                tracingService.Trace("Clone process detected. Skipping QuotePlugin.");
+
+                                return;
+
+                            }
 
                             EntityReference oppProductRef = quoteProduct.GetAttributeValue<EntityReference>("tbs_opportunityproduct");
 
@@ -120,7 +132,7 @@ namespace Falk_Plugins
         {
             QueryExpression query = new QueryExpression("tbs_opppanelaccessory");
             query.ColumnSet = new ColumnSet(true);
-            query.Criteria.AddCondition("tbs_opportunityproduct",ConditionOperator.Equal,oppProductRef.Id);
+            query.Criteria.AddCondition("tbs_opportunityproduct", ConditionOperator.Equal, oppProductRef.Id);
 
             EntityCollection accessories = service.RetrieveMultiple(query);
 
@@ -132,7 +144,7 @@ namespace Falk_Plugins
 
                 foreach (var attribute in oppAccessory.Attributes)
                 {
-                    if (attribute.Key == "tbs_opppanelaccessoryid" ||attribute.Key == "tbs_opportunityproduct")
+                    if (attribute.Key == "tbs_opppanelaccessoryid" || attribute.Key == "tbs_opportunityproduct")
                         continue;
 
                     quoteAccessory[attribute.Key] = attribute.Value;
