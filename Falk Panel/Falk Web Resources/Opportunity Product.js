@@ -157,22 +157,38 @@ Falk.OpportunityProduct = {
             return;
 
         const productId = product[0].id.replace(/[{}]/g, "");
+        var exteriorColorCategoryAttr = formContext.getAttribute("tbs_exteriorcolorcategory");
+        var exteriorColorCategory = null;
 
-        const fetchXml =
+        if (exteriorColorCategoryAttr != null) {
+            exteriorColorCategory = exteriorColorCategoryAttr.getValue();
+        }
+
+        var fetchXml =
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
-            "  <entity name='tbs_finish'>" +
-            "    <attribute name='tbs_name' />" +
-            "    <order attribute='tbs_name' />" +
-            "    <filter>" +
-            "       <condition attribute='tbs_type' operator='eq' value='1' />" +
-            "    </filter>" +
-            "    <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
-            "       <filter>" +
-            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
-            "       </filter>" +
-            "    </link-entity>" +
-            "  </entity>" +
-            "</fetch>";
+            "   <entity name='tbs_finish'>" +
+            "     <attribute name='tbs_name' />" +
+            "     <order attribute='tbs_name' />" +
+            "     <filter>" +
+            "         <condition attribute='tbs_type' operator='eq' value='1' />" +
+            "     </filter>" +
+            "     <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
+            "         <filter>" +
+            "             <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "         </filter>" +
+            "     </link-entity>";
+
+        // Only add the color category link-entity if a category is selected
+        if (exteriorColorCategory !== null && exteriorColorCategory !== undefined) {
+            fetchXml +=
+                "     <link-entity name='tbs_color' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
+                "         <filter>" +
+                "             <condition attribute='tbs_colorcategory' operator='eq' value='" + exteriorColorCategory + "' />" +
+                "         </filter>" +
+                "     </link-entity>";
+        }
+
+        fetchXml += "</entity></fetch>";
 
         const layoutXml =
             "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +
@@ -199,21 +215,37 @@ Falk.OpportunityProduct = {
 
         const productId = product[0].id.replace(/[{}]/g, "");
 
-        const fetchXml =
+        var interiorColorCategoryAttr = formContext.getAttribute("tbs_interiorcolorcategory");
+        var interiorColorCategory = null;
+
+        if (interiorColorCategoryAttr != null) {
+            interiorColorCategory = interiorColorCategoryAttr.getValue();
+        }
+
+        let fetchXml =
             "<fetch version='1.0' mapping='logical' distinct='true'>" +
-            "  <entity name='tbs_finish'>" +
-            "    <attribute name='tbs_name' />" +
-            "    <order attribute='tbs_name' />" +
-            "    <filter>" +
-            "       <condition attribute='tbs_type' operator='eq' value='0' />" +
-            "    </filter>" +
-            "    <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
-            "       <filter>" +
-            "           <condition attribute='productid' operator='eq' value='" + productId + "' />" +
-            "       </filter>" +
-            "    </link-entity>" +
-            "  </entity>" +
-            "</fetch>";
+            "   <entity name='tbs_finish'>" +
+            "     <attribute name='tbs_name' />" +
+            "     <order attribute='tbs_name' />" +
+            "     <filter>" +
+            "         <condition attribute='tbs_type' operator='eq' value='1' />" +
+            "     </filter>" +
+            "     <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
+            "         <filter>" +
+            "             <condition attribute='productid' operator='eq' value='" + productId + "' />" +
+            "         </filter>" +
+            "     </link-entity>";
+
+        if (interiorColorCategory !== null && interiorColorCategory !== undefined) {
+            fetchXml +=
+                "     <link-entity name='tbs_color' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
+                "         <filter>" +
+                "             <condition attribute='tbs_colorcategory' operator='eq' value='" + interiorColorCategory + "' />" +
+                "         </filter>" +
+                "     </link-entity>";
+        }
+
+        fetchXml += "</entity></fetch>";
 
         const layoutXml =
             "<grid name='resultset' object='1' jump='tbs_name' select='1' icon='1' preview='1'>" +

@@ -23,7 +23,7 @@ CrmJS.OpportunityFunctions = {
     },
 
     // ==================== Owner OnChange ====================
-    onOwnerChange: function (executionContext) {
+    onCurrencyChange: function (executionContext) {
         var formContext = executionContext.getFormContext();
 
         CrmJS.OpportunityFunctions.setTerritoryFromOwner(formContext);
