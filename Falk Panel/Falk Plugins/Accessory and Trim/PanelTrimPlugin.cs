@@ -286,21 +286,25 @@ namespace Falk_Plugins.Accessory_and_Trim
             {
                 categoryName = "FM";
             }
-            else if (isCAD)
+            else
             {
                 categoryName = "Tier1";
             }
-            else if (isUSD)
-            {
-                if (finishValue == 0 || finishValue == 1)
-                {
-                    categoryName = "Tier1";
-                }
-                else
-                {
-                    categoryName = "Tier2";
-                }
-            }
+            //else if (isCAD)
+            //{
+            //    categoryName = "Tier1";
+            //}
+            //else if (isUSD)
+            //{
+            //    if (finishValue == 0 || finishValue == 1)
+            //    {
+            //        categoryName = "Tier1";
+            //    }
+            //    else
+            //    {
+            //        categoryName = "Tier2";
+            //    }
+            //}
             #endregion
 
             #region Retrieve Tier record using Category
