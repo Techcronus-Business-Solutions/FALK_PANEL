@@ -167,6 +167,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Order\PostOrderCreateAutoNumberByOwnerPrefix.cs" />
     <Compile Include="Pricing Master\OrderExtraPricing.cs" />
     <Compile Include="Pricing Master\QuoteExtraPricing.cs" />
     <Compile Include="Pricing Master\OpportunityExtraPricing.cs" />

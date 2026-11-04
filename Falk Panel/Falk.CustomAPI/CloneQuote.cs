@@ -64,6 +64,7 @@ namespace Falk.CustomAPI
                     case "quoteid":
                     case "quotenumber":
                     case "revisionnumber":
+                    case "tbs_quoteno":
                     case "createdon":
                     case "createdby":
                     case "modifiedon":
@@ -85,6 +86,7 @@ namespace Falk.CustomAPI
                 newQuote["name"] = oldQuote.GetAttributeValue<string>("name") + " - Copy";
             }
 
+            newQuote["tbs_iscopy"] = true;
             Guid newQuoteId = service.Create(newQuote);
 
             return newQuoteId;

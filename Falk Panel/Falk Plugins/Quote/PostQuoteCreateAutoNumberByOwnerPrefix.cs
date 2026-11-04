@@ -6,164 +6,94 @@ namespace Falk_Plugins.Quote
 {
     public class PostQuoteCreateAutoNumberByOwnerPrefix : IPlugin
     {
+        private const int PostOperation = 40;
+
         public void Execute(IServiceProvider serviceProvider)
         {
-            // Initialize tracing service
-            ITracingService tracingService = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
+            ITracingService tracingService =
+                (ITracingService)serviceProvider.GetService(typeof(ITracingService));
 
-            tracingService.Trace("GenerateQuoteNumber plugin execution started.");
+            IPluginExecutionContext context =
+                (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+
+            if (context.MessageName != "Create" || context.PrimaryEntityName != "quote")
+                return;
 
             try
             {
-                // Get plugin execution context
-                IPluginExecutionContext context =(IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
-
-                tracingService.Trace(
-                    "Message Name: {0}", context.MessageName);
-
-                tracingService.Trace(
-                    "Primary Entity: {0}", context.PrimaryEntityName);
-
-                tracingService.Trace(
-                    "Execution Stage: {0}", context.Stage);
-
-                tracingService.Trace(
-                    "User ID: {0}", context.UserId);
-
-                tracingService.Trace(
-                    "Initiating User ID: {0}", context.InitiatingUserId);
-
-                // Initialize organization service
-                IOrganizationServiceFactory factory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
-
-                IOrganizationService service = factory.CreateOrganizationService(context.UserId);
-
-                tracingService.Trace("Organization service initialized.");
-
-                // Run only on Quote Create
-                if (context.MessageName != "Create" ||
-                    context.PrimaryEntityName != "quote")
+                // Stage 40: add the user's prefix
+                if (context.Stage == PostOperation)
                 {
-                    tracingService.Trace(
-                        "Plugin stopped because the message or entity did not match.");
+                    IOrganizationServiceFactory factory =
+                        (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
+                    IOrganizationService service = factory.CreateOrganizationService(context.UserId);
 
-                    return;
+                    HandlePostOperation(context, service, tracingService);
                 }
-
-                tracingService.Trace(
-                    "Quote Create message verified.");
-
-                // Get Quote ID
-                Guid quoteId = context.PrimaryEntityId;
-
-                tracingService.Trace(
-                    "Quote ID: {0}", quoteId);
-
-                // Get initiating user's ID
-                Guid userId = context.InitiatingUserId;
-
-                tracingService.Trace(
-                    "Retrieving user prefix for user: {0}", userId);
-
-                // Retrieve User Prefix
-                Entity user = service.Retrieve(
-                    "systemuser",
-                    userId,
-                    new ColumnSet("tbs_prefix"));
-
-                string prefix =
-                    user.GetAttributeValue<string>("tbs_prefix");
-
-                tracingService.Trace(
-                    "Retrieved prefix: {0}",
-                    string.IsNullOrWhiteSpace(prefix)
-                        ? "<empty>"
-                        : prefix);
-
-                if (string.IsNullOrWhiteSpace(prefix))
-                {
-                    throw new InvalidPluginExecutionException(
-                        "Prefix is not configured for the logged-in user.");
-                }
-
-                // Retrieve Quote Auto Number
-                tracingService.Trace(
-                    "Retrieving Quote Auto Number.");
-
-                Entity quote = service.Retrieve(
-                    "quote",
-                    quoteId,
-                    new ColumnSet("tbs_quoteno"));
-
-                string autoNumber =
-                    quote.GetAttributeValue<string>("tbs_quoteno");
-
-                tracingService.Trace(
-                    "Retrieved Auto Number: {0}",
-                    string.IsNullOrWhiteSpace(autoNumber)
-                        ? "<empty>"
-                        : autoNumber);
-
-                if (string.IsNullOrWhiteSpace(autoNumber))
-                {
-                    throw new InvalidPluginExecutionException(
-                        "Auto Number was not generated.");
-                }
-
-
-                // Generate Final Quote Number
-
-                string finalQuoteNumber = autoNumber;
-
-                // Check whether the existing Quote Number already contains a prefix
-                if (autoNumber.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase))
-                {
-                    finalQuoteNumber = autoNumber;
-                }
-                else
-                {
-                    // Remove any existing prefix and retain the actual Quote Number
-                    int separatorIndex = autoNumber.IndexOf('-');
-
-                    if (separatorIndex >= 0)
-                    {
-                        finalQuoteNumber = autoNumber.Substring(separatorIndex + 1);
-                    }
-
-                    // Add the current user's prefix
-                    finalQuoteNumber = $"{prefix}-{finalQuoteNumber}";
-                }
-
-                tracingService.Trace(
-                    "Final Quote Number: {0}", finalQuoteNumber);
-
-
-                // Update Quote
-                Entity updateQuote = new Entity("quote");
-                updateQuote.Id = quoteId;
-                updateQuote["tbs_quoteno"] = finalQuoteNumber;
-
-                tracingService.Trace(
-                    "Updating Quote Number.");
-
-                service.Update(updateQuote);
-
-                tracingService.Trace(
-                    "Quote Number update completed successfully.");
+            }
+            catch (InvalidPluginExecutionException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                tracingService.Trace(
-                    "ERROR in GenerateQuoteNumber: {0}", ex.ToString());
-
+                tracingService.Trace("Quote number plugin error: {0}", ex.ToString());
                 throw new InvalidPluginExecutionException(
                     "Error generating Quote Number: " + ex.Message, ex);
             }
-            finally
+        }
+
+        private void HandlePostOperation(
+            IPluginExecutionContext context,
+            IOrganizationService service,
+            ITracingService tracingService)
+        {
+            Guid quoteId = context.PrimaryEntityId;
+
+            Entity quote = service.Retrieve(
+                "quote",
+                quoteId,
+                new ColumnSet("tbs_quoteno", "tbs_iscopy", "revisionnumber"));
+
+            bool isCopy = quote.GetAttributeValue<bool?>("tbs_iscopy") ?? false;
+            int revisionNumber = quote.GetAttributeValue<int?>("revisionnumber") ?? 0;
+
+            tracingService.Trace("Stage 40. isCopy={0}, revision={1}, quoteno='{2}'",
+    isCopy, revisionNumber, quote.GetAttributeValue<string>("tbs_quoteno"));
+
+            // Revise: keep the same quote number
+            if (revisionNumber > 0 && !isCopy)
             {
-                tracingService.Trace(
-                    "GenerateQuoteNumber plugin execution finished.");
+                tracingService.Trace("Revise detected. Quote number not changed.");
+                return;
             }
+
+            string autoNumber = quote.GetAttributeValue<string>("tbs_quoteno");
+
+            if (string.IsNullOrWhiteSpace(autoNumber))
+                throw new InvalidPluginExecutionException("Auto Number was not generated.");
+
+            Entity user = service.Retrieve(
+                "systemuser",
+                context.InitiatingUserId,
+                new ColumnSet("tbs_prefix"));
+
+            string prefix = user.GetAttributeValue<string>("tbs_prefix");
+
+            if (string.IsNullOrWhiteSpace(prefix))
+                throw new InvalidPluginExecutionException(
+                    "Prefix is not configured for the logged-in user.");
+
+            // Already has the prefix, nothing to do
+            if (autoNumber.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            string finalQuoteNumber = prefix + "-" + autoNumber;
+            tracingService.Trace("Final Quote Number: {0}", finalQuoteNumber);
+
+            Entity update = new Entity("quote", quoteId);
+            update["tbs_quoteno"] = finalQuoteNumber;
+            service.Update(update);
         }
     }
 }
