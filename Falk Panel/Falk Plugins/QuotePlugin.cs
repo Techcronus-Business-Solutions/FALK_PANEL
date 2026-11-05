@@ -39,17 +39,12 @@ namespace Falk_Plugins
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
                             // Entity quoteProduct = service.Retrieve("quotedetail",targetEntity.Id,new ColumnSet("tbs_opportunityproduct"));
-                            Entity quoteProduct = service.Retrieve("quotedetail", targetEntity.Id, new ColumnSet("tbs_opportunityproduct", "skippricecalculation"));
+                            Entity quoteProduct = service.Retrieve("quotedetail", targetEntity.Id, new ColumnSet("tbs_opportunityproduct", "skippricecalculation", "tbs_isquoteclone"));
 
-
-                            if (quoteProduct.Contains("skippricecalculation") && quoteProduct.GetAttributeValue<OptionSetValue>("skippricecalculation").Value == 1)
-
+                            if (quoteProduct.Contains("tbs_isquoteclone") && quoteProduct.GetAttributeValue<bool>("tbs_isquoteclone"))
                             {
-
                                 tracingService.Trace("Clone process detected. Skipping QuotePlugin.");
-
                                 return;
-
                             }
 
                             EntityReference oppProductRef = quoteProduct.GetAttributeValue<EntityReference>("tbs_opportunityproduct");
