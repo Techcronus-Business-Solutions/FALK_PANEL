@@ -20,6 +20,7 @@ CrmJS.OpportunityFunctions = {
         var formContext = executionContext.getFormContext();
 
         CrmJS.OpportunityFunctions.setTerritoryFromOwner(formContext);
+        CrmJS.OpportunityFunctions.registerStageChange(executionContext);
     },
 
     // ==================== Owner OnChange ====================
@@ -27,6 +28,34 @@ CrmJS.OpportunityFunctions = {
         var formContext = executionContext.getFormContext();
 
         CrmJS.OpportunityFunctions.setTerritoryFromOwner(formContext);
+    },
+
+    // ==================== Register BPF Stage Change ====================
+    registerStageChange: function (executionContext) {
+        var formContext = executionContext.getFormContext();
+
+        // Fires after the user moves to another stage and the BPF saves it
+        formContext.data.process.addOnStageChange(
+            CrmJS.OpportunityFunctions.onStageChange
+        );
+    },
+
+    // ==================== On Stage Change ====================
+    onStageChange: function (executionContext) {
+        var formContext = executionContext.getFormContext();
+
+        var stage = formContext.data.process.getActiveStage();
+        if (!stage) return;
+
+        var stageName = stage.getName();
+
+        // Compare by stage name. Change "Review" if the name differs
+        if (stageName === "Review") {
+            var tab = formContext.ui.tabs.get("QUOTES");
+            if (tab) {
+                tab.setFocus();
+            }
+        }
     },
 
     // ==================== Set Territory From Owner ====================

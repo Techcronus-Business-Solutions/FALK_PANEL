@@ -240,13 +240,13 @@ namespace Falk_Plugins.Pricing_Master
                 }
             }
 
-            target["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
+           // target["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
 
-            decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
+           // decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
 
             target["ispriceoverridden"] = true;
-            target["priceperunit"] = new Money(roundValues(pricePerUnit));
-            target["extendedamount"] = new Money(roundValues(pricePerUnit) * roundValues(sqft));
+           // target["priceperunit"] = new Money(roundValues(pricePerUnit));
+           // target["extendedamount"] = new Money(roundValues(pricePerUnit) * roundValues(sqft));
         }
     }
 }

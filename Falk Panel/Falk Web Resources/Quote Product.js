@@ -150,6 +150,43 @@ Falk.QuoteProduct = {
 
             Falk.QuoteProduct.addExteriorColorView(formContext);
         });
+
+        formContext.data.entity.addOnSave(Falk.QuoteProduct.OnSave);
+        formContext.data.entity.addOnPostSave(Falk.QuoteProduct.OnPostSave);
+    },
+
+    _isNewRecord: false,
+
+    OnSave: function (executionContext) {
+        const formContext = executionContext.getFormContext();
+        Falk.QuoteProduct._isNewRecord = formContext.ui.getFormType() === 1;
+    },
+
+    OnPostSave: function (executionContext) {
+        const formContext = executionContext.getFormContext();
+
+        if (!Falk.QuoteProduct._isNewRecord)
+            return;
+
+        Falk.QuoteProduct._isNewRecord = false;
+
+        const recordId = formContext.data.entity.getId();
+        if (!recordId)
+            return;
+
+        // Mark every field as "don't submit" so the form is no longer dirty
+        formContext.data.entity.attributes.forEach(function (attr) {
+            attr.setSubmitMode("never");
+        });
+
+        // Reopen the saved record without the unsaved-changes prompt
+        Xrm.Navigation.openForm(
+            {
+                entityName: formContext.data.entity.getEntityName(),
+                entityId: recordId.replace(/[{}]/g, "")
+            },
+            { openInNewWindow: false }
+        );
     },
 
     addExteriorFinishView: function (formContext) {

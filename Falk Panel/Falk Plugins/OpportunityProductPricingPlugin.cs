@@ -245,17 +245,17 @@ namespace Falk_Plugins.Pricing_Master
                 }
             }
 
-            target["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
-            tracingService.Trace($"Upcharge: {upcharge}");
+           // target["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
+           // tracingService.Trace($"Upcharge: {upcharge}");
 
-            decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
-            tracingService.Trace($"Price Per Unit: {pricePerUnit}");
+           // decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
+           // tracingService.Trace($"Price Per Unit: {pricePerUnit}");
             target["ispriceoverridden"] = true;
-            tracingService.Trace($"Is Price Overridden: {target["ispriceoverridden"]}");
-            target["priceperunit"] = new Money(roundValues(pricePerUnit));
-            tracingService.Trace($"Price Per Unit: {target["priceperunit"]}");
-            target["extendedamount"] = new Money(roundValues(pricePerUnit) * roundValues(sqft));
-            tracingService.Trace($"Extended Amount: {target["extendedamount"]}");
+           // tracingService.Trace($"Is Price Overridden: {target["ispriceoverridden"]}");
+           // target["priceperunit"] = new Money(roundValues(pricePerUnit));
+          //  tracingService.Trace($"Price Per Unit: {target["priceperunit"]}");
+          //  target["extendedamount"] = new Money(roundValues(pricePerUnit) * roundValues(sqft));
+           // tracingService.Trace($"Extended Amount: {target["extendedamount"]}");
         }
     }
 }
