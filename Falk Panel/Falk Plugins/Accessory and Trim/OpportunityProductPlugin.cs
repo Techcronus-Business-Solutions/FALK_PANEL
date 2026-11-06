@@ -351,7 +351,12 @@ namespace Falk_Plugins.Pricing_Master
             try
             {
                 QueryExpression query = new QueryExpression("tbs_trim");
-                query.ColumnSet.AddColumns("tbs_trimid", "tbs_name", "tbs_unit");
+                //query.ColumnSet.AddColumns("tbs_trimid", "tbs_name", "tbs_unit");
+                query.ColumnSet.AddColumns("tbs_trimid", "tbs_name", "tbs_trimpricing");
+
+
+
+
                 LinkEntity query_tbs_trim_tbs_thickness = query.AddLink("tbs_trim_tbs_thickness", "tbs_trimid", "tbs_trimid");
                 query_tbs_trim_tbs_thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
 
@@ -367,13 +372,31 @@ namespace Falk_Plugins.Pricing_Master
 
                 foreach (Entity trim in trims.Entities)
                 {
-                    tracingService.Trace($"Trim Exists? : {trim.Contains("tbs_unit").ToString()}");
+                    //tracingService.Trace($"Trim Exists? : {trim.Contains("tbs_unit").ToString()}");
+
+                    EntityReference trimPricingRef =
+                trim.GetAttributeValue<EntityReference>("tbs_trimpricing");
+
+                    EntityReference unit = null;
+
+                    if (trimPricingRef != null)
+                    {
+                        Entity trimPricing = service.Retrieve(
+                            "tbs_trimpricing",
+                            trimPricingRef.Id,
+                            new ColumnSet("tbs_unit")
+                        );
+
+                        unit = trimPricing.GetAttributeValue<EntityReference>("tbs_unit");
+                    }
+
 
                     Entity panelTrim = new Entity("tbs_opppaneltrim");
                     panelTrim["tbs_opportunityproduct"] = new EntityReference("opportunityproduct", opportunityProductId);
                     panelTrim["tbs_paneltype"] = panelType;
                     panelTrim["tbs_panelthickness"] = panelThickness;
-                    panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
+                    //panelTrim["tbs_unit"] = trim.Contains("tbs_unit") ? trim.GetAttributeValue<EntityReference>("tbs_unit") : null;
+                    panelTrim["tbs_unit"] = unit;
                     panelTrim["tbs_trim"] = trim.ToEntityReference();
                     panelTrim["tbs_iscustomtrim"] = false;
                     panelTrim["transactioncurrencyid"] = currencyIsoCode != null ? new EntityReference("transactioncurrency", currencyIsoCode.id) : null;

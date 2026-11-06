@@ -209,14 +209,14 @@ namespace Falk_Plugins
             string exteriorFinish = GetLookupCode("tbs_exteriorfinish");
             tracingService.Trace(exteriorFinish);
 
+            tracingService.Trace("Getting tbs_exteriorcolor");
             string exteriorColor = GetLookupCode("tbs_exteriorcolor");
-            tracingService.Trace(exteriorColor);
 
+            tracingService.Trace("Getting tbs_exteriorgauge");
             string exteriorGauge = GetLookupCode("tbs_exteriorgauge");
-            tracingService.Trace(exteriorGauge);
 
+            tracingService.Trace("Getting tbs_exteriorprofile");
             string exteriorProfile = GetLookupCode("tbs_exteriorprofile");
-            tracingService.Trace(exteriorProfile);
 
             //Yes/No
 
@@ -313,32 +313,49 @@ namespace Falk_Plugins
 
         private string GetLookupCode(string lookupField)
         {
-            EntityReference lookup;
+            EntityReference lookup = null;
+
             if (PreImage != null)
             {
                 tracingService.Trace("PreImage not null");
-                lookup = targetEntity.Contains(lookupField) ? targetEntity.GetAttributeValue<EntityReference>(lookupField) : PreImage.GetAttributeValue<EntityReference>(lookupField);
-                tracingService.Trace(lookup.Id.ToString());
+
+                lookup = targetEntity.Contains(lookupField)
+                    ? targetEntity.GetAttributeValue<EntityReference>(lookupField)
+                    : PreImage.GetAttributeValue<EntityReference>(lookupField);
             }
             else
             {
                 tracingService.Trace("PreImage null");
-                lookup = targetEntity.Contains(lookupField) ? targetEntity.GetAttributeValue<EntityReference>(lookupField) : null;
-                tracingService.Trace(lookup.Id.ToString());
+
+                lookup = targetEntity.Contains(lookupField)
+                    ? targetEntity.GetAttributeValue<EntityReference>(lookupField)
+                    : null;
             }
+
             if (lookup == null)
             {
-                throw new InvalidPluginExecutionException("Required field '" + lookupField + "' is empty.");
+                throw new InvalidPluginExecutionException(
+                    $"Required field '{lookupField}' is empty."
+                );
             }
 
-            Entity lookupRecord = service.Retrieve(lookup.LogicalName, lookup.Id, new ColumnSet("tbs_code"));
+            tracingService.Trace($"Field : {lookupField}");
+            tracingService.Trace($"Lookup Id : {lookup.Id}");
 
-            string code = lookupRecord.Contains("tbs_code") ? lookupRecord.GetAttributeValue<string>("tbs_code") : null;
+            Entity lookupRecord = service.Retrieve(
+                lookup.LogicalName,
+                lookup.Id,
+                new ColumnSet("tbs_code"));
+
+            string code = lookupRecord.GetAttributeValue<string>("tbs_code");
 
             if (string.IsNullOrWhiteSpace(code))
             {
-                throw new InvalidPluginExecutionException("Code is not configured for " + lookupField + ".");
+                throw new InvalidPluginExecutionException(
+                    $"Code is not configured for {lookupField}."
+                );
             }
+
             return code.Trim().ToUpperInvariant();
         }
         private string GetCore(string lookupField)
@@ -354,13 +371,19 @@ namespace Falk_Plugins
             {
                 tracingService.Trace("PreImage null");
                 lookup = targetEntity.Contains(lookupField) ? targetEntity.GetAttributeValue<EntityReference>(lookupField) : null;
+                if (lookup == null)
+                {
+                    throw new InvalidPluginExecutionException(
+                        $"Required field '{lookupField}' is empty."
+                    );
+                }
                 tracingService.Trace(lookup.Id.ToString());
             }
 
-            if (lookup == null)
-            {
-                throw new InvalidPluginExecutionException("Required field '" + lookupField + "' is empty.");
-            }
+            //if (lookup == null)
+            //{
+            //    throw new InvalidPluginExecutionException("Required field '" + lookupField + "' is empty.");
+            //}
 
             QueryExpression query = new QueryExpression("product");
 
