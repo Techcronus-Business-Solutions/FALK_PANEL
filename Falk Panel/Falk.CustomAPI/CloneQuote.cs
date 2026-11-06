@@ -126,7 +126,8 @@ namespace Falk.CustomAPI
                 }
 
                 newProduct["quoteid"] = new EntityReference("quote", newQuoteId);
-                newProduct["quoteid"] = new EntityReference("quote", newQuoteId);
+
+                newProduct["tbs_isquoteclone"] = true;
 
                 newProduct["skippricecalculation"] =new OptionSetValue(1);
 
@@ -141,7 +142,7 @@ namespace Falk.CustomAPI
                 CreateQuotePanelTrims(oldProduct.Id, newQuoteProductId);
 
                 Entity quoteProductUpdate = new Entity("quotedetail", newQuoteProductId);
-
+                quoteProductUpdate["tbs_isquoteclone"] = false;
                 quoteProductUpdate["skippricecalculation"] = new OptionSetValue(0);
 
                 service.Update(quoteProductUpdate);
