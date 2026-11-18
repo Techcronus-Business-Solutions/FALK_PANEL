@@ -48,6 +48,11 @@ namespace Falk_Plugins.Pricing_Master
                                 if (context.Stage == PostOperation)
                                 {
                                     tracingService.Trace("create");
+                                  tracingService.Trace(
+                                    "skippricecalculation=" +
+                                    (targetEntity.Contains("skippricecalculation")
+                                        ? targetEntity.GetAttributeValue<OptionSetValue>("skippricecalculation").Value.ToString()
+                                        : "NULL"));
                                     EntityReference panelThickness = targetEntity.GetAttributeValue<EntityReference>("tbs_panelthickness");
                                     tracingService.Trace(panelThickness.Id.ToString());
 
@@ -56,7 +61,20 @@ namespace Falk_Plugins.Pricing_Master
                                     tracingService.Trace("Panel id " + panelType.Id.ToString());
 
                                     EntityReference currencyref = targetEntity.GetAttributeValue<EntityReference>("transactioncurrencyid");
+                                            tracingService.Trace(
+                                                "PanelThickness=" +
+                                                (panelThickness == null ? "NULL" : panelThickness.Id.ToString()));
+ 
+                                            tracingService.Trace(
+                                                "PanelType=" +
+                                                (panelType == null ? "NULL" : panelType.Id.ToString()));
+ 
+                                            tracingService.Trace(
+                                                "CurrencyRef=" +
+                                                (currencyref == null ? "NULL" : currencyref.Id.ToString()));
+
                                     Currency currency = GetCurrencyExchangeRate(service, currencyref);
+
 
                                     CreatePanelAccessories(service, targetEntity.Id, panelType, panelThickness, currency);
                                     tracingService.Trace("Panel Accessories created");

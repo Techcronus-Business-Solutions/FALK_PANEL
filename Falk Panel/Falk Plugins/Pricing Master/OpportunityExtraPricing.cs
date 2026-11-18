@@ -23,6 +23,9 @@ namespace Falk_Plugins.Pricing_Master
         private IOrganizationServiceFactory factory { get; set; }
         private Entity targetEntity { get; set; }
         #endregion
+        
+
+
 
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
         {
@@ -31,6 +34,13 @@ namespace Falk_Plugins.Pricing_Master
                 throw new ArgumentNullException(nameof(localcontext));
             }
             InitProperties(localcontext);
+             Entity traceTarget = context.InputParameters.Contains(CONST_TARGETENTITY) ? context.InputParameters[CONST_TARGETENTITY] as Entity : null;
+                    tracingService.Trace("FIRED | Msg={0} Stage={1} Depth={2} Entity={3} Fields={4}",
+                        context.MessageName,
+                        context.Stage,
+                        context.Depth,
+                        traceTarget != null ? traceTarget.LogicalName : "ref",
+                        traceTarget != null ? string.Join(",", traceTarget.Attributes.Keys) : "");
 
             try
             {
@@ -90,6 +100,13 @@ namespace Falk_Plugins.Pricing_Master
                                 {
                                     targetEntity["tbs_shopdrawingsprice"] = null;
                                 }
+
+                                SyncShopDrawingsRowSafe(
+                                    targetEntity.Id,
+                                    shopDrawings,
+                                    targetEntity.GetAttributeValue<Money>("tbs_shopdrawingsprice"),
+                                    targetEntity.Contains("tbs_shopdrawings"));
+
                             }
                             if (targetEntity.Contains("tbs_totalsqft") || targetEntity.Contains("tbs_stampedandsealeddrawings"))
                             {
@@ -104,6 +121,15 @@ namespace Falk_Plugins.Pricing_Master
                                 {
                                     targetEntity["tbs_stampedandsealedshopdrawingsprice"] = null;
                                 }
+
+                                SyncOpportunityProductRowSafe(
+                                    targetEntity.Id,
+                                    stampedSealedDrawings,
+                                    targetEntity.GetAttributeValue<Money>(
+                                        "tbs_stampedandsealedshopdrawingsprice"),
+                                    targetEntity.Contains("tbs_stampedandsealeddrawings"),
+                                    StampedSealedDrawingsRowName);
+
                             }
 
                             if (targetEntity.Contains("tbs_totalfilteredsqft") || targetEntity.Contains("tbs_weathertightwarranty"))
@@ -123,7 +149,15 @@ namespace Falk_Plugins.Pricing_Master
                                 else
                                 {
                                     targetEntity["tbs_roofwarrantyprice"] = null;
-                                }
+                                    
+                                 }
+                                SyncOpportunityProductRowSafe(
+                                                    targetEntity.Id,
+                                                    warranty,
+                                                    targetEntity.GetAttributeValue<Money>("tbs_roofwarrantyprice"),
+                                                    targetEntity.Contains("tbs_weathertightwarranty"),
+                                                    RoofWarrantyRowName);
+
                             }
                             if (targetEntity.Contains("tbs_fmapproval"))
                             {
@@ -147,33 +181,134 @@ namespace Falk_Plugins.Pricing_Master
                 else if (context.InputParameters.Contains(CONST_TARGETENTITY) && (context.InputParameters[CONST_TARGETENTITY] is EntityReference))
                 {
                     EntityReference targetEntityRef = (EntityReference)context.InputParameters["Target"];
+
                     if (targetEntityRef.LogicalName == "opportunityproduct")
                     {
                         if (context.MessageName == CONST_DELETE && context.Stage == PostOperation)
                         {
                             try
+
                             {
+                                  if (!context.PreEntityImages.Contains("PreImage"))
+                                           {
+                                                tracingService.Trace("PreImage not found.");
+                                                    return;
+                                            }
+
+
                                 //if (targetEntity.Contains("quantity"))
                                 //{
                                 Entity PreImage = context.PreEntityImages["PreImage"];
-                                Guid oppId = PreImage.GetAttributeValue<EntityReference>("opportunityid").Id;
 
+                                
+                                EntityReference oppRef =PreImage.GetAttributeValue<EntityReference>("opportunityid");
+                                                            
+                                Guid oppId = oppRef.Id;
+
+                                bool isWriteIn = PreImage.GetAttributeValue<bool?>("isproductoverridden") ?? false;
+                                String rowName = (PreImage.GetAttributeValue<string>("productdescription") ?? "").Trim();
+                                bool isShopDrawingsRow = isWriteIn && string.Equals(rowName, ShopDrawingsRowName,StringComparison.OrdinalIgnoreCase); 
+
+                                 bool isStampedSealedRow =
+                                    isWriteIn &&
+                                    string.Equals(
+                                        rowName,
+                                        StampedSealedDrawingsRowName,
+                                        StringComparison.OrdinalIgnoreCase);
+
+                                 bool isRoofWarrantyRow =
+                                    isWriteIn &&
+                                    string.Equals(
+                                        rowName,
+                                        RoofWarrantyRowName,
+                                        StringComparison.OrdinalIgnoreCase);
+                                                                                    
                                 int totalSQFT = GetTotalSQFTFromOppProducts(oppId);
                                 int totalFilteredSQFT = GetFilteredSQFTFromOppProducts(oppId);
 
-                                Entity updateOpp = new Entity("opportunity");
-                                updateOpp.Id = oppId;
+                                            Entity updateOpp = new Entity("opportunity", oppId);
+
                                 updateOpp["tbs_totalsqft"] = totalSQFT;
                                 updateOpp["tbs_totalfilteredsqft"] = totalFilteredSQFT;
-                                service.Update(updateOpp);
-                                // }
-                            }
+
+                                if (isShopDrawingsRow)
+                                        {
+                                            updateOpp["tbs_shopdrawings"] = false;
+                                            updateOpp["tbs_shopdrawingsprice"] = null;
+
+                                            tracingService.Trace(
+                                                "Manual Shop Drawings deletion detected. " +
+                                                "Toggle set to No and price cleared.");
+                                        }
+
+                                if (isStampedSealedRow)
+                                {
+                                    updateOpp["tbs_stampedandsealeddrawings"] = false;
+                                    updateOpp["tbs_stampedandsealedshopdrawingsprice"] = null;
+
+                                    tracingService.Trace(
+                                        "Manual Stamped and Sealed Drawings deletion detected. Toggle set to No and price cleared.");
+                                }
+
+                                if (isRoofWarrantyRow)
+                                {
+                                    updateOpp["tbs_weathertightwarranty"] = false;
+                                    updateOpp["tbs_roofwarrantyprice"] = null;
+
+                                    tracingService.Trace(
+                                        "Manual Roof Warranty deletion detected. Toggle set to No and price cleared.");
+                                }
+                                    service.Update(updateOpp);
+
+                                
+                                
+                            
+
+                                
+                               // if (isWriteIn && string.Equals(rowName, ShopDrawingsRowName, StringComparison.OrdinalIgnoreCase))
+                                    //{
+                                        // skip if the opportunity itself is being deleted (cascade delete)
+                                       // QueryExpression exists = new QueryExpression("opportunity");
+                                      // Entity updateOpportunity = new Entity("opportunity", oppId);
+                                       // updateOpportunity["tbs_shopdrawings"] = false;
+                                        //updateOpportunity["tbs_shopdrawingsprice"] = null;
+
+                                            //service.Update(updateOpportunity);
+                                    
+                                  //tracingService.Trace(
+                                    //"Manual Shop Drawings deletion detected. " +
+                                   // "Shop Drawings toggle and price reset.");
+                                       
+                                  //  }
+                                 //return;
+
+                                //int totalSQFT = GetTotalSQFTFromOppProducts(oppId);
+                                //int totalFilteredSQFT = GetFilteredSQFTFromOppProducts(oppId);
+
+
+
+                                //Entity updateOpp = new Entity("opportunity");
+                               // updateOpp.Id = oppId;
+                                //updateOpp["tbs_totalsqft"] = totalSQFT;
+                                //updateOpp["tbs_totalfilteredsqft"] = totalFilteredSQFT;
+
+                                 //if (isShopDrawingsRow)
+                                        //{
+                                           // updateOpp["tbs_shopdrawings"] = false;      // toggle -> No
+                                           // updateOpp["tbs_shopdrawingsprice"] = null;  // price -> blank
+                                           // tracingService.Trace("Manual Shop Drawings deletion detected. Toggle set to No, price                       cleared.");
+                                        
+
+                                //service.Update(updateOpp);
+                                 
+                            } 
                             catch (Exception ex)
                             {
                                 throw new InvalidPluginExecutionException(ex.Message);
                             }
-                        }
+                        
                     }
+                        }
                 }
             }
             catch (Exception ex)
@@ -186,16 +321,19 @@ namespace Falk_Plugins.Pricing_Master
         private int GetTotalSQFTFromOppProducts(Guid oppId)
         {
             int totalSQFT = 0;
+            string excludeShopDrawingsRow = BuildShopDrawingsRowExclusion(oppId);
 
             string fetchXml = $@"
-                   <fetch aggregate='true'>
-                      <entity name='opportunityproduct'>
-                        <attribute name='quantity' alias='qty' aggregate='sum' />
-                        <filter>
-                          <condition attribute='opportunityid' operator='eq' value='{oppId}' />
-                        </filter>
-                      </entity>
-                    </fetch>";
+           <fetch aggregate='true'>
+              <entity name='opportunityproduct'>
+                <attribute name='quantity' alias='qty' aggregate='sum' />
+                <filter>
+                  <condition attribute='opportunityid' operator='eq' value='{oppId}' />
+                  {excludeShopDrawingsRow}
+                </filter>
+              </entity>
+            </fetch>";
+
 
             Entity SQFT = service.RetrieveMultiple(new FetchExpression(fetchXml)).Entities.FirstOrDefault();
             if (SQFT != null)
@@ -295,5 +433,259 @@ namespace Falk_Plugins.Pricing_Master
             return currencyEntity;
 
         }
+
+        private const string ShopDrawingsRowName = "Shop Drawings";
+        private const string StampedSealedDrawingsRowName = "Stamped and Sealed Shop Drawings";
+        private const string RoofWarrantyRowName = "Roof Warranty";
+
+
+        private List<Entity> GetOpportunityProductRows(Guid oppId, string rowName)
+        {
+            QueryExpression query = new QueryExpression("opportunityproduct");
+
+            query.ColumnSet = new ColumnSet(
+                "opportunityproductid",
+                "productdescription",
+                "priceperunit",
+                "quantity");
+
+            query.Criteria.AddCondition(
+                "opportunityid",
+                ConditionOperator.Equal,
+                oppId);
+
+            query.Criteria.AddCondition(
+                "isproductoverridden",
+                ConditionOperator.Equal,
+                true);
+
+            return service.RetrieveMultiple(query).Entities
+                .Where(e => string.Equals(
+                    (e.GetAttributeValue<string>("productdescription") ?? "").Trim(),
+                    rowName,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+
+
+       private List<Entity> GetShopDrawingsRows(Guid oppId)
+        {
+            return GetOpportunityProductRows(oppId, ShopDrawingsRowName);
+        }
+
+        private string BuildShopDrawingsRowExclusion(Guid oppId)
+        {
+            string[] excludedRows =
+            {
+                ShopDrawingsRowName,
+                StampedSealedDrawingsRowName,
+                RoofWarrantyRowName
+            };
+
+            return string.Concat(
+                excludedRows
+                    .SelectMany(rowName =>
+                        GetOpportunityProductRows(oppId, rowName))
+                    .Select(e =>
+                        $"<condition attribute='opportunityproductid' operator='ne' value='{e.Id}' />"));
+        }
+
+
+        private void CreateBypassingCustomLogic(Entity entity)
+        {
+            CreateRequest request = new CreateRequest { Target = entity };
+            request.Parameters["BypassCustomPluginExecution"] = true;
+            service.Execute(request);
+        }
+
+        private void UpdateBypassingCustomLogic(Entity entity)
+        {
+            UpdateRequest request = new UpdateRequest { Target = entity };
+            request.Parameters["BypassCustomPluginExecution"] = true;
+            service.Execute(request);
+        }
+
+        private void DeleteBypassingCustomLogic(string logicalName, Guid id)
+        {
+            DeleteRequest request = new DeleteRequest { Target = new EntityReference(logicalName, id) };
+            request.Parameters["BypassCustomPluginExecution"] = true;
+            service.Execute(request);
+        }
+
+
+        private void SyncShopDrawingsRowSafe(Guid oppId, bool shopDrawings, Money priceMoney, bool allowCreate)
+        {
+            decimal price = priceMoney != null ? priceMoney.Value : 0m;
+            List<Entity> matches = GetShopDrawingsRows(oppId);
+                    tracingService.Trace("SYNC | shopDrawings={0} price={1} existingRows={2}", shopDrawings, price, matches.Count);
+
+            if (shopDrawings && price > 0)
+            {
+                if (matches.Count > 0)
+                {
+                    Entity existing = matches[0];
+                    Money existingPrice = existing.GetAttributeValue<Money>("priceperunit");
+                    decimal existingQty = existing.GetAttributeValue<decimal?>("quantity") ?? 0m;
+
+                    // update only when something changed
+                    if (existingPrice == null || existingPrice.Value != price || existingQty != 1m)
+                    {
+                        Entity updateProduct = new Entity("opportunityproduct", existing.Id);
+                        updateProduct["ispriceoverridden"] = true;
+                        updateProduct["priceperunit"] = new Money(price);
+                        updateProduct["quantity"] = 1m;
+                        updateProduct["tbs_baseprice"] = new Money(price);
+                        UpdateBypassingCustomLogic(updateProduct);
+                        tracingService.Trace("Shop Drawings row updated.");
+                    }
+
+                    // remove accidental duplicates
+                    foreach (Entity duplicate in matches.Skip(1))
+                    {
+                        DeleteBypassingCustomLogic("opportunityproduct", duplicate.Id);
+                    }
+                }
+
+                else if (allowCreate)
+                {
+                    Entity newProduct = new Entity("opportunityproduct");
+                    newProduct["opportunityid"] = new EntityReference("opportunity", oppId);
+                    newProduct["isproductoverridden"] = true;               // write-in product
+                    newProduct["productdescription"] = ShopDrawingsRowName; // "Write In Product" field
+                    newProduct["quantity"] = 1m;
+                    newProduct["ispriceoverridden"] = true;
+                    newProduct["priceperunit"] = new Money(price);
+                    newProduct["tbs_baseprice"] = new Money(price);
+                    CreateBypassingCustomLogic(newProduct);
+                    tracingService.Trace("Shop Drawings row created.");
+                
+                 }
+                else
+                {
+                    Entity newProduct = new Entity("opportunityproduct");
+                    newProduct["opportunityid"] = new EntityReference("opportunity", oppId);
+                    newProduct["isproductoverridden"] = true;               // write-in product
+                    newProduct["productdescription"] = ShopDrawingsRowName; // "Write In Product" field
+                    newProduct["quantity"] = 1m;
+                    newProduct["ispriceoverridden"] = true;
+                    newProduct["priceperunit"] = new Money(price);
+                    newProduct["tbs_baseprice"] = new Money(price);
+                    CreateBypassingCustomLogic(newProduct);
+                    tracingService.Trace("Shop Drawings row created.");
+                }
+            }
+            else
+            {
+                // Shop Drawings = No -> delete the row
+                foreach (Entity existing in matches)
+                {
+                    DeleteBypassingCustomLogic("opportunityproduct", existing.Id);
+                    tracingService.Trace("Shop Drawings row deleted.");
+                }
+            }
+        }
+
+        private void SyncOpportunityProductRowSafe(
+            Guid oppId,
+            bool enabled,
+            Money priceMoney,
+            bool allowCreate,
+            string rowName)
+        {
+            decimal price = priceMoney != null ? priceMoney.Value : 0m;
+
+            List<Entity> matches =
+                GetOpportunityProductRows(oppId, rowName);
+
+            tracingService.Trace(
+                "SYNC | Row={0} Enabled={1} Price={2} ExistingRows={3}",
+                rowName,
+                enabled,
+                price,
+                matches.Count);
+
+            if (enabled && price > 0)
+            {
+                if (matches.Count > 0)
+                {
+                    Entity existing = matches[0];
+
+                    Money existingPrice =
+                        existing.GetAttributeValue<Money>("priceperunit");
+
+                    decimal existingQty =
+                        existing.GetAttributeValue<decimal?>("quantity") ?? 0m;
+
+                    if (existingPrice == null ||
+                        existingPrice.Value != price ||
+                        existingQty != 1m)
+                    {
+                        Entity updateProduct =
+                            new Entity("opportunityproduct", existing.Id);
+
+                        updateProduct["ispriceoverridden"] = true;
+                        updateProduct["priceperunit"] = new Money(price);
+                        updateProduct["quantity"] = 1m;
+                        updateProduct["tbs_baseprice"] = new Money(price);
+
+                        UpdateBypassingCustomLogic(updateProduct);
+
+                        tracingService.Trace("{0} row updated.", rowName);
+                    }
+
+                    // Remove duplicate rows
+
+                    foreach (Entity duplicate in matches.Skip(1))
+                    {
+                        DeleteBypassingCustomLogic(
+                            "opportunityproduct",
+                            duplicate.Id);
+
+                        tracingService.Trace(
+                            "{0} duplicate row deleted.", rowName);
+                    }
+                }
+                else
+                {
+                    Entity newProduct = new Entity("opportunityproduct");
+
+                    newProduct["opportunityid"] =
+                        new EntityReference("opportunity", oppId);
+
+                    newProduct["isproductoverridden"] = true;
+                    newProduct["productdescription"] = rowName;
+                    newProduct["quantity"] = 1m;
+                    newProduct["ispriceoverridden"] = true;
+                    newProduct["priceperunit"] = new Money(price);
+                    newProduct["tbs_baseprice"] = new Money(price);
+
+                    CreateBypassingCustomLogic(newProduct);
+
+                    tracingService.Trace("{0} row created.", rowName);
+                }
+            }
+            else
+            {
+                // Toggle No or price is zero: delete the row
+
+                foreach (Entity existing in matches)
+                {
+                    DeleteBypassingCustomLogic(
+                        "opportunityproduct",
+                        existing.Id);
+
+                    tracingService.Trace("{0} row deleted.", rowName);
+                }
+            }
+        }
+
+
     }
 }
+
+
+
+    
+
+
