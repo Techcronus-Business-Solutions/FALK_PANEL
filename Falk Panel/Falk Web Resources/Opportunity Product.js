@@ -13,7 +13,10 @@ Falk.OpportunityProduct = {
     FalkHPSFinishId: null,
 
     OnLoad: async function (executionContext) {
+
         const formContext = executionContext.getFormContext();
+
+        Falk.OpportunityProduct.ToggleSpecialProductFields(formContext);
 
         if (formContext.ui.getFormType() === 1) {
             formContext.getAttribute("quantity").setValue(0);
@@ -95,6 +98,7 @@ Falk.OpportunityProduct = {
 
             formContext.getAttribute("tbs_exteriorcolorcategory").setValue(null);
             formContext.getAttribute("tbs_interiorcolorcategory").setValue(null);
+            await Falk.OpportunityProduct.ToggleSpecialProductFields(formContext);
         });
 
         formContext.getAttribute("tbs_panelthickness").addOnChange(async function () {
@@ -149,8 +153,17 @@ Falk.OpportunityProduct = {
             Falk.OpportunityProduct.addExteriorColorView(formContext);
         });
 
+        formContext.getAttribute("tbs_exteriorcolor").addOnChange(function (executionContext) {
+                Falk.OpportunityProduct.SetExteriorColorCategory(executionContext);
+        });
+
+        formContext.getAttribute("tbs_interiorcolor").addOnChange(function (executionContext) {
+                Falk.OpportunityProduct.SetInteriorColorCategory(executionContext);
+        });
+
         formContext.data.entity.addOnSave(Falk.OpportunityProduct.OnSave);
         formContext.data.entity.addOnPostSave(Falk.OpportunityProduct.OnPostSave);
+
     },
 
     _isNewRecord: false,
@@ -487,7 +500,7 @@ Falk.OpportunityProduct = {
                 "   <order attribute='tbs_name' />" +
                 "   <filter type='and'>" +
                 "      <condition attribute='tbs_paneltype' operator='eq' value='" + productId + "' />" +
-                            exteriorcolorCategoryCondition +
+                exteriorcolorCategoryCondition +
                 "   </filter>" +
                 " </entity>" +
                 "</fetch>";
@@ -500,7 +513,7 @@ Falk.OpportunityProduct = {
                 "   <order attribute='tbs_name' />" +
                 "   <filter type='and'>" +
                 "       <condition attribute='statecode' operator='eq' value='0' />" +
-                            exteriorcolorCategoryCondition +
+                exteriorcolorCategoryCondition +
                 "   </filter>" +
                 "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
                 "       <filter>" +
@@ -556,7 +569,7 @@ Falk.OpportunityProduct = {
                 "   <order attribute='tbs_name' />" +
                 "   <filter type='and'>" +
                 "      <condition attribute='tbs_paneltype' operator='eq' value='" + productId + "' />" +
-                        interiorcolorCategoryCondition +
+                interiorcolorCategoryCondition +
                 "   </filter>" +
                 " </entity>" +
                 "</fetch>";
@@ -569,7 +582,7 @@ Falk.OpportunityProduct = {
                 "   <order attribute='tbs_name' />" +
                 "   <filter type='and'>" +
                 "       <condition attribute='statecode' operator='eq' value='0' />" +
-                            interiorcolorCategoryCondition +
+                interiorcolorCategoryCondition +
                 "   </filter>" +
                 "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
                 "       <filter>" +
@@ -595,6 +608,47 @@ Falk.OpportunityProduct = {
             layoutXml,
             true
         );
+    },
+
+    SetExteriorColorCategory: async function (executionContext) {
+
+        const formContext = executionContext.getFormContext();
+
+        const color = formContext.getAttribute("tbs_exteriorcolor").getValue();
+
+        if (!color) { 
+            formContext.getAttribute("tbs_exteriorcolorcategory").setValue(null);
+            return;
+        }
+
+        const colorId = color[0].id.replace(/[{}]/g, "");
+
+        const colorRecord = await Xrm.WebApi.retrieveRecord("tbs_color", colorId, "?$select=tbs_colorcategory");
+
+        if (colorRecord.tbs_colorcategory !== null && colorRecord.tbs_colorcategory !== undefined) {
+            formContext.getAttribute("tbs_exteriorcolorcategory").setValue(colorRecord.tbs_colorcategory);
+        }
+    },
+
+    SetInteriorColorCategory: async function (executionContext) {
+
+        const formContext = executionContext.getFormContext();
+
+        const color = formContext.getAttribute("tbs_interiorcolor").getValue();
+
+        if (!color) {
+            formContext.getAttribute("tbs_interiorcolorcategory").setValue(null);
+            return;
+        }
+
+        const colorId = color[0].id.replace(/[{}]/g, "");
+
+        const colorRecord = await Xrm.WebApi.retrieveRecord("tbs_color", colorId, "?$select=tbs_colorcategory");
+
+        if (colorRecord.tbs_colorcategory !== null && colorRecord.tbs_colorcategory !== undefined) {
+
+            formContext.getAttribute("tbs_interiorcolorcategory").setValue(colorRecord.tbs_colorcategory);
+        }
     },
 
     EnableDisableExteriorEmboss: async function (formContext) {
@@ -752,5 +806,54 @@ Falk.OpportunityProduct = {
             const calculatedPrice = Number((basePrice * multiplier / 100 * retrievedCurrency.exchangerate).toFixed(2));
             formContext.getAttribute("tbs_baseprice").setValue(calculatedPrice);
         }
+    },
+
+    ToggleSpecialProductFields: function (formContext) {
+        const specialProducts = [
+            "shop drawings",
+            "stamped and sealed shop drawings",
+            "weather tight warranty"
+        ];
+
+        // The only fields that stay visible for special products
+        const keepFields = ["productdescription", "baseamount"];
+
+        try {
+            const product = formContext.getAttribute("productid")?.getValue();
+            const productName =
+                (product && product[0] && product[0].name) ||
+                formContext.getAttribute("productdescription")?.getValue();
+
+            const isSpecial = !!productName &&
+                specialProducts.includes(productName.toLowerCase().trim());
+
+            const self = Falk.OpportunityProduct;
+            self._hiddenByToggle = self._hiddenByToggle || [];
+
+            if (isSpecial) {
+                formContext.ui.controls.forEach(function (control) {
+                    const name = control.getName();
+
+                    if (keepFields.includes(name)) return;   // keep these two
+                    if (!control.getVisible()) return;       // already hidden, leave it alone
+
+                    control.setVisible(false);
+                    self._hiddenByToggle.push(name);          // remember what we hid
+                });
+            }
+            else {
+                // Restore only what this function hid
+                self._hiddenByToggle.forEach(function (name) {
+                    const control = formContext.getControl(name);
+                    if (control) control.setVisible(true);
+                });
+                self._hiddenByToggle = [];
+            }
+        }
+        catch (error) {
+            console.error("ToggleSpecialProductFields Error:", error);
+        }
+
+
     }
 }

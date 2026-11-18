@@ -151,6 +151,14 @@ Falk.OrderProduct = {
             Falk.OrderProduct.addExteriorColorView(formContext);
         });
 
+        formContext.getAttribute("tbs_exteriorcolor").addOnChange(function (executionContext) {
+            Falk.OrderProduct.SetExteriorColorCategory(executionContext);
+        });
+
+        formContext.getAttribute("tbs_interiorcolor").addOnChange(function (executionContext) {
+            Falk.OrderProduct.SetInteriorColorCategory(executionContext);
+        });
+
         formContext.data.entity.addOnSave(Falk.OrderProduct.OnSave);
         formContext.data.entity.addOnPostSave(Falk.OrderProduct.OnPostSave);
     },
@@ -565,6 +573,47 @@ Falk.OrderProduct = {
             layoutXml,
             true
         );
+    },
+
+    SetExteriorColorCategory: async function (executionContext) {
+
+        const formContext = executionContext.getFormContext();
+
+        const color = formContext.getAttribute("tbs_exteriorcolor").getValue();
+
+        if (!color) {
+            formContext.getAttribute("tbs_orderexteriorcolorcategory").setValue(null);
+            return;
+        }
+
+        const colorId = color[0].id.replace(/[{}]/g, "");
+
+        const colorRecord = await Xrm.WebApi.retrieveRecord("tbs_color", colorId, "?$select=tbs_colorcategory");
+
+        if (colorRecord.tbs_colorcategory !== null && colorRecord.tbs_colorcategory !== undefined) {
+            formContext.getAttribute("tbs_orderexteriorcolorcategory").setValue(colorRecord.tbs_colorcategory);
+        }
+    },
+
+    SetInteriorColorCategory: async function (executionContext) {
+
+        const formContext = executionContext.getFormContext();
+
+        const color = formContext.getAttribute("tbs_interiorcolor").getValue();
+
+        if (!color) {
+            formContext.getAttribute("tbs_orderinteriorcolorcategory").setValue(null);
+            return;
+        }
+
+        const colorId = color[0].id.replace(/[{}]/g, "");
+
+        const colorRecord = await Xrm.WebApi.retrieveRecord("tbs_color", colorId, "?$select=tbs_colorcategory");
+
+        if (colorRecord.tbs_colorcategory !== null && colorRecord.tbs_colorcategory !== undefined) {
+
+            formContext.getAttribute("tbs_orderinteriorcolorcategory").setValue(colorRecord.tbs_colorcategory);
+        }
     },
 
     EnableDisableExteriorEmboss: async function (formContext) {
