@@ -154,11 +154,11 @@ Falk.OpportunityProduct = {
         });
 
         formContext.getAttribute("tbs_exteriorcolor").addOnChange(function (executionContext) {
-                Falk.OpportunityProduct.SetExteriorColorCategory(executionContext);
+            Falk.OpportunityProduct.SetExteriorColorCategory(executionContext);
         });
 
         formContext.getAttribute("tbs_interiorcolor").addOnChange(function (executionContext) {
-                Falk.OpportunityProduct.SetInteriorColorCategory(executionContext);
+            Falk.OpportunityProduct.SetInteriorColorCategory(executionContext);
         });
 
         formContext.data.entity.addOnSave(Falk.OpportunityProduct.OnSave);
@@ -278,7 +278,7 @@ Falk.OpportunityProduct = {
             "     <attribute name='tbs_name' />" +
             "     <order attribute='tbs_name' />" +
             "     <filter>" +
-            "         <condition attribute='tbs_type' operator='eq' value='1' />" +
+            "         <condition attribute='tbs_type' operator='eq' value='0' />" +
             "     </filter>" +
             "     <link-entity name='tbs_finish_product' from='tbs_finishid' to='tbs_finishid' link-type='inner'>" +
             "         <filter>" +
@@ -616,7 +616,7 @@ Falk.OpportunityProduct = {
 
         const color = formContext.getAttribute("tbs_exteriorcolor").getValue();
 
-        if (!color) { 
+        if (!color) {
             formContext.getAttribute("tbs_exteriorcolorcategory").setValue(null);
             return;
         }
@@ -809,10 +809,13 @@ Falk.OpportunityProduct = {
     },
 
     ToggleSpecialProductFields: function (formContext) {
+
+        const product = formContext.getAttribute("productid")?.getValue();
+
         const specialProducts = [
             "shop drawings",
             "stamped and sealed shop drawings",
-            "weather tight warranty"
+            "roof warranty"
         ];
 
         // The only fields that stay visible for special products
@@ -823,6 +826,9 @@ Falk.OpportunityProduct = {
             const productName =
                 (product && product[0] && product[0].name) ||
                 formContext.getAttribute("productdescription")?.getValue();
+
+            console.log("Final Product Name:", productName);
+
 
             const isSpecial = !!productName &&
                 specialProducts.includes(productName.toLowerCase().trim());
@@ -853,7 +859,6 @@ Falk.OpportunityProduct = {
         catch (error) {
             console.error("ToggleSpecialProductFields Error:", error);
         }
-
 
     }
 }
