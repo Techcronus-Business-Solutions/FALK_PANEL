@@ -7,10 +7,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Crm.Sdk.Messages;
 
-
 namespace Falk.CustomAPI
 {
-    public class CloneOpportunityProduct: CustomAPIBase
+    public class CloneOpportunityProduct : CustomAPIBase
     {
         public CloneOpportunityProduct() : base(typeof(CloneOpportunityProduct)) { }
 
@@ -30,63 +29,67 @@ namespace Falk.CustomAPI
             try
             {
                 tracingService.Trace("execution started");
+
                 EntityReference oppProductRef = GetInputRef("Target");
                 tracingService.Trace("Opportunity ProductId = " + oppProductRef.Id.ToString());
 
-                try
+                // Optional: when supplied, the cloned line is created directly on this opportunity
+                Guid? newOpportunityId = GetOptionalGuid("NewOpportunityId");
+                tracingService.Trace("NewOpportunityId = " + (newOpportunityId.HasValue ? newOpportunityId.Value.ToString() : "not supplied"));
+
+                Guid ClonedOppProduct = CloneOpportunityProductEnt(oppProductRef.Id, newOpportunityId);
+                CreateOpportunityLineItems(oppProductRef.Id, ClonedOppProduct);
+                CreateOpportunityPanelAccessories(oppProductRef.Id, ClonedOppProduct);
+                CreateOpportunityPanelTrims(oppProductRef.Id, ClonedOppProduct);
+
+                CalculateRollupFieldRequest calcularRollupAcces = new CalculateRollupFieldRequest
                 {
-                    Guid ClonedOppProduct = CloneOpportunityProductEnt(oppProductRef.Id);
-                    CreateOpportunityLineItems(oppProductRef.Id, ClonedOppProduct);
-                    CreateOpportunityPanelAccessories(oppProductRef.Id, ClonedOppProduct);
-                    CreateOpportunityPanelTrims(oppProductRef.Id, ClonedOppProduct);
+                    Target = new EntityReference("opportunityproduct", ClonedOppProduct),
+                    FieldName = "tbs_accessoriespricetotal"
+                };
+                service.Execute(calcularRollupAcces);
 
-                    CalculateRollupFieldRequest calcularRollupAcces = new CalculateRollupFieldRequest
-                    {
-                        Target = new EntityReference("opportunityproduct", ClonedOppProduct),
-                        FieldName = "tbs_accessoriespricetotal"
-                    };
-                    CalculateRollupFieldResponse calcularRollupAccesResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupAcces);
-
-                    CalculateRollupFieldRequest calcularRollupTrim = new CalculateRollupFieldRequest
-                    {
-                        Target = new EntityReference("opportunityproduct", ClonedOppProduct),
-                        FieldName = "tbs_trimspricetotal"
-                    };
-                    CalculateRollupFieldResponse calcularRollupTrimResult = (CalculateRollupFieldResponse)service.Execute(calcularRollupTrim);
-
-                    Entity OppProduct = new Entity("opportunityproduct", ClonedOppProduct);
-
-                    OppProduct["skippricecalculation"] = new OptionSetValue(0);
-                    service.Update(OppProduct);
-
-                    context.OutputParameters["ClonedOpportunityProductId"] = ClonedOppProduct;
-                }
-                catch (Exception e)
+                CalculateRollupFieldRequest calcularRollupTrim = new CalculateRollupFieldRequest
                 {
-                    tracingService.Trace($"Error Occurred in Calculating Rollup :{e.Message}");
-                    throw new InvalidPluginExecutionException(e.Message);
-                }
+                    Target = new EntityReference("opportunityproduct", ClonedOppProduct),
+                    FieldName = "tbs_trimspricetotal"
+                };
+                service.Execute(calcularRollupTrim);
 
+                Entity OppProduct = new Entity("opportunityproduct", ClonedOppProduct);
+                OppProduct["skippricecalculation"] = new OptionSetValue(0);
+                service.Update(OppProduct);
+
+                context.OutputParameters["ClonedOpportunityProductId"] = ClonedOppProduct;
             }
             catch (Exception ex)
             {
-                tracingService.Trace("CalculateAccessoryQty Custom API Exception: {0}", ex.ToString());
-                throw new InvalidPluginExecutionException($"Error in CalculateAccessoryQty Custom API: {ex.Message}");
+                tracingService.Trace("CloneOpportunityProduct Custom API Exception: {0}", ex.ToString());
+                throw new InvalidPluginExecutionException($"Error in CloneOpportunityProduct Custom API: {ex.Message}");
             }
         }
 
-        private Guid CloneOpportunityProductEnt(Guid oppProductId)
+        private Guid CloneOpportunityProductEnt(Guid oppProductId, Guid? newOpportunityId)
         {
             Entity oldOppProduct = service.Retrieve("opportunityproduct", oppProductId, new ColumnSet(true));
             Entity newOppProduct = new Entity("opportunityproduct");
+
             foreach (var attribute in oldOppProduct.Attributes)
             {
                 if (attribute.Key == "opportunityproductid")
                     continue;
+
                 newOppProduct[attribute.Key] = attribute.Value;
             }
 
+            // Create the line on the NEW (open) opportunity, not on the original (possibly Won/Lost) one
+            if (newOpportunityId.HasValue)
+            {
+                newOppProduct["opportunityid"] = new EntityReference("opportunity", newOpportunityId.Value);
+            }
+
             newOppProduct["skippricecalculation"] = new OptionSetValue(1);
+
             Guid newOppProductId = service.Create(newOppProduct);
             tracingService.Trace($"New Opportunity Product Created with ID: {newOppProductId}");
             return newOppProductId;
@@ -102,30 +105,22 @@ namespace Falk.CustomAPI
 
             tracingService.Trace($"line items Found : {oldLineitems.Entities.Count}");
 
-            for (int i = 0; i < oldLineitems.Entities.Count; i++)
+            foreach (Entity oppLineItems in oldLineitems.Entities)
             {
-                Entity oppLineItems = oldLineitems.Entities[i];
-
                 Entity newOppLineItem = new Entity("tbs_lineitem");
 
                 foreach (var attribute in oppLineItems.Attributes)
                 {
-                    tracingService.Trace("attribute = " + attribute);
                     if (attribute.Key == "tbs_lineitemid" || attribute.Key == "tbs_opportunityproduct")
                         continue;
-                    tracingService.Trace("Before assigning: " + attribute.Key);
 
                     newOppLineItem[attribute.Key] = attribute.Value;
-
-                    tracingService.Trace("After assigning: " + attribute.Key);
                 }
 
-                tracingService.Trace("Finished copying all attributes.");
                 newOppLineItem["tbs_opportunityproduct"] = new EntityReference("opportunityproduct", newOppProductId);
 
-                tracingService.Trace("Before service.Create(LineItems)");
                 Guid createdId = service.Create(newOppLineItem);
-                tracingService.Trace("After service.Create(oppLineItems): " + createdId);
+                tracingService.Trace("Line item created: " + createdId);
             }
         }
 
@@ -185,6 +180,22 @@ namespace Falk.CustomAPI
             }
         }
 
+        private Guid? GetOptionalGuid(string parameterName)
+        {
+            if (!context.InputParameters.Contains(parameterName) || context.InputParameters[parameterName] == null)
+                return null;
+
+            object value = context.InputParameters[parameterName];
+
+            if (value is Guid guid)
+                return guid == Guid.Empty ? (Guid?)null : guid;
+
+            if (value is EntityReference entityRef)
+                return entityRef.Id;
+
+            throw new InvalidPluginExecutionException($"Input parameter '{parameterName}' is invalid.");
+        }
+
         private EntityReference GetInputRef(string parameterName, bool required = true)
         {
             if (!context.InputParameters.Contains(parameterName))
@@ -211,21 +222,18 @@ namespace Falk.CustomAPI
 
         private void InitProperties(LocalPluginContext localcontext)
         {
-            //// Obtain the execution context service from the LocalContext.
             context = localcontext.PluginExecutionContext;
             if (context == null)
             {
                 throw new InvalidPluginExecutionException("Failed to retrieve Plugin Execution Context !");
             }
 
-            //Get the Organization Service from the LocalContext
             service = localcontext.OrganizationService;
             if (service == null)
             {
                 throw new InvalidPluginExecutionException("Failed to retrieve Organization Service !");
             }
 
-            //Get the Tracing Service from the LocalContext
             tracingService = localcontext.TracingService;
             if (tracingService == null)
             {

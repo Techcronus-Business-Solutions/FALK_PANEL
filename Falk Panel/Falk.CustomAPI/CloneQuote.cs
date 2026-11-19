@@ -76,6 +76,16 @@ namespace Falk.CustomAPI
                     case "overriddencreatedon":
                     case "timezoneruleversionnumber":
                     case "utcconversiontimezonecode":
+
+
+                    case "statecode":
+                    case "statuscode":
+
+                    case "closedon":
+
+                  case "processid":
+                  case "stageid":
+                  case "traversedpath":
                         continue;
                 }
                 newQuote[attribute.Key] = attribute.Value;
@@ -87,9 +97,13 @@ namespace Falk.CustomAPI
             }
 
             newQuote["tbs_iscopy"] = true;
-            Guid newQuoteId = service.Create(newQuote);
+            newQuote["statecode"] = new OptionSetValue(0);
+             newQuote["statuscode"] = new OptionSetValue(1);
+            //Guid newQuoteId = service.Create(newQuote);
 
-            return newQuoteId;
+            //return newQuoteId;
+
+            return service.Create(newQuote);
         }
         private void CloneQuoteProducts(Guid oldQuoteId, Guid newQuoteId)
         {
