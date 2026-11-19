@@ -243,9 +243,12 @@ namespace Falk.CustomAPI
                 {
                     tracingService.Trace($"Error applying markup: {ex.Message}");
                 }
-                salesorderdetail["tbs_usprice"] = new Money(roundValues(usPrice));
 
-                Entity order = service.Retrieve("salesorderdetail", orderProduct.Id, new ColumnSet("quantity", "tbs_usdpriceadjustment"));
+                decimal finalUsPrice = roundValues(usPrice);
+                salesorderdetail["tbs_usprice"] = new Money(finalUsPrice);
+                tracingService.Trace($"Final US Price: {finalUsPrice}");
+
+                Entity order = service.Retrieve("salesorderdetail", orderProduct.Id, new ColumnSet("quantity", "tbs_usdpriceadjustment","tbs_accessoriespricetotal", "tbs_trimspricetotal", "tbs_sqftamount"));
                 decimal sqft = order.GetAttributeValue<decimal>("quantity");
                 tracingService.Trace(sqft.ToString());
 
@@ -255,52 +258,43 @@ namespace Falk.CustomAPI
                 {
                     if (sqft < 1000)
                     {
-                        upcharge = (usPrice * 0.10m) + (1200m / sqft);
+                        tracingService.Trace($"Calculating upcharge for sqft < 1000");
+                        upcharge = (finalUsPrice * 0.10m) + (1200m / sqft);
+                        tracingService.Trace($"Upcharge Calculation: (finalUsPrice * 0.10) + (1200 / sqft) = ({finalUsPrice} * 0.10) + (1200 / {sqft}) = {upcharge}");
                     }
                     else if (sqft < 3500)
                     {
-                        upcharge = (usPrice * 0.10m) + (750m / sqft);
+                        upcharge = (finalUsPrice * 0.10m) + (750m / sqft);
                     }
                 }
-                tracingService.Trace(upcharge.ToString());
+                decimal finalUpcharge = roundValues(upcharge);
+                tracingService.Trace($"Upcharge: {finalUpcharge}");
 
-                salesorderdetail["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
+                salesorderdetail["tbs_smallorderupcharge"] = new Money(finalUpcharge);
+
 
                 decimal usdAdjustment = order.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value ?? 0;
-                decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
+                decimal accessoriesTotal = order.GetAttributeValue<Money>("tbs_accessoriespricetotal")?.Value ?? 0;
+                decimal trimsTotal = order.GetAttributeValue<Money>("tbs_trimspricetotal")?.Value ?? 0;
 
-                decimal lineTotal = sqft * roundValues(pricePerUnit);
+                // Panel + Upcharge + Adjustment per sqft
+                decimal panelAndUpchargePerSqft = finalUsPrice + roundValues(usdAdjustment) + finalUpcharge;
 
-                tracingService.Trace(roundValues(pricePerUnit).ToString());
+                decimal exactTotal = roundValues(sqft * panelAndUpchargePerSqft)
+                                   + roundValues(accessoriesTotal)
+                                   + roundValues(trimsTotal);
 
-                tracingService.Trace(roundValues(lineTotal).ToString());
+                // True unit price per sqft including accessories and trims
+                decimal systemPricePerUnit = sqft > 0
+                    ? Math.Round(exactTotal / sqft, 4, MidpointRounding.AwayFromZero)
+                    : panelAndUpchargePerSqft;
 
-                Entity existingLine = service.Retrieve(
-                    "salesorderdetail",
-                    orderProduct.Id,
-                    new ColumnSet("ispriceoverridden"));
+                tracingService.Trace($"panelAndUpcharge={panelAndUpchargePerSqft}, exactTotal={exactTotal}, systemPricePerUnit={systemPricePerUnit}");
 
-                bool currentOverride = existingLine.GetAttributeValue<bool?>("ispriceoverridden") ?? false;
-
-                if (!currentOverride)
-                {
-                    salesorderdetail["ispriceoverridden"] = true;
-                }
-
-                decimal currentPrice = existingLine.GetAttributeValue<Money>("priceperunit")?.Value ?? 0;
-
-                if (currentPrice != roundValues(pricePerUnit))
-                {
-                    salesorderdetail["priceperunit"] = new Money(roundValues(pricePerUnit));
-                }
-
-                    //salesorderdetail["ispriceoverridden"] = true;
-                    //salesorderdetail["priceperunit"] = new Money(roundValues(pricePerUnit));
-                    salesorderdetail["baseamount"] = new Money(roundValues(lineTotal));
-                //foreach (var attr in salesorderdetail.Attributes)
-                //{
-                //    tracingService.Trace("Updating Field = " + attr.Key);
-                //}
+                // If tbs_sqftamount should include accessories/trims per sqft:
+                order["tbs_sqftamount"] = new Money(panelAndUpchargePerSqft);
+                order["ispriceoverridden"] = true;
+                order["priceperunit"] = new Money(systemPricePerUnit);
                 service.Update(salesorderdetail);
                 #endregion
             }
