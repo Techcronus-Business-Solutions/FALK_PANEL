@@ -242,41 +242,56 @@ namespace Falk.CustomAPI
                     tracingService.Trace($"Error applying markup: {ex.Message}");
                 }
 
-                oppProduct["tbs_usprice"] = new Money(roundValues(usPrice));
+                decimal finalUsPrice = roundValues(usPrice);
+                oppProduct["tbs_usprice"] = new Money(finalUsPrice);
+                tracingService.Trace($"Final US Price: {finalUsPrice}");
 
-                Entity opp = service.Retrieve("opportunityproduct",opportunityProduct.Id,new ColumnSet("quantity", "tbs_usdpriceadjustment"));
+                Entity opp = service.Retrieve("opportunityproduct",opportunityProduct.Id,new ColumnSet("quantity", "tbs_usdpriceadjustment", "tbs_accessoriespricetotal", "tbs_trimspricetotal"));
                 decimal sqft = opp.GetAttributeValue<decimal>("quantity");
-                tracingService.Trace(sqft.ToString());
-
+                tracingService.Trace($"Quantity (sqft): {sqft}");
                 decimal upcharge = 0;
 
                 if (sqft > 0)
                 {
                     if (sqft < 1000)
                     {
-                        upcharge = (usPrice * 0.10m) + (1200m / sqft);
+                        tracingService.Trace($"Calculating upcharge for sqft < 1000");
+                        upcharge = (finalUsPrice * 0.10m) + (1200m / sqft);
+                        tracingService.Trace($"Upcharge Calculation: (finalUsPrice * 0.10) + (1200 / sqft) = ({finalUsPrice} * 0.10) + (1200 / {sqft}) = {upcharge}");
                     }
                     else if (sqft < 3500)
                     {
-                        upcharge = (usPrice * 0.10m) + (750m / sqft);
+                        upcharge = (finalUsPrice * 0.10m) + (750m / sqft);
                     }
                 }
-                tracingService.Trace(upcharge.ToString());
+                decimal finalUpcharge = roundValues(upcharge);
+                tracingService.Trace($"Upcharge: {finalUpcharge}");
 
-                oppProduct["tbs_smallorderupcharge"] = new Money(roundValues(upcharge));
+                oppProduct["tbs_smallorderupcharge"] = new Money(finalUpcharge);
 
+                
                 decimal usdAdjustment = opp.GetAttributeValue<Money>("tbs_usdpriceadjustment")?.Value ?? 0;
-                decimal pricePerUnit = roundValues(usPrice) + roundValues(usdAdjustment) + roundValues(upcharge);
+                decimal accessoriesTotal = opp.GetAttributeValue<Money>("tbs_accessoriespricetotal")?.Value ?? 0;
+                decimal trimsTotal = opp.GetAttributeValue<Money>("tbs_trimspricetotal")?.Value ?? 0;
 
-                decimal lineTotal = sqft * roundValues(pricePerUnit);
+                // Panel + Upcharge + Adjustment per sqft
+                decimal panelAndUpchargePerSqft = finalUsPrice + roundValues(usdAdjustment) + finalUpcharge;
 
-                tracingService.Trace(pricePerUnit.ToString());
+                decimal exactTotal = roundValues(sqft * panelAndUpchargePerSqft)
+                                   + roundValues(accessoriesTotal)
+                                   + roundValues(trimsTotal);
 
-                tracingService.Trace(lineTotal.ToString());
+                // True unit price per sqft including accessories and trims
+                decimal systemPricePerUnit = sqft > 0
+                    ? Math.Round(exactTotal / sqft, 4, MidpointRounding.AwayFromZero)
+                    : panelAndUpchargePerSqft;
 
+                tracingService.Trace($"panelAndUpcharge={panelAndUpchargePerSqft}, exactTotal={exactTotal}, systemPricePerUnit={systemPricePerUnit}");
+
+                // If tbs_sqftamount should include accessories/trims per sqft:
+                oppProduct["tbs_sqftamount"] = new Money(panelAndUpchargePerSqft);
                 oppProduct["ispriceoverridden"] = true;
-                oppProduct["priceperunit"] = new Money(roundValues(pricePerUnit));
-                oppProduct["baseamount"] = new Money(roundValues(lineTotal));
+                oppProduct["priceperunit"] = new Money(systemPricePerUnit);
 
                 service.Update(oppProduct);
                 #endregion

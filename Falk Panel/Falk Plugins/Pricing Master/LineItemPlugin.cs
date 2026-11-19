@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Crm.Sdk.Messages;
+﻿using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
@@ -39,12 +38,21 @@ namespace Falk_Plugins
                     {
                         if (context.MessageName == CONST_CREATE && context.Stage == PostOperation)
                         {
+                            Guid oppProductId = Guid.Empty;
+
                             #region Calculate Opportunity Product Rollups
                             // Calculate total SQFT & Linear Ft of all line items on the opportunity product
                             try
                             {
-                                Entity OpportunityProduct = service.Retrieve("opportunityproduct", targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id, new ColumnSet("skippricecalculation"));
-                                if(GetOptionSetAttributeValue(OpportunityProduct, "skippricecalculation") == 1)
+                                EntityReference oppProdRef = targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct");
+                                if (oppProdRef == null)
+                                {
+                                    return;
+                                }
+                                oppProductId = oppProdRef.Id;
+
+                                Entity OpportunityProduct = service.Retrieve("opportunityproduct", oppProductId, new ColumnSet("skippricecalculation"));
+                                if (GetOptionSetAttributeValue(OpportunityProduct, "skippricecalculation") == 1)
                                 {
                                     return;
                                 }
@@ -54,7 +62,7 @@ namespace Falk_Plugins
                                                     <entity name='tbs_lineitem'>
                                                     <attribute name='tbs_totalsqft' alias='sqft' aggregate='sum' />
                                                     <filter>
-                                                    <condition attribute='tbs_opportunityproduct' operator='eq' value='{targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id}' />
+                                                    <condition attribute='tbs_opportunityproduct' operator='eq' value='{oppProductId}' />
                                                     </filter>
                                                     </entity>
                                                     </fetch>";
@@ -67,13 +75,12 @@ namespace Falk_Plugins
                                 {
                                     tracingService.Trace("X: " + (SQFT.GetAttributeValue<AliasedValue>("sqft") == null).ToString());
                                     totalSQFT = SQFT.Contains("sqft") ? (decimal)(SQFT.GetAttributeValue<AliasedValue>("sqft")?.Value ?? 0) : 0;
-
                                 }
                                 //tracingService.Trace($"Total SQFT: {totalSQFT}");
 
                                 decimal linearFt = width > 0 ? (totalSQFT * 12) / width : 0;
 
-                                Entity OpportunityProductToUpdate = new Entity("opportunityproduct", targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id);
+                                Entity OpportunityProductToUpdate = new Entity("opportunityproduct", oppProductId);
                                 OpportunityProductToUpdate["quantity"] = totalSQFT;
                                 OpportunityProductToUpdate["tbs_linearfeet"] = linearFt;
                                 service.Update(OpportunityProductToUpdate);
@@ -89,7 +96,7 @@ namespace Falk_Plugins
                             {
                                 CalculateRollupFieldRequest calcularRollup = new CalculateRollupFieldRequest
                                 {
-                                    Target = new EntityReference("opportunityproduct", targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id),
+                                    Target = new EntityReference("opportunityproduct", oppProductId),
                                     FieldName = "tbs_totalamountofpanels"
                                 };
                                 CalculateRollupFieldResponse calcularRollupResult = (CalculateRollupFieldResponse)service.Execute(calcularRollup);
@@ -99,12 +106,25 @@ namespace Falk_Plugins
                                 tracingService.Trace($"Error Occurred in Calculating Total Number of Panel :{e.Message}");
                                 throw new InvalidPluginExecutionException(e.Message);
                             }
+
+                            if (oppProductId != Guid.Empty)
+                            {
+                                TriggerOpportunityProductPricing(oppProductId);
+                            }
                             #endregion
                         }
 
                         else if (context.MessageName == CONST_UPDATE && context.Stage == PostOperation)
                         {
                             Entity PreImage = context.PreEntityImages["PreImage"];
+                            EntityReference oppProdRef = targetEntity.GetAttributeValue<EntityReference>("tbs_opportunityproduct")
+                                                     ?? PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct");
+                            if (oppProdRef == null)
+                            {
+                                return;
+                            }
+                            Guid oppProductId = oppProdRef.Id;
+                            bool shouldRecalculatePricing = false;
 
                             #region Calculate Opportunity Product Rollups
                             // Calculate total SQFT & Linear Ft of all line items on the opportunity product
@@ -112,8 +132,10 @@ namespace Falk_Plugins
                             {
                                 try
                                 {
-                                    decimal width = targetEntity.Contains("tbs_widthpanel") ? targetEntity.GetAttributeValue<decimal>("tbs_widthpanel") : PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
-                                    Entity OpportunityProduct = service.Retrieve("opportunityproduct", PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id, new ColumnSet("quantity"));
+                                    decimal width = targetEntity.Contains("tbs_widthpanel")
+                                        ? GetDecimalAttributeValue(targetEntity, "tbs_widthpanel")
+                                        : GetDecimalAttributeValue(PreImage, "tbs_widthpanel");
+                                    Entity OpportunityProduct = service.Retrieve("opportunityproduct", oppProductId, new ColumnSet("quantity"));
 
                                     decimal totalSqFtSum = GetDecimalAttributeValue(OpportunityProduct, "quantity") + GetDecimalAttributeValue(targetEntity, "tbs_totalsqft") - GetDecimalAttributeValue(PreImage, "tbs_totalsqft");
                                     decimal linearFt = width > 0 ? (totalSqFtSum * 12) / width : 0;
@@ -122,6 +144,7 @@ namespace Falk_Plugins
                                     OpportunityProductToUpdate["quantity"] = totalSqFtSum;
                                     OpportunityProductToUpdate["tbs_linearfeet"] = linearFt;
                                     service.Update(OpportunityProductToUpdate);
+                                    shouldRecalculatePricing = true;
                                 }
                                 catch (Exception e)
                                 {
@@ -137,7 +160,7 @@ namespace Falk_Plugins
                                 {
                                     CalculateRollupFieldRequest calcularRollup = new CalculateRollupFieldRequest
                                     {
-                                        Target = new EntityReference("opportunityproduct", PreImage.GetAttributeValue<EntityReference>("tbs_opportunityproduct").Id),
+                                        Target = new EntityReference("opportunityproduct", oppProductId),
                                         FieldName = "tbs_totalamountofpanels"
                                     };
                                     CalculateRollupFieldResponse calcularRollupResult = (CalculateRollupFieldResponse)service.Execute(calcularRollup);
@@ -147,6 +170,11 @@ namespace Falk_Plugins
                                     tracingService.Trace($"Error Occurred in Calculating Total Number of Panel :{e.Message}");
                                     throw new InvalidPluginExecutionException(e.Message);
                                 }
+                            }
+
+                            if (shouldRecalculatePricing && oppProductId != Guid.Empty)
+                            {
+                                TriggerOpportunityProductPricing(oppProductId);
                             }
                             #endregion
                         }
@@ -172,7 +200,7 @@ namespace Falk_Plugins
                             // Calculate total SQFT & Linear Ft of all line items on the opportunity product
                             try
                             {
-                                decimal width = PreImage.GetAttributeValue<decimal>("tbs_widthpanel");
+                                decimal width = GetDecimalAttributeValue(PreImage, "tbs_widthpanel");
                                 string fetchXml = $@"
                                             <fetch aggregate='true'>
                                               <entity name='tbs_lineitem'>
@@ -190,7 +218,6 @@ namespace Falk_Plugins
                                 if (SQFT != null)
                                 {
                                     tracingService.Trace("X: " + (SQFT.GetAttributeValue<AliasedValue>("sqft") == null).ToString());
-                                    //totalSQFT = SQFT.Contains("sqft") ? (decimal)(SQFT.GetAttributeValue<AliasedValue>("sqft")?.Value ?? 0) : 0;
                                     if (SQFT.Contains("sqft") && SQFT.GetAttributeValue<AliasedValue>("sqft") != null)
                                     {
                                         var rawValue = SQFT.GetAttributeValue<AliasedValue>("sqft").Value;
@@ -200,19 +227,15 @@ namespace Falk_Plugins
                                     {
                                         totalSQFT = 0;
                                     }
-
                                 }
                                 //tracingService.Trace($"Total SQFT: {totalSQFT}");
 
                                 decimal linearFt = width > 0 ? (totalSQFT * 12) / width : 0;
 
-
                                 Entity OpportunityProductToUpdate = new Entity("opportunityproduct", opportunityProd);
                                 OpportunityProductToUpdate["quantity"] = totalSQFT;
                                 OpportunityProductToUpdate["tbs_linearfeet"] = linearFt;
                                 service.Update(OpportunityProductToUpdate);
-
-
                             }
                             catch (Exception e)
                             {
@@ -235,6 +258,8 @@ namespace Falk_Plugins
                                 tracingService.Trace($"Error Occurred in Calculating Total Number of Panel :{e.Message}");
                                 throw new InvalidPluginExecutionException(e.Message);
                             }
+
+                            TriggerOpportunityProductPricing(opportunityProd);
                             #endregion
                         }
                     }
@@ -248,26 +273,68 @@ namespace Falk_Plugins
 
         private void InitProperties(LocalPluginContext localcontext)
         {
-            //// Obtain the execution context service from the LocalContext.
+            // Obtain the execution context service from the LocalContext.
             context = localcontext.PluginExecutionContext;
             if (context == null)
             {
                 throw new InvalidPluginExecutionException("Failed to retrieve Plugin Execution Context !");
             }
 
-            //Get the Organization Service from the LocalContext
+            // Get the Organization Service from the LocalContext
             service = localcontext.OrganizationService;
             if (service == null)
             {
                 throw new InvalidPluginExecutionException("Failed to retrieve Organization Service !");
             }
 
-            //Get the Tracing Service from the LocalContext
+            // Get the Tracing Service from the LocalContext
             tracingService = localcontext.TracingService;
             if (tracingService == null)
             {
                 throw new InvalidPluginExecutionException("Failed to retrieve Tracing Service !");
             }
+        }
+
+        private void TriggerOpportunityProductPricing(Guid opportunityProductId)
+        {
+            Entity oppProd = service.Retrieve(
+                "opportunityproduct",
+                opportunityProductId,
+                new ColumnSet(
+                    "productid",
+                    "tbs_panelthickness",
+                    "tbs_priceleveltier",
+                    "tbs_exteriorfinish",
+                    "tbs_interiorfinish",
+                    "tbs_exteriorgauge",
+                    "tbs_interiorgauge",
+                    "tbs_exteriorcolorcategory",
+                    "tbs_exteriorcolor",
+                    "tbs_interiorcolorcategory",
+                    "tbs_interiorcolor",
+                    "tbs_interioremboss",
+                    "tbs_exterioremboss"
+                ));
+
+            var req = new OrganizationRequest("tbs_FalkCustomAPIOpportunityProductPricingCalculation") // replace with your Custom API unique name
+            {
+                ["Target"] = new EntityReference("opportunityproduct", opportunityProductId),
+                ["Product"] = oppProd.GetAttributeValue<EntityReference>("productid"),
+                ["PanelThickness"] = oppProd.GetAttributeValue<EntityReference>("tbs_panelthickness"),
+                ["PriceLevelTier"] = oppProd.GetAttributeValue<EntityReference>("tbs_priceleveltier"),
+                ["ExteriorFinish"] = oppProd.GetAttributeValue<EntityReference>("tbs_exteriorfinish"),
+                ["InteriorFinish"] = oppProd.GetAttributeValue<EntityReference>("tbs_interiorfinish"),
+                ["ExteriorGauge"] = oppProd.GetAttributeValue<EntityReference>("tbs_exteriorgauge"),
+                ["InteriorGauge"] = oppProd.GetAttributeValue<EntityReference>("tbs_interiorgauge"),
+                ["ExteriorColorCategory"] = oppProd.GetAttributeValue<OptionSetValue>("tbs_exteriorcolorcategory")?.Value,
+                ["ExteriorColor"] = oppProd.GetAttributeValue<EntityReference>("tbs_exteriorcolor"),
+                ["InteriorColorCategory"] = oppProd.GetAttributeValue<OptionSetValue>("tbs_interiorcolorcategory")?.Value,
+                ["InteriorColor"] = oppProd.GetAttributeValue<EntityReference>("tbs_interiorcolor"),
+                ["InteriorEmboss"] = oppProd.GetAttributeValue<OptionSetValue>("tbs_interioremboss")?.Value,
+                ["ExteriorEmboss"] = oppProd.GetAttributeValue<OptionSetValue>("tbs_exterioremboss")?.Value
+            };
+
+            service.Execute(req);
         }
     }
 }
