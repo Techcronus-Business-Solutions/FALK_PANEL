@@ -17,11 +17,11 @@ Falk.LineItem = {
         formContext.getAttribute("tbs_ft")?.addOnChange(Falk.LineItem.OnChangeFeetInch);
         formContext.getAttribute("tbs_ft")?.addOnChange(Falk.LineItem.ValidateMinimumLength);
 
-        formContext.getAttribute("tbs_in")
-            ?.addOnChange(Falk.LineItem.OnChangeFeetInch);
+        formContext.getAttribute("tbs_in")?.addOnChange(Falk.LineItem.OnChangeFeetInch);
 
-        formContext.getAttribute("tbs_numberofpanels")
-            ?.addOnChange(Falk.LineItem.SetSqft);
+        formContext.getAttribute("tbs_in")?.addOnChange(Falk.LineItem.ValidateInches);
+
+        formContext.getAttribute("tbs_numberofpanels")?.addOnChange(Falk.LineItem.SetSqft);
     },
 
     OnChangeFeetInch: function (executionContext) {
@@ -254,6 +254,35 @@ Falk.LineItem = {
                     "Unable to validate minimum length.\n\n"
                     + error.message
             });
+        }
+    },
+
+    ValidateInches: async function (executionContext) {
+
+        var formContext = executionContext.getFormContext();
+
+        var inchesAttr = formContext.getAttribute("tbs_in");
+
+        if (!inchesAttr)
+            return;
+
+        var inches = inchesAttr.getValue();
+
+        if (inches == null)
+            return;
+
+        if (inches < 0 || inches > 11) {
+
+            await Xrm.Navigation.openAlertDialog({
+                title: "Invalid Inches",
+                text: "Inches must be between 0 and 11."
+            });
+
+            inchesAttr.setValue(null);
+
+            formContext.getAttribute("tbs_linearftinch")?.setValue(null);
+
+            formContext.getAttribute("tbs_totalsqft")?.setValue(null);
         }
     }
 };
