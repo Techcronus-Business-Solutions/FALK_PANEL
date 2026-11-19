@@ -45,8 +45,10 @@ namespace Falk.CustomAPI
                 var opportunityProduct = GetInputRef("Target");
 
                 // get tracsaction currency from opportunity product
-                Entity opportunityProductEntity = service.Retrieve("opportunityproduct", opportunityProduct.Id, new ColumnSet("transactioncurrencyid"));
-                var transactionCurrency = GetCurrencyExchangeRate(service, opportunityProductEntity.GetAttributeValue<EntityReference>("transactioncurrencyid"));
+                Entity opportunityProductEntity = service.Retrieve("opportunityproduct", opportunityProduct.Id, new ColumnSet("transactioncurrencyid", "opportunityid"));
+                var currencyRef = opportunityProductEntity.GetAttributeValue<EntityReference>("transactioncurrencyid");
+                var transactionCurrency = GetCurrencyExchangeRate(service, currencyRef);
+                tracingService.Trace($"Currency -> Id={currencyRef?.Id}, ExchangeRate={transactionCurrency.exchangeRate}");
 
                 string interiorCategoryText = GetColorCategoryText(interiorColorCategory);
                 string exteriorCategoryText = GetColorCategoryText(exteriorColorCategory);
@@ -185,9 +187,9 @@ namespace Falk.CustomAPI
 
                 decimal totalPropertyPrice = roundValues(interiorPrice) + roundValues(exteriorPrice) + roundValues(interiorEmbossPrice) + roundValues(exteriorEmbossPrice);
                 oppProduct["tbs_totalpropertiesprice"] = new Money(roundValues(totalPropertyPrice));
-                
+
                 decimal usPrice = roundValues(calculatedPrice) + roundValues(totalPropertyPrice);
-                tracingService.Trace(usPrice.ToString());
+                tracingService.Trace($"US Price before Markup: calculatedPrice={roundValues(calculatedPrice)}, totalPropertyPrice={roundValues(totalPropertyPrice)}, usPrice={usPrice}");
 
                 // --- Territory & Product Markup Calculation ---
                 try
@@ -196,13 +198,13 @@ namespace Falk.CustomAPI
                     if (oppRef != null && product != null)
                     {
                         string region = GetTerritoryRegion(oppRef.Id);
-                        tracingService.Trace($"Resolved Region: {region}");
+                        tracingService.Trace($"Resolved Region: '{region}' (OppId={oppRef.Id})");
 
                         if (!string.IsNullOrEmpty(region))
                         {
                             Entity productEntity = service.Retrieve(product.LogicalName, product.Id, new ColumnSet("name"));
                             string productName = productEntity.GetAttributeValue<string>("name") ?? string.Empty;
-                            tracingService.Trace($"Product Name: {productName}");
+                            tracingService.Trace($"Product Name: '{productName}'");
 
                             decimal markupMultiplier = 1.0m;
 
@@ -233,7 +235,7 @@ namespace Falk.CustomAPI
                             }
 
                             usPrice *= markupMultiplier;
-                            tracingService.Trace($"US Price after Markup ({markupMultiplier}): {usPrice}");
+                            tracingService.Trace($"US Price after Markup: multiplier={markupMultiplier}, usPrice={usPrice}");
                         }
                     }
                 }
@@ -244,7 +246,7 @@ namespace Falk.CustomAPI
 
                 decimal finalUsPrice = roundValues(usPrice);
                 oppProduct["tbs_usprice"] = new Money(finalUsPrice);
-                tracingService.Trace($"Final US Price: {finalUsPrice}");
+                tracingService.Trace($"Saved tbs_usprice (finalUsPrice): {finalUsPrice}");
 
                 Entity opp = service.Retrieve("opportunityproduct",opportunityProduct.Id,new ColumnSet("quantity", "tbs_usdpriceadjustment", "tbs_accessoriespricetotal", "tbs_trimspricetotal"));
                 decimal sqft = opp.GetAttributeValue<decimal>("quantity");
