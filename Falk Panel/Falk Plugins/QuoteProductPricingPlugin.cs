@@ -31,6 +31,11 @@ namespace Falk_Plugins.Pricing_Master
             }
             InitProperties(localcontext);
 
+            if (context.Depth > 1)
+            {
+                return;
+            }
+
             try
             {
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)

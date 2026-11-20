@@ -24,12 +24,17 @@ namespace Falk_Plugins.Pricing_Master
         #endregion
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
         {
-
+           
             if (localcontext == null)
             {
                 throw new ArgumentNullException(nameof(localcontext));
             }
             InitProperties(localcontext);
+
+            if (context.Depth > 1)
+            {
+                return;
+            }
 
             try
             {
