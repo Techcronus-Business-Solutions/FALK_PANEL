@@ -97,7 +97,7 @@ Falk.OrderProduct = {
 
                 formContext.getAttribute("tbs_orderexteriorcolorcategory").setValue(null);
                 formContext.getAttribute("tbs_orderinteriorcolorcategory").setValue(null);
-                await Falk.QuoteProduct.ToggleSpecialProductFields(formContext);
+                await Falk.OrderProduct.ToggleSpecialProductFields(formContext);
             });
 
         formContext.getAttribute("tbs_panelthickness")
