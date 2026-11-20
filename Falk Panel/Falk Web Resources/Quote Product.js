@@ -776,6 +776,10 @@ Falk.QuoteProduct = {
 
 
     ToggleSpecialProductFields: function (formContext) {
+
+        if (formContext.ui.getFormType() !== 2) {
+            return;
+        }
             const product = formContext.getAttribute("productid")?.getValue();
             const writeInProduct = formContext.getAttribute("productdescription")?.getValue();
 

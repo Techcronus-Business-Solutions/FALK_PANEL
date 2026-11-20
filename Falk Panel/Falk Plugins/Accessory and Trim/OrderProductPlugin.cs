@@ -253,7 +253,7 @@ namespace Falk_Plugins.Accessory_and_Trim
                 query.ColumnSet.AddColumns("tbs_accessoryid");
                 LinkEntity pricing = query.AddLink("tbs_accessorypricing", "tbs_accessorypricing", "tbs_accessorypricingid");
                 pricing.EntityAlias = "pricing";
-                pricing.Columns.AddColumns("tbs_price", "tbs_unit");
+                pricing.Columns.AddColumns("tbs_price", "tbs_unit", "tbs_canadacustomermargin");
                 LinkEntity thickness = query.AddLink("tbs_accessory_tbs_thickness", "tbs_accessoryid", "tbs_accessoryid");
                 thickness.EntityAlias = "thickness";
                 thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
@@ -363,7 +363,7 @@ namespace Falk_Plugins.Accessory_and_Trim
             try
             {
                 QueryExpression query = new QueryExpression("tbs_trim");
-                query.ColumnSet.AddColumns("tbs_trimid", "tbs_name", "tbs_unit", "tbs_canadacustomermargin");
+                query.ColumnSet.AddColumns("tbs_trimid", "tbs_name", "tbs_unit");
                 LinkEntity query_tbs_trim_tbs_thickness = query.AddLink("tbs_trim_tbs_thickness", "tbs_trimid", "tbs_trimid");
                 query_tbs_trim_tbs_thickness.LinkCriteria.AddCondition("tbs_thicknessid", ConditionOperator.Equal, panelThickness.Id);
 
