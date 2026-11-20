@@ -811,6 +811,11 @@ Falk.OpportunityProduct = {
     ToggleSpecialProductFields: function (formContext) {
 
         const product = formContext.getAttribute("productid")?.getValue();
+        const writeInProduct = formContext.getAttribute("productdescription")?.getValue();
+
+        if (writeInProduct) {
+            Xrm.Utility.showProgressIndicator("Loading...");
+        }
 
         const specialProducts = [
             "shop drawings",
@@ -822,16 +827,11 @@ Falk.OpportunityProduct = {
         const keepFields = ["productdescription", "baseamount"];
 
         try {
-            const product = formContext.getAttribute("productid")?.getValue();
-            const productName =
-                (product && product[0] && product[0].name) ||
-                formContext.getAttribute("productdescription")?.getValue();
+            const productName = (product && product[0] && product[0].name) || formContext.getAttribute("productdescription")?.getValue();
 
             console.log("Final Product Name:", productName);
 
-
-            const isSpecial = !!productName &&
-                specialProducts.includes(productName.toLowerCase().trim());
+            const isSpecial = !!productName && specialProducts.includes(productName.toLowerCase().trim());
 
             const self = Falk.OpportunityProduct;
             self._hiddenByToggle = self._hiddenByToggle || [];
@@ -858,7 +858,9 @@ Falk.OpportunityProduct = {
         }
         catch (error) {
             console.error("ToggleSpecialProductFields Error:", error);
+            Xrm.Utility.closeProgressIndicator();
+        } finally {
+            Xrm.Utility.closeProgressIndicator();
         }
-
     }
 }

@@ -15,6 +15,7 @@ Falk.QuoteProduct = {
     OnLoad: async function (executionContext) {
         const formContext = executionContext.getFormContext();
 
+        Falk.QuoteProduct.ToggleSpecialProductFields(formContext);
         // Cache Environment Variables
         Falk.QuoteProduct.FRW42PanelId = await this.GetEnvironmentVariableValue("tbs_FRW42PanelId");
 
@@ -96,6 +97,7 @@ Falk.QuoteProduct = {
 
                 formContext.getAttribute("tbs_quoteexteriorcolorcategory").setValue(null);
                 formContext.getAttribute("tbs_quoteinteriorcolorcategory").setValue(null);
+                await Falk.QuoteProduct.ToggleSpecialProductFields(formContext);
             });
 
         formContext.getAttribute("tbs_panelthickness")
@@ -465,7 +467,7 @@ Falk.QuoteProduct = {
                 "   <order attribute='tbs_name' />" +
                 "   <filter type='and'>" +
                 "      <condition attribute='tbs_paneltype' operator='eq' value='" + productId + "' />" +
-                            exteriorcolorCategoryCondition +
+                exteriorcolorCategoryCondition +
                 "   </filter>" +
                 " </entity>" +
                 "</fetch>";
@@ -478,7 +480,7 @@ Falk.QuoteProduct = {
                 "   <order attribute='tbs_name' />" +
                 "   <filter type='and'>" +
                 "       <condition attribute='statecode' operator='eq' value='0' />" +
-                            exteriorcolorCategoryCondition +
+                exteriorcolorCategoryCondition +
                 "   </filter>" +
                 "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
                 "       <filter>" +
@@ -534,7 +536,7 @@ Falk.QuoteProduct = {
                 "   <order attribute='tbs_name' />" +
                 "   <filter type='and'>" +
                 "      <condition attribute='tbs_paneltype' operator='eq' value='" + productId + "' />" +
-                        interiorcolorCategoryCondition +
+                interiorcolorCategoryCondition +
                 "   </filter>" +
                 " </entity>" +
                 "</fetch>";
@@ -547,7 +549,7 @@ Falk.QuoteProduct = {
                 "   <order attribute='tbs_name' />" +
                 "   <filter type='and'>" +
                 "       <condition attribute='statecode' operator='eq' value='0' />" +
-                            interiorcolorCategoryCondition +
+                interiorcolorCategoryCondition +
                 "   </filter>" +
                 "    <link-entity name='tbs_color_tbs_finish' from='tbs_colorid' to='tbs_colorid' link-type='inner'>" +
                 "       <filter>" +
@@ -769,6 +771,62 @@ Falk.QuoteProduct = {
             const multiplier = tierRecord.tbs_multiplier;
             const calculatedPrice = Number((basePrice * multiplier / 100 * retrievedCurrency.exchangerate).toFixed(2));
             formContext.getAttribute("tbs_baseprice").setValue(calculatedPrice);
+        }
+    },
+
+
+    ToggleSpecialProductFields: function (formContext) {
+            const product = formContext.getAttribute("productid")?.getValue();
+            const writeInProduct = formContext.getAttribute("productdescription")?.getValue();
+
+            if (writeInProduct) {
+                Xrm.Utility.showProgressIndicator("Loading...");
+            }
+
+        const specialProducts = [
+                "shop drawings",
+                "roof warranty",
+                "stamped and sealed shop drawings"
+            ];
+
+            // The only fields that stay visible for special products
+            const keepFields = ["productdescription", "baseamount"];
+
+        try {
+            const productName = (product && product[0] && product[0].name) || formContext.getAttribute("productdescription")?.getValue();
+
+            console.log("Final Product Name:", productName);
+
+            const isSpecial = !!productName && specialProducts.includes(productName.toLowerCase().trim());
+
+            const self = Falk.QuoteProduct;
+            self._hiddenByToggle = self._hiddenByToggle || [];
+
+            if (isSpecial) {
+                formContext.ui.controls.forEach(function (control) {
+                    const name = control.getName();
+
+                    if (keepFields.includes(name)) return;   // keep these two
+                    if (!control.getVisible()) return;       // already hidden, leave it alone
+
+                    control.setVisible(false);
+                    self._hiddenByToggle.push(name);          // remember what we hid
+                });
+            }
+            else {
+                // Restore only what this function hid
+                self._hiddenByToggle.forEach(function (name) {
+                    const control = formContext.getControl(name);
+                    if (control) control.setVisible(true);
+                });
+                self._hiddenByToggle = [];
+            }
+        }
+        catch (error) {
+            console.error("ToggleSpecialProductFields Error:", error);
+            Xrm.Utility.closeProgressIndicator();
+        } finally {
+            Xrm.Utility.closeProgressIndicator();
         }
     }
 }
