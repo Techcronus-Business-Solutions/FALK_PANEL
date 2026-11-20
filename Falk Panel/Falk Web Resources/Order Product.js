@@ -16,6 +16,7 @@ Falk.OrderProduct = {
         const formContext = executionContext.getFormContext();
 
         Falk.OrderProduct.ToggleSpecialProductFields(formContext);
+        await Falk.OrderProduct.SetUnitFromProduct(formContext);
         // Cache Environment Variables
         Falk.OrderProduct.FRW42PanelId = await Falk.OrderProduct.GetEnvironmentVariableValue("tbs_FRW42PanelId");
 
@@ -98,6 +99,7 @@ Falk.OrderProduct = {
                 formContext.getAttribute("tbs_orderexteriorcolorcategory").setValue(null);
                 formContext.getAttribute("tbs_orderinteriorcolorcategory").setValue(null);
                 await Falk.OrderProduct.ToggleSpecialProductFields(formContext);
+                await Falk.OrderProduct.SetUnitFromProduct(formContext);
             });
 
         formContext.getAttribute("tbs_panelthickness")
@@ -832,5 +834,56 @@ Falk.OrderProduct = {
         } finally {
             Xrm.Utility.closeProgressIndicator();
         }
-    }
+    },
+
+    SetUnitFromProduct: async function (formContext) {
+        try {
+            const productAttr = formContext.getAttribute("productid");
+            const uomAttr = formContext.getAttribute("uomid");
+
+            // Required attributes must exist on the form
+            if (!productAttr || !uomAttr) {
+                return;
+            }
+
+            const product = productAttr.getValue();
+
+            // Write-in product: no product selected, so do nothing
+            if (!product || !product[0] || !product[0].id) {
+                return;
+            }
+
+            const productId = product[0].id.replace(/[{}]/g, "");
+
+            const productRecord = await Xrm.WebApi.retrieveRecord(
+                "product",
+                productId,
+                "?$select=_defaultuomid_value"
+            );
+
+            if (!productRecord || !productRecord._defaultuomid_value) {
+                return;
+            }
+
+            const uomId = productRecord._defaultuomid_value;
+            const uomName =
+                productRecord["_defaultuomid_value@OData.Community.Display.V1.FormattedValue"] || "";
+
+            // Skip if the same unit is already set (avoids marking the form dirty)
+            const currentUom = uomAttr.getValue();
+            if (currentUom && currentUom[0] &&
+                currentUom[0].id.replace(/[{}]/g, "").toLowerCase() === uomId.toLowerCase()) {
+                return;
+            }
+
+            uomAttr.setValue([{
+                id: uomId,
+                name: uomName,
+                entityType: "uom"
+            }]);
+        }
+        catch (error) {
+            console.error("SetUnitFromProduct Error:", error);
+        }
+    },
 }
