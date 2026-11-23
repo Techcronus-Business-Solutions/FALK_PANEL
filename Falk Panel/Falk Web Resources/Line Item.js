@@ -278,11 +278,11 @@ Falk.LineItem = {
                 text: "Inches must be between 0 and 11."
             });
 
-            inchesAttr.setValue(null);
+            inchesAttr.setValue(0);
 
             formContext.getAttribute("tbs_linearftinch")?.setValue(null);
 
-            formContext.getAttribute("tbs_totalsqft")?.setValue(null);
+            formContext.getAttribute("tbs_totalsqft")?.setValue(0);
         }
     }
 };
