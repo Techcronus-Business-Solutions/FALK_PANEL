@@ -791,7 +791,7 @@ Falk.OrderProduct = {
 
           const specialProducts = [
             "shop drawings",
-            "roof warranty",
+            "weather tight warranty",
             "stamped and sealed shop drawings"
         ];
 

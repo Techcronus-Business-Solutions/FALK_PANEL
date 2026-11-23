@@ -256,7 +256,7 @@ namespace Falk_Plugins.Pricing_Master
                                     updateOpp["tbs_roofwarrantyprice"] = null;
 
                                     tracingService.Trace(
-                                        "Manual Roof Warranty deletion detected. Toggle set to No and price cleared.");
+                                        "Manual Weather Tight Warranty deletion detected. Toggle set to No and price cleared.");
                                 }
                                     service.Update(updateOpp);
 
@@ -436,7 +436,7 @@ namespace Falk_Plugins.Pricing_Master
 
         private const string ShopDrawingsRowName = "Shop Drawings";
         private const string StampedSealedDrawingsRowName = "Stamped and Sealed Shop Drawings";
-        private const string RoofWarrantyRowName = "Roof Warranty";
+        private const string RoofWarrantyRowName = "Weather Tight Warranty";
 
 
         private List<Entity> GetOpportunityProductRows(Guid oppId, string rowName)

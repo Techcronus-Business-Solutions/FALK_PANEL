@@ -29,7 +29,7 @@ namespace Falk_Plugins.Pricing_Master
 
         private const string ShopDrawingsRowName = "Shop Drawings";
         private const string StampedSealedDrawingsRowName = "Stamped and Sealed Shop Drawings";
-        private const string RoofWarrantyRowName = "Roof Warranty";
+        private const string RoofWarrantyRowName = "Weather Tight Warranty";
         #endregion
 
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
@@ -166,7 +166,7 @@ namespace Falk_Plugins.Pricing_Master
             {
                 updateQuote["tbs_weathertightwarranty"] = false;
                 updateQuote["tbs_roofwarrantyprice"] = null;
-                tracingService.Trace("Manual Roof Warranty line deletion detected.");
+                tracingService.Trace("Manual Weather Tight Warranty line deletion detected.");
             }
 
             updateQuote["tbs_totalsqft"] = GetTotalSQFTFromQuoteProducts(quoteId);

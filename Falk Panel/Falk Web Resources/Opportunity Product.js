@@ -824,7 +824,7 @@ Falk.OpportunityProduct = {
         const specialProducts = [
             "shop drawings",
             "stamped and sealed shop drawings",
-            "roof warranty"
+            "weather tight warranty"
         ];
 
         // The only fields that stay visible for special products
