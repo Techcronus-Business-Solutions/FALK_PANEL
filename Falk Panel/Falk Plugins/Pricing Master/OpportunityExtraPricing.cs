@@ -447,6 +447,7 @@ namespace Falk_Plugins.Pricing_Master
                 "opportunityproductid",
                 "productdescription",
                 "priceperunit",
+                "tbs_sqftamount",
                 "quantity");
 
             query.Criteria.AddCondition(
@@ -536,6 +537,7 @@ namespace Falk_Plugins.Pricing_Master
                         updateProduct["priceperunit"] = new Money(price);
                         updateProduct["quantity"] = 1m;
                         updateProduct["tbs_baseprice"] = new Money(price);
+                        updateProduct["tbs_sqftamount"] = new Money(price);
                         UpdateBypassingCustomLogic(updateProduct);
                         tracingService.Trace("Shop Drawings row updated.");
                     }
@@ -557,6 +559,7 @@ namespace Falk_Plugins.Pricing_Master
                     newProduct["ispriceoverridden"] = true;
                     newProduct["priceperunit"] = new Money(price);
                     newProduct["tbs_baseprice"] = new Money(price);
+                    newProduct["tbs_sqftamount"] = new Money(price);
                     CreateBypassingCustomLogic(newProduct);
                     tracingService.Trace("Shop Drawings row created.");
                 
@@ -571,6 +574,7 @@ namespace Falk_Plugins.Pricing_Master
                     newProduct["ispriceoverridden"] = true;
                     newProduct["priceperunit"] = new Money(price);
                     newProduct["tbs_baseprice"] = new Money(price);
+                    newProduct["tbs_sqftamount"] = new Money(price);
                     CreateBypassingCustomLogic(newProduct);
                     tracingService.Trace("Shop Drawings row created.");
                 }
@@ -628,6 +632,7 @@ namespace Falk_Plugins.Pricing_Master
                         updateProduct["priceperunit"] = new Money(price);
                         updateProduct["quantity"] = 1m;
                         updateProduct["tbs_baseprice"] = new Money(price);
+                        updateProduct["tbs_sqftamount"] = new Money(price);
 
                         UpdateBypassingCustomLogic(updateProduct);
 
@@ -659,6 +664,7 @@ namespace Falk_Plugins.Pricing_Master
                     newProduct["ispriceoverridden"] = true;
                     newProduct["priceperunit"] = new Money(price);
                     newProduct["tbs_baseprice"] = new Money(price);
+                    newProduct["tbs_sqftamount"] = new Money(price);
 
                     CreateBypassingCustomLogic(newProduct);
 
