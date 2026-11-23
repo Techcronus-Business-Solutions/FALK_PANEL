@@ -292,9 +292,9 @@ namespace Falk.CustomAPI
                 tracingService.Trace($"panelAndUpcharge={panelAndUpchargePerSqft}, exactTotal={exactTotal}, systemPricePerUnit={systemPricePerUnit}");
 
                 // If tbs_sqftamount should include accessories/trims per sqft:
-                order["tbs_sqftamount"] = new Money(panelAndUpchargePerSqft);
-                order["ispriceoverridden"] = true;
-                order["priceperunit"] = new Money(systemPricePerUnit);
+                salesorderdetail["tbs_sqftamount"] = new Money(panelAndUpchargePerSqft);
+                salesorderdetail["ispriceoverridden"] = true;
+                salesorderdetail["priceperunit"] = new Money(systemPricePerUnit);
                 service.Update(salesorderdetail);
                 #endregion
             }
@@ -339,7 +339,7 @@ namespace Falk.CustomAPI
             try
             {
                 //Fetch Order Territory
-                Entity order = service.Retrieve("salesorder", opportunityId, new ColumnSet("tbs_territory"));
+                Entity order = service.Retrieve("salesorder", opportunityId, new ColumnSet("tbs_territory", "ransactioncurrencyid"));
 
 
                 EntityReference territoryRef = order.GetAttributeValue<EntityReference>("tbs_territory")

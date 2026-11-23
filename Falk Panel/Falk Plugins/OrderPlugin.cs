@@ -27,7 +27,7 @@ namespace Falk_Plugins
         {
 
             if (localcontext == null)
-            { 
+            {
                 throw new ArgumentNullException(nameof(localcontext));
             }
             InitProperties(localcontext);
@@ -37,7 +37,7 @@ namespace Falk_Plugins
                 if (context.InputParameters.Contains(CONST_TARGETENTITY) && context.InputParameters[CONST_TARGETENTITY] is Entity)
                 {
                     targetEntity = (Entity)context.InputParameters[CONST_TARGETENTITY];
-                    if(targetEntity.LogicalName == "salesorder")
+                    if (targetEntity.LogicalName == "salesorder")
                     {
                         EntityReference customer = targetEntity.GetAttributeValue<EntityReference>("customerid");
                         if (customer != null && customer.LogicalName == "account")
@@ -123,6 +123,13 @@ namespace Falk_Plugins
         {
             tracingService.Trace("GenerateProductForOrderProduct started.");
 
+            // Write-in product: no catalog product, so skip Product ID generation
+            if (IsWriteInProduct())
+            {
+                tracingService.Trace("Write-in product detected, skipping Product ID generation.");
+                return;
+            }
+
             string productId = GenerateProductId();
 
             if (string.IsNullOrWhiteSpace(productId))
@@ -170,6 +177,26 @@ namespace Falk_Plugins
             targetEntity["tbs_bcitemid"] = productId;
 
             tracingService.Trace("Product lookup set on Order Product.");
+        }
+
+        private bool IsWriteInProduct()
+        {
+            // Value sent in this request (Create, or Update where the field changed)
+            if (targetEntity.Contains("isproductoverridden"))
+                return targetEntity.GetAttributeValue<bool>("isproductoverridden");
+
+            // Value from the PreImage, if the step's PreImage includes it
+            if (PreImage != null && PreImage.Contains("isproductoverridden"))
+                return PreImage.GetAttributeValue<bool>("isproductoverridden");
+
+            // Update where neither has it: read the saved record
+            if (context.MessageName == CONST_UPDATE)
+            {
+                Entity existing = service.Retrieve("salesorderdetail", targetEntity.Id, new ColumnSet("isproductoverridden"));
+                return existing.GetAttributeValue<bool>("isproductoverridden");
+            }
+
+            return false;
         }
 
 
