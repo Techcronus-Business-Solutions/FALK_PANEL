@@ -387,7 +387,7 @@ namespace Falk_Plugins.Pricing_Master
             {
                 QueryExpression query = new QueryExpression("salesorderdetail")
                 {
-                    ColumnSet = new ColumnSet("salesorderdetailid", "productdescription", "priceperunit", "quantity")
+                    ColumnSet = new ColumnSet("salesorderdetailid", "productdescription", "priceperunit", "quantity", "tbs_sqftamount")
                 };
 
                 query.Criteria.AddCondition("salesorderid", ConditionOperator.Equal, salesorderId);
@@ -422,7 +422,8 @@ namespace Falk_Plugins.Pricing_Master
                             Entity updateProduct = new Entity("salesorderdetail", existing.Id);
                             updateProduct["ispriceoverridden"] = true;
                             updateProduct["priceperunit"] = new Money(price);
-                            updateProduct["quantity"] = 1m;
+                        updateProduct["tbs_sqftamount"] = new Money(price);
+                        updateProduct["quantity"] = 1m;
                             updateProduct["tbs_baseprice"] = new Money(price);
                             UpdateBypassingCustomLogic(updateProduct);
                             tracingService.Trace("{0} order line updated.", rowName);
@@ -443,7 +444,8 @@ namespace Falk_Plugins.Pricing_Master
                         newProduct["quantity"] = 1m;
                         newProduct["ispriceoverridden"] = true;
                         newProduct["priceperunit"] = new Money(price);
-                        newProduct["tbs_baseprice"] = new Money(price);
+                    newProduct["tbs_sqftamount"] = new Money(price);
+                    newProduct["tbs_baseprice"] = new Money(price);
                         CreateBypassingCustomLogic(newProduct);
                         tracingService.Trace("{0} order line created.", rowName);
                     }

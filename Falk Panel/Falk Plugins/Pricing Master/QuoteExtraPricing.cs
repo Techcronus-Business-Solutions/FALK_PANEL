@@ -420,7 +420,7 @@ namespace Falk_Plugins.Pricing_Master
         {
             QueryExpression query = new QueryExpression("quotedetail")
             {
-                ColumnSet = new ColumnSet("quotedetailid", "productdescription", "priceperunit", "quantity")
+                ColumnSet = new ColumnSet("quotedetailid", "productdescription", "priceperunit", "quantity", "tbs_sqftamount")
             };
 
             query.Criteria.AddCondition("quoteid", ConditionOperator.Equal, quoteId);
@@ -457,6 +457,7 @@ namespace Falk_Plugins.Pricing_Master
                         updateProduct["priceperunit"] = new Money(price);
                         updateProduct["quantity"] = 1m;
                         updateProduct["tbs_baseprice"] = new Money(price);
+                        updateProduct["tbs_sqftamount"] = new Money(price);
                         UpdateBypassingCustomLogic(updateProduct);
                         tracingService.Trace("{0} quote line updated.", rowName);
                     }
@@ -478,6 +479,7 @@ namespace Falk_Plugins.Pricing_Master
                     newProduct["ispriceoverridden"] = true;
                     newProduct["priceperunit"] = new Money(price);
                     newProduct["tbs_baseprice"] = new Money(price);
+                    newProduct["tbs_sqftamount"] = new Money(price);
                     CreateBypassingCustomLogic(newProduct);
                     tracingService.Trace("{0} quote line created.", rowName);
                 }

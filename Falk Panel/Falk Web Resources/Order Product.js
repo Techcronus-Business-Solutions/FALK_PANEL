@@ -798,7 +798,7 @@ Falk.OrderProduct = {
         ];
 
         // The only fields that stay visible for special products
-        const keepFields = ["productdescription", "baseamount"];
+        const keepFields = ["productdescription", "baseamount", "tbs_sqftamount", "extendedamount"];
 
         try {
             const productName = (product && product[0] && product[0].name) || formContext.getAttribute("productdescription")?.getValue();
