@@ -163,6 +163,8 @@ Falk.OrderProduct = {
             Falk.OrderProduct.SetInteriorColorCategory(executionContext);
         });
 
+        await Falk.OrderProduct.SyncColorCategoriesOnLoad(formContext);
+
         formContext.data.entity.addOnSave(Falk.OrderProduct.OnSave);
         formContext.data.entity.addOnPostSave(Falk.OrderProduct.OnPostSave);
     },
@@ -886,4 +888,33 @@ Falk.OrderProduct = {
             console.error("SetUnitFromProduct Error:", error);
         }
     },
+
+    SyncColorCategoriesOnLoad: async function (formContext) {
+        var exteriorColor = formContext.getAttribute("tbs_exteriorcolor")?.getValue();
+        var exteriorCategory = formContext.getAttribute("tbs_orderexteriorcolorcategory")?.getValue();
+
+        if (exteriorColor && (exteriorCategory === null || exteriorCategory === undefined)) {
+            const colorId = exteriorColor[0].id.replace(/[{}]/g, "");
+
+            const colorRecord = await Xrm.WebApi.retrieveRecord("tbs_color", colorId, "?$select=tbs_colorcategory");
+
+            if (colorRecord.tbs_colorcategory !== null && colorRecord.tbs_colorcategory !== undefined) {
+                formContext.getAttribute("tbs_orderexteriorcolorcategory").setValue(colorRecord.tbs_colorcategory);
+            }
+        }
+
+        // Interior
+        var interiorColor = formContext.getAttribute("tbs_interiorcolor")?.getValue();
+        var interiorCategory = formContext.getAttribute("tbs_orderinteriorcolorcategory")?.getValue();
+
+        if (interiorColor && (interiorCategory === null || interiorCategory === undefined)) {
+            const colorId = interiorColor[0].id.replace(/[{}]/g, "");
+
+            const colorRecord = await Xrm.WebApi.retrieveRecord("tbs_color", colorId, "?$select=tbs_colorcategory");
+
+            if (colorRecord.tbs_colorcategory !== null && colorRecord.tbs_colorcategory !== undefined) {
+                formContext.getAttribute("tbs_orderinteriorcolorcategory").setValue(colorRecord.tbs_colorcategory);
+            }
+        }
+    }
 }

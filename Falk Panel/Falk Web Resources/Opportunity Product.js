@@ -98,6 +98,7 @@ Falk.OpportunityProduct = {
 
             formContext.getAttribute("tbs_exteriorcolorcategory").setValue(null);
             formContext.getAttribute("tbs_interiorcolorcategory").setValue(null);
+
             await Falk.OpportunityProduct.ToggleSpecialProductFields(formContext);
         });
 
@@ -160,6 +161,8 @@ Falk.OpportunityProduct = {
         formContext.getAttribute("tbs_interiorcolor").addOnChange(function (executionContext) {
             Falk.OpportunityProduct.SetInteriorColorCategory(executionContext);
         });
+
+        await Falk.OpportunityProduct.SyncColorCategoriesOnLoad(formContext);
 
         formContext.data.entity.addOnSave(Falk.OpportunityProduct.OnSave);
         formContext.data.entity.addOnPostSave(Falk.OpportunityProduct.OnPostSave);
@@ -865,6 +868,35 @@ Falk.OpportunityProduct = {
             Xrm.Utility.closeProgressIndicator();
         } finally {
             Xrm.Utility.closeProgressIndicator();
+        }
+    },
+
+    SyncColorCategoriesOnLoad: async function (formContext) {
+        var exteriorColor = formContext.getAttribute("tbs_exteriorcolor")?.getValue();
+        var exteriorCategory = formContext.getAttribute("tbs_exteriorcolorcategory")?.getValue();
+
+        if (exteriorColor && (exteriorCategory === null || exteriorCategory === undefined)) {
+            const colorId = exteriorColor[0].id.replace(/[{}]/g, "");
+
+            const colorRecord = await Xrm.WebApi.retrieveRecord("tbs_color", colorId, "?$select=tbs_colorcategory");
+
+            if (colorRecord.tbs_colorcategory !== null && colorRecord.tbs_colorcategory !== undefined) {
+                formContext.getAttribute("tbs_exteriorcolorcategory").setValue(colorRecord.tbs_colorcategory);
+            }
+        }
+
+        // Interior
+        var interiorColor = formContext.getAttribute("tbs_interiorcolor")?.getValue();
+        var interiorCategory = formContext.getAttribute("tbs_interiorcolorcategory")?.getValue();
+
+        if (interiorColor && (interiorCategory === null || interiorCategory === undefined)) {
+            const colorId = interiorColor[0].id.replace(/[{}]/g, "");
+
+            const colorRecord = await Xrm.WebApi.retrieveRecord("tbs_color", colorId, "?$select=tbs_colorcategory");
+
+            if (colorRecord.tbs_colorcategory !== null && colorRecord.tbs_colorcategory !== undefined) {
+                formContext.getAttribute("tbs_interiorcolorcategory").setValue(colorRecord.tbs_colorcategory);
+            }
         }
     }
 }
