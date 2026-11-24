@@ -17,9 +17,8 @@ Falk.LineItem = {
         formContext.getAttribute("tbs_ft")?.addOnChange(Falk.LineItem.OnChangeFeetInch);
         formContext.getAttribute("tbs_ft")?.addOnChange(Falk.LineItem.ValidateMinimumLength);
 
-        formContext.getAttribute("tbs_in")?.addOnChange(Falk.LineItem.OnChangeFeetInch);
-
         formContext.getAttribute("tbs_in")?.addOnChange(Falk.LineItem.ValidateInches);
+        formContext.getAttribute("tbs_in")?.addOnChange(Falk.LineItem.OnChangeFeetInch);
 
         formContext.getAttribute("tbs_numberofpanels")?.addOnChange(Falk.LineItem.SetSqft);
     },
@@ -29,6 +28,10 @@ Falk.LineItem = {
 
         var feet = formContext.getAttribute("tbs_ft").getValue() ?? 0;
         var inches = formContext.getAttribute("tbs_in").getValue() ?? 0;
+
+        if (inches < 0 || inches > 11) {
+            return;
+        }
 
         if (feet === 0 && inches === 0) {
             formContext.getAttribute("tbs_linearftinch").setValue(null);
@@ -108,7 +111,7 @@ Falk.LineItem = {
                 fractionText = "1/4";
                 break;
             case 2:
-                fractionText = "1/2"; 
+                fractionText = "1/2";
                 break;
             case 3:
                 fractionText = "3/4";
@@ -125,12 +128,11 @@ Falk.LineItem = {
 
         return result;
     },
-    ValidateMinimumLength: async function (executionContext) {
 
+    ValidateMinimumLength: async function (executionContext) {
         var formContext = executionContext.getFormContext();
 
         try {
-
             var lengthAttr = formContext.getAttribute("tbs_ft");
 
             if (!lengthAttr) {
@@ -258,7 +260,6 @@ Falk.LineItem = {
     },
 
     ValidateInches: async function (executionContext) {
-
         var formContext = executionContext.getFormContext();
 
         var inchesAttr = formContext.getAttribute("tbs_in");
@@ -278,11 +279,9 @@ Falk.LineItem = {
                 text: "Inches must be between 0 and 11."
             });
 
-            inchesAttr.setValue(0);
+            inchesAttr.setValue(null);
 
-            formContext.getAttribute("tbs_linearftinch")?.setValue(null);
-
-            formContext.getAttribute("tbs_totalsqft")?.setValue(0);
+            Falk.LineItem.OnChangeFeetInch(executionContext);
         }
     }
 };

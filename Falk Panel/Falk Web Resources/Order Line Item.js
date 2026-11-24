@@ -107,7 +107,7 @@ Falk.OrderLineItem = {
                 fractionText = "1/4";
                 break;
             case 2:
-                fractionText = "1/2"; 
+                fractionText = "1/2";
                 break;
             case 3:
                 fractionText = "3/4";
@@ -126,11 +126,9 @@ Falk.OrderLineItem = {
     },
 
     ValidateMinimumLength: async function (executionContext) {
-
         var formContext = executionContext.getFormContext();
 
         try {
-
             var lengthAttr = formContext.getAttribute("tbs_ft");
 
             if (!lengthAttr) {
@@ -146,8 +144,7 @@ Falk.OrderLineItem = {
                 return;
             }
 
-            var orderProductAttr =
-                formContext.getAttribute("tbs_orderproduct");
+            var orderProductAttr = formContext.getAttribute("tbs_orderproduct");
 
             if (!orderProductAttr) {
                 console.log("Order Product attribute not found.");
@@ -157,7 +154,6 @@ Falk.OrderLineItem = {
             var orderProductValue = orderProductAttr.getValue();
 
             if (!orderProductValue || orderProductValue.length === 0) {
-
                 console.log("Order Product not selected.");
                 return;
             }
@@ -166,15 +162,14 @@ Falk.OrderLineItem = {
 
             console.log("Order Product ID: " + orderProductId);
 
-            // Get Thickness lookup from Opportunity Product
+            // Get Thickness lookup from Order Product
             var orderProduct = await Xrm.WebApi.retrieveRecord(
                 "salesorderdetail",
                 orderProductId,
                 "?$select=_tbs_panelthickness_value"
             );
 
-            var thicknessId =
-                orderProduct["_tbs_panelthickness_value"];
+            var thicknessId = orderProduct["_tbs_panelthickness_value"];
 
             console.log("Thickness ID: " + thicknessId);
 
@@ -190,21 +185,17 @@ Falk.OrderLineItem = {
                 "?$select=tbs_minimumlength"
             );
 
-            var minimumLength =
-                thickness["tbs_minimumlength"];
+            var minimumLength = thickness["tbs_minimumlength"];
 
             console.log("Minimum Length: " + minimumLength);
 
-            if (minimumLength === null ||
-                minimumLength === undefined) {
-
+            if (minimumLength === null || minimumLength === undefined) {
                 console.log("Minimum Length is empty.");
                 return;
             }
 
             // Validate
             if (length < minimumLength) {
-
                 await Xrm.Navigation.openAlertDialog(
                     {
                         title: "Minimum Length Required",
@@ -221,41 +212,26 @@ Falk.OrderLineItem = {
                     }
                 );
 
-                // Clear invalid value
+                // Clear invalid value and recalculate dependent fields
                 lengthAttr.setValue(null);
-
-                // Recalculate dependent fields
-                var linearFtAttr =
-                    formContext.getAttribute("tbs_linearftinch");
-
-                if (linearFtAttr) {
-                    linearFtAttr.setValue(null);
-                }
+                Falk.OrderLineItem.OnChangeFeetInch(executionContext);
 
                 return;
             }
 
             console.log("Minimum length validation passed.");
-
         }
         catch (error) {
-
-            console.error(
-                "ValidateMinimumLength Error: ",
-                error
-            );
+            console.error("ValidateMinimumLength Error: ", error);
 
             await Xrm.Navigation.openAlertDialog({
                 title: "Validation Error",
-                text:
-                    "Unable to validate minimum length.\n\n"
-                    + error.message
+                text: "Unable to validate minimum length.\n\n" + error.message
             });
         }
     },
 
     ValidateInches: async function (executionContext) {
-
         var formContext = executionContext.getFormContext();
 
         var inchesAttr = formContext.getAttribute("tbs_in");
@@ -269,17 +245,13 @@ Falk.OrderLineItem = {
             return;
 
         if (inches < 0 || inches > 11) {
-
             await Xrm.Navigation.openAlertDialog({
                 title: "Invalid Inches",
                 text: "Inches must be between 0 and 11."
             });
 
-            inchesAttr.setValue(0);
-
-            formContext.getAttribute("tbs_linearftinch")?.setValue(null);
-
-            formContext.getAttribute("tbs_totalsqft")?.setValue(0);
+            inchesAttr.setValue(null);
+            Falk.OrderLineItem.OnChangeFeetInch(executionContext);
         }
     }
 };
