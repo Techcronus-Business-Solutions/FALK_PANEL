@@ -22,6 +22,8 @@ namespace Falk_Plugins
         private Entity targetEntity { get; set; }
 
         private Entity PreImage { get; set; }
+
+        private string bcItemDescription = string.Empty;
         #endregion
         protected override void ExecuteCrmPlugin(LocalPluginContext localcontext)
         {
@@ -161,10 +163,14 @@ namespace Falk_Plugins
                     defaultUnitSetup["uom"].ToString()
                 );
 
+                
+
+
                 Entity product = new Entity("product");
 
                 product["name"] = productId;
                 product["productnumber"] = productId;
+                product["description"] = bcItemDescription;
                 product["defaultuomscheduleid"] = new EntityReference("uomschedule", uomScheduleId);
                 product["defaultuomid"] = new EntityReference("uom", uomId);
                 product["quantitydecimal"] = 0;
@@ -325,6 +331,37 @@ namespace Falk_Plugins
 
             tracingService.Trace("Interior Emboss: " + interiorEmboss);
 
+
+            EntityReference panelRef = targetEntity.Contains("productid")
+    ? targetEntity.GetAttributeValue<EntityReference>("productid")
+    : PreImage?.GetAttributeValue<EntityReference>("productid");
+
+            string panelName = panelRef?.Name ?? string.Empty;
+
+
+            string extFinishName = GetLookupName("tbs_exteriorfinish");
+            string extGaugeName = GetLookupName("tbs_exteriorgauge");
+            string extProfileName = GetLookupName("tbs_exteriorprofile");
+            string extColorName = GetLookupName("tbs_exteriorcolor");
+
+            string intFinishName = GetLookupName("tbs_interiorfinish");
+            string intGaugeName = GetLookupName("tbs_interiorgauge");
+            string intProfileName = GetLookupName("tbs_interiorprofile");
+            string intColorName = GetLookupName("tbs_interiorcolor");
+            string thicknessName = GetLookupName("tbs_panelthickness");
+
+
+            string extEmbossText = exteriorEmboss == "Y" ? "EMB" : "";
+            string intEmbossText = interiorEmboss == "Y" ? "EMB" : "";
+
+            bcItemDescription =
+                $"{thicknessName} {extFinishName} {extGaugeName}  {extProfileName} {extColorName} {extEmbossText}/ " +
+                $"{intFinishName} {intGaugeName}  {intProfileName} {intColorName}  {intEmbossText}";
+
+            
+
+            tracingService.Trace("BC Item Description: " + bcItemDescription);
+
             string productId = scheme + panelFamily + thickness + core + exteriorFinish + exteriorColor + exteriorGauge + exteriorProfile + exteriorEmboss + interiorFinish + interiorColor + interiorGauge + interiorProfile + interiorEmboss;
             tracingService.Trace(productId);
 
@@ -384,6 +421,37 @@ namespace Falk_Plugins
             }
 
             return code.Trim().ToUpperInvariant();
+        }
+
+        private string GetLookupName(string lookupField)
+        {
+            EntityReference lookup = null;
+
+            if (PreImage != null)
+            {
+                lookup = targetEntity.Contains(lookupField)
+                    ? targetEntity.GetAttributeValue<EntityReference>(lookupField)
+                    : PreImage.GetAttributeValue<EntityReference>(lookupField);
+            }
+            else
+            {
+                lookup = targetEntity.Contains(lookupField)
+                    ? targetEntity.GetAttributeValue<EntityReference>(lookupField)
+                    : null;
+            }
+
+            if (lookup == null)
+            {
+                return string.Empty;
+            }
+
+            Entity record = service.Retrieve(
+                lookup.LogicalName,
+                lookup.Id,
+                new ColumnSet("tbs_name")
+            );
+
+            return record.GetAttributeValue<string>("tbs_name") ?? string.Empty;
         }
         private string GetCore(string lookupField)
         {
