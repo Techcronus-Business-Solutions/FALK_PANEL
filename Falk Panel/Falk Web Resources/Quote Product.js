@@ -15,6 +15,10 @@ Falk.QuoteProduct = {
     OnLoad: async function (executionContext) {
         const formContext = executionContext.getFormContext();
 
+        formContext.getControl("productid").addPreSearch(function () {
+            Falk.QuoteProduct.addPanelProductFilter(formContext);
+        });
+
         Falk.QuoteProduct.ToggleSpecialProductFields(formContext);
         // Cache Environment Variables
         Falk.QuoteProduct.FRW42PanelId = await this.GetEnvironmentVariableValue("tbs_FRW42PanelId");
@@ -200,6 +204,19 @@ Falk.QuoteProduct = {
             },
             { openInNewWindow: false }
         );
+    },
+
+    addPanelProductFilter: function (formContext) {
+        const productControl = formContext.getControl("productid");
+        if (!productControl)
+            return;
+
+        const filterXml =
+            "<filter type='and'>" +
+            "   <condition attribute='tbs_ispanel' operator='eq' value='1' />" +
+            "</filter>";
+
+        productControl.addCustomFilter(filterXml, "product");
     },
 
     addExteriorFinishView: function (formContext) {

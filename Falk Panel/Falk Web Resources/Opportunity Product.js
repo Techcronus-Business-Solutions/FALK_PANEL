@@ -16,6 +16,10 @@ Falk.OpportunityProduct = {
 
         const formContext = executionContext.getFormContext();
 
+        formContext.getControl("productid").addPreSearch(function () {
+            Falk.OpportunityProduct.addPanelProductFilter(formContext);
+        });
+
         Falk.OpportunityProduct.ToggleSpecialProductFields(formContext);
 
         if (formContext.ui.getFormType() === 1) {
@@ -30,6 +34,7 @@ Falk.OpportunityProduct = {
         );
         Falk.OpportunityProduct.FalkHPSFinishId = JSON.parse(jsonText);
 
+       
         formContext.getControl("tbs_exteriorfinish")
             .addPreSearch(function () {
                 formContext.getAttribute("tbs_exteriorcolor").setValue(null);
@@ -201,6 +206,19 @@ Falk.OpportunityProduct = {
             },
             { openInNewWindow: false }
         );
+    },
+
+    addPanelProductFilter: function (formContext) {
+        const productControl = formContext.getControl("productid");
+        if (!productControl)
+            return;
+
+        const filterXml =
+            "<filter type='and'>" +
+            "   <condition attribute='tbs_ispanel' operator='eq' value='1' />" +
+            "</filter>";
+
+        productControl.addCustomFilter(filterXml, "product");
     },
 
     addExteriorFinishView: function (formContext) {
